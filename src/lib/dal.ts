@@ -15,11 +15,7 @@ export async function getUserProfile() {
     .eq('id', auth.user.id)
     .single()
 
-  if (profileError || !profile) {
-    return null
-  }
-
-  return { ...auth.user, role: profile.role, clinic_id: profile.clinic_id }
+  return { ...auth.user, role: profile.role, clinic_id: profile.clinic_id, active: profile.active }
 }
 
 export async function logout() {

@@ -128,3 +128,19 @@ export async function deleteUser(id: string) {
   revalidatePath('/dashboard/users')
   return { success: true }
 }
+
+export async function toggleUserStatus(id: string, currentStatus: boolean) {
+  const supabase = await createAdminClient()
+
+  const { error } = await supabase
+    .from('users')
+    .update({ active: !currentStatus })
+    .eq('id', id)
+
+  if (error) {
+    return { error: `Erro ao alterar status: ${error.message}` }
+  }
+
+  revalidatePath('/dashboard/users')
+  return { success: true }
+}
