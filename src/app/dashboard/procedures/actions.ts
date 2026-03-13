@@ -14,10 +14,15 @@ export async function createProcedureAction(data: ProcedureFormData) {
     return { error: `Erro de validação: ${errorMsg}` }
   }
 
-  const { specialty_ids, ...procedureData } = validatedFields.data
+  const { specialty_ids, hasNoCode, ...procedureData } = validatedFields.data
+
+  const finalProcedureData = {
+    ...procedureData,
+    code: hasNoCode ? null : procedureData.code || null
+  }
 
   const { data: procedure, error } = await supabase.from('procedures').insert({
-    ...procedureData,
+    ...finalProcedureData,
   }).select().single()
 
   if (error) {
@@ -50,10 +55,15 @@ export async function updateProcedureAction(id: string, data: ProcedureFormData)
     return { error: `Erro de validação: ${errorMsg}` }
   }
 
-  const { specialty_ids, ...procedureData } = validatedFields.data
+  const { specialty_ids, hasNoCode, ...procedureData } = validatedFields.data
+
+  const finalProcedureData = {
+    ...procedureData,
+    code: hasNoCode ? null : procedureData.code || null
+  }
 
   const { error } = await supabase.from('procedures').update({
-    ...procedureData,
+    ...finalProcedureData,
   }).eq('id', id)
 
   if (error) {

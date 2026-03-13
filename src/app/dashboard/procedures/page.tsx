@@ -92,7 +92,7 @@ export default async function ProceduresPage({
                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
                   {procedure.code}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
+                <td className="px-3 py-4 text-sm text-muted-foreground min-w-[300px]">
                   {procedure.name}
                 </td>
                 <td className="px-3 py-4 text-sm text-muted-foreground italic">

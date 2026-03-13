@@ -61,9 +61,11 @@ export async function toggleSpecialtyStatus(id: string, currentStatus: boolean) 
   return { success: true }
 }
 
+/*
 export async function deleteSpecialtyAction(id: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('specialties').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/dashboard/specialties')
 }
+*/

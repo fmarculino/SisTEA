@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/utils/format'
 
 export function AttendanceForm({ 
-  intialData, 
+  initialData, 
   id,
   patients,
   professionals,
@@ -18,7 +18,7 @@ export function AttendanceForm({
   userRole,
   clinics
 }: { 
-  intialData?: Partial<AttendanceFormData>; 
+  initialData?: Partial<AttendanceFormData>; 
   id?: string;
   patients: any[];
   professionals: any[];
@@ -32,7 +32,7 @@ export function AttendanceForm({
   const [isPending, setIsPending] = useState(false)
 
   const defaultClinicId = userRole === 'SMS_ADMIN' 
-    ? (intialData?.clinic_id || '') 
+    ? (initialData?.clinic_id || '') 
     : (userClinicId || '')
 
   const {
@@ -45,19 +45,19 @@ export function AttendanceForm({
   } = useForm<AttendanceFormData>({
     resolver: zodResolver(attendanceSchema) as any,
     defaultValues: {
-      patient_id: intialData?.patient_id || '',
-      professional_id: intialData?.professional_id || '',
-      procedure_id: intialData?.procedure_id || '',
+      patient_id: initialData?.patient_id || '',
+      professional_id: initialData?.professional_id || '',
+      procedure_id: initialData?.procedure_id || '',
       clinic_id: defaultClinicId,
-      attendance_date: intialData?.attendance_date || new Date().toISOString().split('T')[0],
-      auth_number: intialData?.auth_number || '',
-      authorization_date: intialData?.authorization_date || '',
-      authorized_quantity: intialData?.authorized_quantity || 20,
-      cid: intialData?.cid || '',
-      attendance_character: intialData?.attendance_character || '',
-      value_applied: intialData?.value_applied || 0,
-      notes: intialData?.notes || '',
-      sessions: intialData?.sessions || [],
+      attendance_date: initialData?.attendance_date || new Date().toISOString().split('T')[0],
+      auth_number: initialData?.auth_number || '',
+      authorization_date: initialData?.authorization_date || '',
+      authorized_quantity: initialData?.authorized_quantity || 20,
+      cid: initialData?.cid || '',
+      attendance_character: initialData?.attendance_character || '',
+      value_applied: initialData?.value_applied || 0,
+      notes: initialData?.notes || '',
+      sessions: initialData?.sessions || [],
     },
   })
 
@@ -248,7 +248,7 @@ export function AttendanceForm({
           <label className="block text-sm font-medium text-foreground">Qtd. Autorizada</label>
           <input
             type="number"
-            {...register('authorized_quantity', { valueAsNumber: true })}
+            {...register('authorized_quantity')}
             className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
           />
         </div>
@@ -278,7 +278,7 @@ export function AttendanceForm({
             type="number"
             step="0.01"
             readOnly
-            {...register('value_applied', { valueAsNumber: true })}
+            {...register('value_applied')}
             className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-muted cursor-not-allowed"
           />
           <p className="mt-1 text-xs text-muted-foreground">

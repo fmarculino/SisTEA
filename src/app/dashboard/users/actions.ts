@@ -112,6 +112,7 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
   }
 }
 
+/*
 export async function deleteUser(id: string) {
   try {
     const supabase = createAdminClient()
@@ -133,6 +134,7 @@ export async function deleteUser(id: string) {
     return { error: error.message || 'Erro inesperado ao excluir usuário' }
   }
 }
+*/
 
 export async function toggleUserStatus(id: string, currentStatus: boolean) {
   try {

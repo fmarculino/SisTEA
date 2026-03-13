@@ -67,9 +67,11 @@ export async function toggleClinicStatus(id: string, currentStatus: boolean) {
   return { success: true }
 }
 
+/*
 export async function deleteClinicAction(id: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('clinics').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/dashboard/clinics')
 }
+*/

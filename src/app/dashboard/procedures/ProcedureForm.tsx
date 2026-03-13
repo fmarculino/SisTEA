@@ -1,6 +1,6 @@
 'use client'
 
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm, useWatch, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { procedureSchema, type ProcedureFormData } from './schema'
 import { createProcedureAction, updateProcedureAction } from './actions'
@@ -33,6 +33,7 @@ export function ProcedureForm({
     resolver: zodResolver(procedureSchema) as any,
     defaultValues: {
       code: initialData?.code || '',
+      hasNoCode: !initialData?.code && !!id, // If editing and has no code
       name: initialData?.name || '',
       description: initialData?.description || '',
       valor_sus: initialData?.valor_sus || 0,
@@ -45,6 +46,7 @@ export function ProcedureForm({
   // Watch values for total calculation
   const valorSus = useWatch({ control, name: 'valor_sus' })
   const valorRp = useWatch({ control, name: 'valor_rp' })
+  const hasNoCode = useWatch({ control, name: 'hasNoCode' })
   const [totalValue, setTotalValue] = useState(0)
 
   useEffect(() => {
@@ -52,6 +54,12 @@ export function ProcedureForm({
     const rp = Number(valorRp) || 0
     setTotalValue(sus + rp)
   }, [valorSus, valorRp])
+
+  useEffect(() => {
+    if (hasNoCode) {
+      setValue('code', '', { shouldValidate: true })
+    }
+  }, [hasNoCode, setValue])
 
   const formatSUSCode = (value: string) => {
     const digits = value.replace(/\D/g, '')
@@ -72,7 +80,8 @@ export function ProcedureForm({
     // Remove all non-digits
     const cleanValue = value.replace(/\D/g, '')
     // Convert to number (cents / 100)
-    const numericValue = Number(cleanValue) / 100
+    let numericValue = Number(cleanValue) / 100
+    if (isNaN(numericValue)) numericValue = 0
     setValue(name, numericValue, { shouldValidate: true })
   }
 
@@ -103,13 +112,24 @@ export function ProcedureForm({
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium text-foreground">Código SUS *</label>
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-foreground">Código SUS *</label>
+            <label className="flex items-center space-x-1 cursor-pointer">
+              <input
+                type="checkbox"
+                {...register('hasNoCode')}
+                className="w-3 h-3 rounded border-input text-primary focus:ring-primary/20 bg-background transition-all"
+              />
+              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Sem código</span>
+            </label>
+          </div>
           <input
             type="text"
-            placeholder="00.00.00.000-0"
+            placeholder={hasNoCode ? "Não aplicável" : "00.00.00.000-0"}
             {...register('code')}
             onChange={handleSUSCodeChange}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+            disabled={hasNoCode}
+            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background disabled:bg-muted disabled:opacity-50"
           />
           {errors.code && <p className="mt-1 text-sm text-destructive">{errors.code.message}</p>}
         </div>
@@ -135,24 +155,34 @@ export function ProcedureForm({
 
         <div>
           <label className="block text-sm font-medium text-foreground">Valor SUS (R$) *</label>
-          <input
-            type="text"
-            {...register('valor_sus')}
-            value={formatNumberBR(valorSus)}
-            onChange={(e) => handleCurrencyChange('valor_sus', e.target.value)}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+          <Controller
+            name="valor_sus"
+            control={control}
+            render={({ field }) => (
+              <input
+                type="text"
+                value={formatNumberBR(field.value)}
+                onChange={(e) => handleCurrencyChange('valor_sus', e.target.value)}
+                className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+              />
+            )}
           />
           {errors.valor_sus && <p className="mt-1 text-sm text-destructive">{errors.valor_sus.message}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-foreground">Valor Repasse (R$) *</label>
-          <input
-            type="text"
-            {...register('valor_rp')}
-            value={formatNumberBR(valorRp)}
-            onChange={(e) => handleCurrencyChange('valor_rp', e.target.value)}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+          <Controller
+            name="valor_rp"
+            control={control}
+            render={({ field }) => (
+              <input
+                type="text"
+                value={formatNumberBR(field.value)}
+                onChange={(e) => handleCurrencyChange('valor_rp', e.target.value)}
+                className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+              />
+            )}
           />
           {errors.valor_rp && <p className="mt-1 text-sm text-destructive">{errors.valor_rp.message}</p>}
         </div>
