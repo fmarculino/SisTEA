@@ -40,6 +40,7 @@ export function ProfessionalForm({
       name: initialData?.name || '',
       document_type: initialData?.document_type || '',
       document_number: initialData?.document_number || '',
+      cns: initialData?.cns || '',
       specialty_id: initialData?.specialty_id || '',
       email: initialData?.email || '',
       active: initialData?.active ?? true,
@@ -97,6 +98,15 @@ export function ProfessionalForm({
           <input
             type="text"
             {...register('document_number')}
+            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-foreground">CNS (Cartão Nac. Saúde)</label>
+          <input
+            type="text"
+            {...register('cns')}
             className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
           />
         </div>

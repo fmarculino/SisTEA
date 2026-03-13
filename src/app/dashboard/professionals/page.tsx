@@ -60,6 +60,7 @@ export default async function ProfessionalsPage() {
                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
                   {prof.name}
                   <div className="text-muted-foreground font-normal">{prof.document_type} {prof.document_number}</div>
+                  {prof.cns && <div className="text-[10px] text-muted-foreground font-mono">CNS: {prof.cns}</div>}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                   {/* @ts-ignore */}
