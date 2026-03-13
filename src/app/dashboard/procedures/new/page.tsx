@@ -1,3 +1,4 @@
+import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import { ProcedureForm } from '../ProcedureForm'
 import { redirect } from 'next/navigation'
@@ -6,6 +7,13 @@ export default async function NewProcedurePage() {
   const profile = await getUserProfile()
   if (profile?.role !== 'SMS_ADMIN') redirect('/dashboard')
 
+  const supabase = await createClient()
+  const { data: specialties } = await supabase
+    .from('specialties')
+    .select('id, name, cbo')
+    .eq('active', true)
+    .order('name')
+
   return (
     <div className="space-y-6">
       <div>
@@ -13,7 +21,7 @@ export default async function NewProcedurePage() {
           Novo Procedimento
         </h2>
       </div>
-      <ProcedureForm />
+      <ProcedureForm specialties={specialties || []} />
     </div>
   )
 }

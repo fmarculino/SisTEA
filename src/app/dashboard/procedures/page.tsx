@@ -19,7 +19,7 @@ export default async function ProceduresPage({
 
   const supabase = await createClient()
 
-  let query = supabase.from('procedures').select('*')
+  let query = supabase.from('procedures').select('*, specialties:procedure_specialties(specialties(name))')
 
   // Apply Search Filter
   if (queryParams.q) {
@@ -66,6 +66,9 @@ export default async function ProceduresPage({
                 Nome
               </th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
+                Ocupação
+              </th>
+              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
                 Valor SUS
               </th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
@@ -91,6 +94,16 @@ export default async function ProceduresPage({
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                   {procedure.name}
                 </td>
+                <td className="px-3 py-4 text-sm text-muted-foreground italic">
+                  <div className="flex flex-wrap gap-1 max-w-[200px]">
+                    {/* @ts-ignore */}
+                    {procedure.specialties?.map((s: any, idx: number) => (
+                      <span key={idx} className="block text-[11px] bg-accent/30 px-1.5 py-0.5 rounded">
+                        {s.specialties?.name}
+                      </span>
+                    )) || '-'}
+                  </div>
+                </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(procedure.valor_sus)}
                 </td>
@@ -114,7 +127,7 @@ export default async function ProceduresPage({
             ))}
             {(!procedures || procedures.length === 0) && (
               <tr>
-                <td colSpan={7} className="py-4 text-center text-sm text-muted-foreground">
+                <td colSpan={8} className="py-4 text-center text-sm text-muted-foreground">
                   Nenhum procedimento encontrado.
                 </td>
               </tr>

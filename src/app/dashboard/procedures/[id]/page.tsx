@@ -13,6 +13,22 @@ export default async function EditProcedurePage({ params }: { params: Promise<{ 
   const { data: procedure } = await supabase.from('procedures').select('*').eq('id', id).single()
   if (!procedure) notFound()
 
+  const { data: specialties } = await supabase
+    .from('specialties')
+    .select('id, name, cbo')
+    .eq('active', true)
+    .order('name')
+
+  const { data: currentSpecialties } = await supabase
+    .from('procedure_specialties')
+    .select('specialty_id')
+    .eq('procedure_id', id)
+
+  const initialData = {
+    ...procedure,
+    specialty_ids: currentSpecialties?.map(s => s.specialty_id) || []
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -22,7 +38,8 @@ export default async function EditProcedurePage({ params }: { params: Promise<{ 
       </div>
       <ProcedureForm 
         id={procedure.id}
-        initialData={procedure}
+        initialData={initialData}
+        specialties={specialties || []}
       />
     </div>
   )

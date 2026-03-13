@@ -7,12 +7,16 @@ import { createProcedureAction, updateProcedureAction } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+type SpecialtyOption = { id: string; name: string; cbo: string }
+
 export function ProcedureForm({ 
   initialData, 
-  id 
+  id,
+  specialties = []
 }: { 
   initialData?: Partial<ProcedureFormData>; 
   id?: string;
+  specialties?: SpecialtyOption[];
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
@@ -32,6 +36,7 @@ export function ProcedureForm({
       valor_sus: initialData?.valor_sus || 0,
       valor_rp: initialData?.valor_rp || 0,
       active: initialData?.active ?? true,
+      specialty_ids: initialData?.specialty_ids || [],
     },
   })
 
@@ -127,6 +132,24 @@ export function ProcedureForm({
             className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
           />
           {errors.valor_rp && <p className="mt-1 text-sm text-destructive">{errors.valor_rp.message}</p>}
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-semibold text-foreground mb-1 uppercase tracking-tight mb-2 italic">OCUPAÇÃO (Especialidades autorizadas) *</label>
+          <div className="mt-1 space-y-2 max-h-48 overflow-y-auto p-4 border rounded-xl bg-background/50 backdrop-blur-sm border-dashed">
+            {specialties.map((s) => (
+              <label key={s.id} className="flex items-center space-x-3 text-sm cursor-pointer hover:bg-primary/5 p-2 rounded-lg transition-all group">
+                <input
+                  type="checkbox"
+                  value={s.id}
+                  {...register('specialty_ids')}
+                  className="w-4 h-4 rounded border-input text-primary focus:ring-primary/20 bg-background transition-all"
+                />
+                <span className="text-foreground group-hover:text-primary transition-colors">{s.name} (CBO: {s.cbo})</span>
+              </label>
+            ))}
+          </div>
+          {errors.specialty_ids && <p className="mt-1 text-xs text-destructive font-bold">{errors.specialty_ids.message}</p>}
         </div>
 
         <div className="sm:col-span-2">

@@ -7,6 +7,7 @@ export const procedureSchema = z.object({
   valor_sus: z.coerce.number().min(0, 'Valor SUS deve ser positivo'),
   valor_rp: z.coerce.number().min(0, 'Valor Repasse deve ser positivo'),
   active: z.boolean().default(true),
+  specialty_ids: z.array(z.string()).min(1, 'Selecione ao menos uma especialidade'),
 })
 
 export type ProcedureFormData = z.infer<typeof procedureSchema>
