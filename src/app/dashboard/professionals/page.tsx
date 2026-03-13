@@ -8,15 +8,45 @@ import { DataTableFilters } from '@/components/ui/DataTableFilters'
 export default async function ProfessionalsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string }
+  searchParams: { q?: string; status?: string; specialty?: string; clinic?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
   const supabase = await createClient()
 
+  // Fetch filter options
+  const [{ data: specialties }, { data: clinics }] = await Promise.all([
+    supabase.from('specialties').select('id, name').order('name'),
+    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name').order('name') : Promise.resolve({ data: [] })
+  ])
+
+  let selectQuery = '*, professional_clinics(clinics(name)), professional_specialties(specialties(name))'
+  
+  // Conditionally use inner joins for filtering to only return professionals matching the criteria
+  const shouldFilterClinic = profile?.role === 'CLINIC_USER' || queryParams.clinic
+  const shouldFilterSpecialty = queryParams.specialty
+
+  if (shouldFilterClinic && shouldFilterSpecialty) {
+     selectQuery = '*, professional_clinics!inner(clinics(name), clinic_id), professional_specialties!inner(specialties(name), specialty_id)'
+  } else if (shouldFilterClinic) {
+     selectQuery = '*, professional_clinics!inner(clinics(name), clinic_id), professional_specialties(specialties(name))'
+  } else if (shouldFilterSpecialty) {
+     selectQuery = '*, professional_clinics(clinics(name)), professional_specialties!inner(specialties(name), specialty_id)'
+  }
+
   let query = supabase
     .from('professionals')
-    .select('*, professional_clinics(clinics(name)), professional_specialties(specialties(name))')
+    .select(selectQuery)
+
+  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
+    query = query.eq('professional_clinics.clinic_id', profile.clinic_id)
+  } else if (queryParams.clinic) {
+    query = query.eq('professional_clinics.clinic_id', queryParams.clinic)
+  }
+
+  if (queryParams.specialty) {
+    query = query.eq('professional_specialties.specialty_id', queryParams.specialty)
+  }
 
   // Apply Search Filter
   if (queryParams.q) {
@@ -29,6 +59,23 @@ export default async function ProfessionalsPage({
   }
 
   const { data: professionals } = await query.order('name')
+
+  const extraFilters = []
+  if (specialties && specialties.length > 0) {
+    extraFilters.push({
+      paramName: 'specialty',
+      placeholder: 'Todas Especialidades',
+      options: specialties.map(s => ({ value: s.id, label: s.name }))
+    })
+  }
+  
+  if (profile?.role === 'SMS_ADMIN' && clinics && clinics.length > 0) {
+    extraFilters.push({
+      paramName: 'clinic',
+      placeholder: 'Todas Clínicas',
+      options: clinics.map(c => ({ value: c.id, label: c.name }))
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -50,7 +97,10 @@ export default async function ProfessionalsPage({
         </Link>
       </div>
 
-      <DataTableFilters placeholder="Pesquisar por nome, CNS ou CPF..." />
+      <DataTableFilters 
+        placeholder="Pesquisar por nome, CNS ou CPF..." 
+        extraFilters={extraFilters}
+      />
 
       <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
         <table className="min-w-full divide-y divide-border">

@@ -7,11 +7,17 @@ import { useCallback, useEffect, useState } from 'react'
 interface DataTableFiltersProps {
   placeholder?: string
   showStatus?: boolean
+  extraFilters?: {
+    paramName: string;
+    placeholder: string;
+    options: { value: string; label: string }[];
+  }[];
 }
 
 export function DataTableFilters({ 
   placeholder = "Pesquisar...", 
-  showStatus = true 
+  showStatus = true,
+  extraFilters = []
 }: DataTableFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -22,7 +28,7 @@ export function DataTableFilters({
   // Update URL when filters change
   const updateParams = useCallback((name: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
-    if (value) {
+    if (value && value !== 'all') {
       params.set(name, value)
     } else {
       params.delete(name)
@@ -41,8 +47,8 @@ export function DataTableFilters({
   }, [searchValue, searchParams, updateParams])
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 mb-6">
-      <div className="relative flex-1">
+    <div className="flex flex-col sm:flex-row gap-4 mb-6 flex-wrap">
+      <div className="relative flex-1 min-w-[200px]">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <Search className="h-4 w-4 text-muted-foreground" />
         </div>
@@ -55,9 +61,26 @@ export function DataTableFilters({
         />
       </div>
 
-      {showStatus && (
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
+      <div className="flex items-center gap-2 flex-wrap">
+        <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
+        
+        {extraFilters.map((filter) => (
+          <select
+            key={filter.paramName}
+            className="block w-full sm:w-auto py-2 pl-3 pr-10 text-sm border border-input bg-background rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+            value={searchParams.get(filter.paramName) || 'all'}
+            onChange={(e) => updateParams(filter.paramName, e.target.value)}
+          >
+            <option value="all">{filter.placeholder}</option>
+            {filter.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        ))}
+
+        {showStatus && (
           <select
             className="block w-full sm:w-40 py-2 pl-3 pr-10 text-sm border border-input bg-background rounded-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
             value={searchParams.get('status') || 'all'}
@@ -67,8 +90,8 @@ export function DataTableFilters({
             <option value="true">Ativos</option>
             <option value="false">Inativos</option>
           </select>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

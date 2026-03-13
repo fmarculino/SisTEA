@@ -10,11 +10,22 @@ export default async function EditProfessionalPage({ params }: { params: Promise
   const supabase = await createClient()
   const { id } = await params
   
-  const { data: profData } = await supabase
+  let selectQuery = '*, professional_clinics(clinic_id), professional_specialties(specialty_id)'
+  
+  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
+    selectQuery = '*, professional_clinics!inner(clinic_id), professional_specialties(specialty_id)'
+  }
+
+  let query = supabase
     .from('professionals')
-    .select('*, professional_clinics(clinic_id), professional_specialties(specialty_id)')
+    .select(selectQuery)
     .eq('id', id)
-    .single()
+
+  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
+    query = query.eq('professional_clinics.clinic_id', profile.clinic_id)
+  }
+
+  const { data: profData } = await query.single()
     
   if (!profData) notFound()
 
