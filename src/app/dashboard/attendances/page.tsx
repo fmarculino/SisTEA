@@ -3,6 +3,7 @@ import { getUserProfile } from '@/lib/dal'
 import Link from 'next/link'
 import { Plus, Edit2 } from 'lucide-react'
 import { format } from 'date-fns'
+import { formatCurrency } from '@/utils/format'
 import { DeleteAttendanceButton } from './DeleteAttendanceButton'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
@@ -117,7 +118,7 @@ export default async function AttendancesPage({
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(att.value_applied)}
+                    {formatCurrency(att.value_applied)}
                   </td>
                   <td className="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                     <div className="flex items-center justify-end gap-2">

@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import { Users, Activity, Building, DollarSign } from 'lucide-react'
+import { formatCurrency } from '@/utils/format'
 
 export default async function DashboardPage() {
   const profile = await getUserProfile()
@@ -51,7 +52,6 @@ export default async function DashboardPage() {
     }
   }
 
-  const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
   return (
     <div className="space-y-6">
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
                   {profile?.role === 'SMS_ADMIN' ? 'Valor Apurado (Global)' : 'Faturamento Estimado'}
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
-                  {formatter.format(totalValue)}
+                  {formatCurrency(totalValue)}
                 </dd>
               </dl>
             </div>

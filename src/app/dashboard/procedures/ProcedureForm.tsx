@@ -1,11 +1,12 @@
 'use client'
 
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { procedureSchema, type ProcedureFormData } from './schema'
 import { createProcedureAction, updateProcedureAction } from './actions'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { formatCurrency, formatNumberBR } from '@/utils/format'
 
 type SpecialtyOption = { id: string; name: string; cbo: string }
 
@@ -24,6 +25,7 @@ export function ProcedureForm({
 
   const {
     register,
+    control,
     handleSubmit,
     setValue,
     formState: { errors },
@@ -40,6 +42,17 @@ export function ProcedureForm({
     },
   })
 
+  // Watch values for total calculation
+  const valorSus = useWatch({ control, name: 'valor_sus' })
+  const valorRp = useWatch({ control, name: 'valor_rp' })
+  const [totalValue, setTotalValue] = useState(0)
+
+  useEffect(() => {
+    const sus = Number(valorSus) || 0
+    const rp = Number(valorRp) || 0
+    setTotalValue(sus + rp)
+  }, [valorSus, valorRp])
+
   const formatSUSCode = (value: string) => {
     const digits = value.replace(/\D/g, '')
     let formatted = digits
@@ -53,6 +66,14 @@ export function ProcedureForm({
   const handleSUSCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatSUSCode(e.target.value)
     setValue('code', formatted, { shouldValidate: true })
+  }
+
+  const handleCurrencyChange = (name: 'valor_sus' | 'valor_rp', value: string) => {
+    // Remove all non-digits
+    const cleanValue = value.replace(/\D/g, '')
+    // Convert to number (cents / 100)
+    const numericValue = Number(cleanValue) / 100
+    setValue(name, numericValue, { shouldValidate: true })
   }
 
   const onSubmit = async (data: ProcedureFormData) => {
@@ -115,9 +136,10 @@ export function ProcedureForm({
         <div>
           <label className="block text-sm font-medium text-foreground">Valor SUS (R$) *</label>
           <input
-            type="number"
-            step="0.01"
+            type="text"
             {...register('valor_sus')}
+            value={formatNumberBR(valorSus)}
+            onChange={(e) => handleCurrencyChange('valor_sus', e.target.value)}
             className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
           />
           {errors.valor_sus && <p className="mt-1 text-sm text-destructive">{errors.valor_sus.message}</p>}
@@ -126,12 +148,21 @@ export function ProcedureForm({
         <div>
           <label className="block text-sm font-medium text-foreground">Valor Repasse (R$) *</label>
           <input
-            type="number"
-            step="0.01"
+            type="text"
             {...register('valor_rp')}
+            value={formatNumberBR(valorRp)}
+            onChange={(e) => handleCurrencyChange('valor_rp', e.target.value)}
             className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
           />
           {errors.valor_rp && <p className="mt-1 text-sm text-destructive">{errors.valor_rp.message}</p>}
+        </div>
+
+        <div className="sm:col-span-2 bg-accent/10 p-4 rounded-lg border border-dashed border-accent">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-semibold text-foreground uppercase tracking-wider">Valor Total do Procedimento</span>
+            <span className="text-xl font-bold text-primary">{formatCurrency(totalValue)}</span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground italic">Soma do Valor SUS + Valor Repasse</p>
         </div>
 
         <div className="sm:col-span-2">

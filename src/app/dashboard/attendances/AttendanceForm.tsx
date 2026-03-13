@@ -6,6 +6,7 @@ import { attendanceSchema, type AttendanceFormData } from './schema'
 import { createAttendanceAction, updateAttendanceAction } from './actions'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { formatCurrency } from '@/utils/format'
 
 export function AttendanceForm({ 
   intialData, 
@@ -109,6 +110,15 @@ export function AttendanceForm({
     ? professionals.filter(p => p.professional_clinics?.some((pc: any) => pc.clinic_id === selectedClinicId))
     : professionals
 
+  const calculateEndTime = (startTime: string, minutesToAdd: number) => {
+    if (!startTime) return ''
+    const [hours, minutes] = startTime.split(':').map(Number)
+    const date = new Date()
+    date.setHours(hours)
+    date.setMinutes(minutes + minutesToAdd)
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl bg-card text-card-foreground p-6 rounded-lg shadow border">
       {errorMsg && (
@@ -194,7 +204,7 @@ export function AttendanceForm({
             <option value="">Selecione um procedimento...</option>
             {procedures.length > 0 ? (
               procedures.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} (Padrão: R$ {p.valor_total})</option>
+                <option key={p.id} value={p.id}>{p.name} (Padrão: {formatCurrency(p.valor_total)})</option>
               ))
             ) : (
               <option value="" disabled>Nenhum procedimento cadastrado ou ativo</option>
@@ -294,7 +304,7 @@ export function AttendanceForm({
           <button
             type="button"
             disabled={sessionFields.length >= authorizedQuantity}
-            onClick={() => append({ session_date: new Date().toISOString().split('T')[0], start_time: '08:00', end_time: '09:00', status: 'Realizada' })}
+            onClick={() => append({ session_date: new Date().toISOString().split('T')[0], start_time: '08:00', end_time: '08:50', status: 'Realizada' })}
             className="rounded-md border border-input bg-background px-3 py-1 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {sessionFields.length >= authorizedQuantity ? 'Limite Atingido' : '+ Adicionar Sessão'}
@@ -320,7 +330,14 @@ export function AttendanceForm({
                 <label className="block text-xs font-medium text-foreground mb-1">Início</label>
                 <input
                   type="time"
-                  {...register(`sessions.${index}.start_time` as const)}
+                  {...register(`sessions.${index}.start_time` as const, {
+                    onChange: (e) => {
+                      const endTime = calculateEndTime(e.target.value, 50)
+                      if (endTime) {
+                        setValue(`sessions.${index}.end_time`, endTime)
+                      }
+                    }
+                  })}
                   className="block w-full rounded-md border-input shadow-sm py-1.5 px-3 text-sm border bg-background"
                 />
               </div>

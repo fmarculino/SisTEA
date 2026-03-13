@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import { FileText } from 'lucide-react'
+import { formatCurrency } from '@/utils/format'
 
 export default async function ReportsPage({
   searchParams,
@@ -64,7 +65,6 @@ export default async function ReportsPage({
     reportData[cName].totalValue += val
   })
 
-  const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
   return (
     <div className="space-y-6">
@@ -103,7 +103,7 @@ export default async function ReportsPage({
               <div key={clinicName} className="border-b border-border pb-6 last:border-0 last:pb-0">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-foreground">{clinicName}</h3>
-                  <span className="text-lg font-semibold text-green-500">Total: {formatter.format(clinicData.totalValue as number)}</span>
+                  <span className="text-lg font-semibold text-green-500">Total: {formatCurrency(clinicData.totalValue as number)}</span>
                 </div>
                 
                 <table className="min-w-full divide-y divide-border">
@@ -119,7 +119,7 @@ export default async function ReportsPage({
                       <tr key={profName}>
                         <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-foreground">{profName}</td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-muted-foreground text-right">{profData.count}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-muted-foreground text-right">{formatter.format(profData.value)}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-muted-foreground text-right">{formatCurrency(profData.value)}</td>
                       </tr>
                     ))}
                   </tbody>

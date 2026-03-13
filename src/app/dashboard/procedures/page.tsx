@@ -5,6 +5,7 @@ import { Edit2, Plus } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { formatCurrency } from '@/utils/format'
 
 export default async function ProceduresPage({
   searchParams,
@@ -105,13 +106,13 @@ export default async function ProceduresPage({
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(procedure.valor_sus)}
+                  {formatCurrency(procedure.valor_sus)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(procedure.valor_rp)}
+                  {formatCurrency(procedure.valor_rp)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-foreground font-medium">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(procedure.valor_total || (procedure.valor_sus + procedure.valor_rp))}
+                  {formatCurrency(procedure.valor_total || (procedure.valor_sus + procedure.valor_rp))}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                   <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${procedure.active ? 'bg-green-500/10 text-green-700 dark:text-green-400 ring-green-600/20' : 'bg-destructive/10 text-destructive dark:text-destructive-foreground ring-destructive/20'}`}>
