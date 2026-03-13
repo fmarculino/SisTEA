@@ -4,7 +4,14 @@ import Link from 'next/link'
 import { Edit2, Plus } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
-export default async function ProceduresPage() {
+import { DataTableFilters } from '@/components/ui/DataTableFilters'
+
+export default async function ProceduresPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; status?: string }
+}) {
+  const queryParams = await searchParams
   const profile = await getUserProfile()
   if (profile?.role !== 'SMS_ADMIN') {
     redirect('/dashboard') // Somente admin acessa procedimentos
@@ -12,10 +19,19 @@ export default async function ProceduresPage() {
 
   const supabase = await createClient()
 
-  const { data: procedures } = await supabase
-    .from('procedures')
-    .select('*')
-    .order('name')
+  let query = supabase.from('procedures').select('*')
+
+  // Apply Search Filter
+  if (queryParams.q) {
+    query = query.or(`name.ilike.%${queryParams.q}%,code.ilike.%${queryParams.q}%`)
+  }
+
+  // Apply Status Filter
+  if (queryParams.status && queryParams.status !== 'all') {
+    query = query.eq('active', queryParams.status === 'true')
+  }
+
+  const { data: procedures } = await query.order('name')
 
   return (
     <div className="space-y-6">
@@ -36,6 +52,8 @@ export default async function ProceduresPage() {
           Novo Procedimento
         </Link>
       </div>
+
+      <DataTableFilters placeholder="Pesquisar por nome ou código..." />
 
       <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
         <table className="min-w-full divide-y divide-border">

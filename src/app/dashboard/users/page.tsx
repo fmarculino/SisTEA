@@ -5,7 +5,14 @@ import { Edit2, Shield, Building, UserPlus } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import UserActions from './UserActions'
 
-export default async function UsersPage() {
+import { DataTableFilters } from '@/components/ui/DataTableFilters'
+
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; status?: string }
+}) {
+  const queryParams = await searchParams
   const profile = await getUserProfile()
   
   if (profile?.role !== 'SMS_ADMIN') {
@@ -14,10 +21,19 @@ export default async function UsersPage() {
 
   const supabase = await createClient()
 
-  const { data: users } = await supabase
-    .from('users')
-    .select('*, clinics(name)')
-    .order('email')
+  let query = supabase.from('users').select('*, clinics(name)')
+
+  // Apply Search Filter
+  if (queryParams.q) {
+    query = query.ilike('email', `%${queryParams.q}%`)
+  }
+
+  // Apply Status Filter
+  if (queryParams.status && queryParams.status !== 'all') {
+    query = query.eq('active', queryParams.status === 'true')
+  }
+
+  const { data: users } = await query.order('email')
 
   return (
     <div className="space-y-6">
@@ -38,6 +54,8 @@ export default async function UsersPage() {
           Novo Usuário
         </Link>
       </div>
+
+      <DataTableFilters placeholder="Pesquisar por e-mail..." />
 
       <div className="overflow-x-auto shadow-lg ring-1 ring-border sm:rounded-xl">
         <table className="min-w-full divide-y divide-border">

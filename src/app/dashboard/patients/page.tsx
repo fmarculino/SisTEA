@@ -3,14 +3,32 @@ import { getUserProfile } from '@/lib/dal'
 import Link from 'next/link'
 import { Edit2, Plus } from 'lucide-react'
 
-export default async function PatientsPage() {
+import { DataTableFilters } from '@/components/ui/DataTableFilters'
+
+export default async function PatientsPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; status?: string }
+}) {
+  const queryParams = await searchParams
   const profile = await getUserProfile()
   const supabase = await createClient()
 
-  const { data: patients } = await supabase
+  let query = supabase
     .from('patients')
     .select('*, clinics(name)')
-    .order('name')
+
+  // Apply Search Filter
+  if (queryParams.q) {
+    query = query.or(`name.ilike.%${queryParams.q}%,cns_patient.ilike.%${queryParams.q}%`)
+  }
+
+  // Apply Status Filter
+  if (queryParams.status && queryParams.status !== 'all') {
+    query = query.eq('active', queryParams.status === 'true')
+  }
+
+  const { data: patients } = await query.order('name')
 
   return (
     <div className="space-y-6">
@@ -31,6 +49,8 @@ export default async function PatientsPage() {
           Novo Paciente
         </Link>
       </div>
+
+      <DataTableFilters placeholder="Pesquisar por nome ou CNS..." />
 
       <div className="overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
         <table className="min-w-full divide-y divide-border">

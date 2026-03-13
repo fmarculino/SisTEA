@@ -5,7 +5,14 @@ import { Plus, Edit2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { DeleteAttendanceButton } from './DeleteAttendanceButton'
 
-export default async function AttendancesPage() {
+import { DataTableFilters } from '@/components/ui/DataTableFilters'
+
+export default async function AttendancesPage({
+  searchParams,
+}: {
+  searchParams: { q?: string }
+}) {
+  const queryParams = await searchParams
   const profile = await getUserProfile()
   const supabase = await createClient()
 
@@ -21,13 +28,21 @@ export default async function AttendancesPage() {
       clinic:clinics(name),
       sessions:attendance_sessions(id, status)
     `)
-    .order('attendance_date', { ascending: false })
+
+  // Apply Search Filter
+  if (queryParams.q) {
+    // Filter by patient name or professional name
+    // Since Supabase join filters are complex, we'll use a simpler approach if possible
+    // or filter on the client if the dataset is small. 
+    // But let's try Postgres path search if supported, otherwise just name.
+    query = query.or(`patient.name.ilike.%${queryParams.q}%,professional.name.ilike.%${queryParams.q}%`)
+  }
 
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
     query = query.eq('clinic_id', profile.clinic_id)
   }
 
-  const { data: attendances } = await query
+  const { data: attendances } = await query.order('attendance_date', { ascending: false })
 
   return (
     <div className="space-y-6">
@@ -48,6 +63,11 @@ export default async function AttendancesPage() {
           Novo Registro
         </Link>
       </div>
+
+      <DataTableFilters 
+        placeholder="Pesquisar por paciente ou profissional..." 
+        showStatus={false} 
+      />
 
       <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
         <table className="min-w-full divide-y divide-border">

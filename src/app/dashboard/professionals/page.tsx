@@ -3,15 +3,32 @@ import { getUserProfile } from '@/lib/dal'
 import Link from 'next/link'
 import { Edit2, Plus } from 'lucide-react'
 
-export default async function ProfessionalsPage() {
+import { DataTableFilters } from '@/components/ui/DataTableFilters'
+
+export default async function ProfessionalsPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; status?: string }
+}) {
+  const queryParams = await searchParams
   const profile = await getUserProfile()
   const supabase = await createClient()
 
-  // Se SMS_ADMIN, lista tudo; Se CLINIC_USER, rls cuida disso, mas chamamos normal.
-  const { data: professionals } = await supabase
+  let query = supabase
     .from('professionals')
     .select('*, professional_clinics(clinics(name)), professional_specialties(specialties(name))')
-    .order('name')
+
+  // Apply Search Filter
+  if (queryParams.q) {
+    query = query.or(`name.ilike.%${queryParams.q}%,cns.ilike.%${queryParams.q}%,cpf.ilike.%${queryParams.q}%`)
+  }
+
+  // Apply Status Filter
+  if (queryParams.status && queryParams.status !== 'all') {
+    query = query.eq('active', queryParams.status === 'true')
+  }
+
+  const { data: professionals } = await query.order('name')
 
   return (
     <div className="space-y-6">
@@ -32,6 +49,8 @@ export default async function ProfessionalsPage() {
           Novo Profissional
         </Link>
       </div>
+
+      <DataTableFilters placeholder="Pesquisar por nome, CNS ou CPF..." />
 
       <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
         <table className="min-w-full divide-y divide-border">

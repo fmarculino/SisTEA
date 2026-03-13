@@ -5,14 +5,34 @@ import Link from 'next/link'
 import { Edit2, Plus, CheckCircle, XCircle } from 'lucide-react'
 import { ClinicActions } from './ClinicActions'
 
-export default async function ClinicsPage() {
+import { DataTableFilters } from '@/components/ui/DataTableFilters'
+
+export default async function ClinicsPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; status?: string }
+}) {
+  const queryParams = await searchParams
   const profile = await getUserProfile()
   if (profile?.role !== 'SMS_ADMIN') {
     redirect('/dashboard')
   }
 
   const supabase = await createClient()
-  const { data: clinics } = await supabase.from('clinics').select('*').order('name')
+  
+  let query = supabase.from('clinics').select('*')
+
+  // Apply Search Filter
+  if (queryParams.q) {
+    query = query.or(`name.ilike.%${queryParams.q}%,cnpj.ilike.%${queryParams.q}%`)
+  }
+
+  // Apply Status Filter
+  if (queryParams.status && queryParams.status !== 'all') {
+    query = query.eq('active', queryParams.status === 'true')
+  }
+
+  const { data: clinics } = await query.order('name')
 
   return (
     <div className="space-y-6">
@@ -33,6 +53,8 @@ export default async function ClinicsPage() {
           Nova Clínica
         </Link>
       </div>
+
+      <DataTableFilters placeholder="Pesquisar por nome ou CNPJ..." />
 
       <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
         <table className="min-w-full divide-y divide-border">
