@@ -39,9 +39,8 @@ export default async function UsersPage() {
         </Link>
       </div>
 
-      <div className="overflow-hidden shadow-lg ring-1 ring-border sm:rounded-xl">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border">
+      <div className="overflow-x-auto shadow-lg ring-1 ring-border sm:rounded-xl">
+        <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted/50">
               <tr>
                 <th scope="col" className="py-4 pl-6 pr-3 text-left text-sm font-semibold text-foreground">
@@ -122,7 +121,6 @@ export default async function UsersPage() {
               )}
             </tbody>
           </table>
-        </div>
       </div>
     </div>
   )

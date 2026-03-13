@@ -12,7 +12,7 @@ export default async function EditProfessionalPage({ params }: { params: Promise
   
   const { data: profData } = await supabase
     .from('professionals')
-    .select('*, professional_clinics(clinic_id)')
+    .select('*, professional_clinics(clinic_id), professional_specialties(specialty_id)')
     .eq('id', id)
     .single()
     
@@ -20,7 +20,8 @@ export default async function EditProfessionalPage({ params }: { params: Promise
 
   const prof = {
     ...profData,
-    clinic_ids: profData.professional_clinics?.map((pc: any) => pc.clinic_id) || []
+    clinic_ids: profData.professional_clinics?.map((pc: any) => pc.clinic_id) || [],
+    specialty_ids: profData.professional_specialties?.map((ps: any) => ps.specialty_id) || []
   }
 
   const { data: specialtiesData } = await supabase.from('specialties').select('id, name, cbo').order('name')

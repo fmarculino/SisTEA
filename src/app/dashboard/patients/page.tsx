@@ -40,7 +40,7 @@ export default async function PatientsPage() {
                 Nome
               </th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
-                Responsável
+                Nome da Mãe
               </th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
                 Data Nascimento
@@ -63,8 +63,7 @@ export default async function PatientsPage() {
                   {patient.name}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                  {patient.guardian_name || '-'}
-                  {patient.guardian_phone && <div className="text-xs text-muted-foreground/80">{patient.guardian_phone}</div>}
+                  {patient.mother_name || '-'}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                   {new Date(patient.birth_date).toLocaleDateString('pt-BR')}

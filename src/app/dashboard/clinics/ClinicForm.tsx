@@ -6,6 +6,7 @@ import { clinicSchema, type ClinicFormData } from './schema'
 import { createClinicAction, updateClinicAction } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { formatCNPJ } from '@/lib/validation-utils'
 
 export function ClinicForm({ intialData, id }: { intialData?: Partial<ClinicFormData>; id?: string }) {
   const router = useRouter()
@@ -15,6 +16,7 @@ export function ClinicForm({ intialData, id }: { intialData?: Partial<ClinicForm
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<ClinicFormData>({
     resolver: zodResolver(clinicSchema) as any,
@@ -29,6 +31,12 @@ export function ClinicForm({ intialData, id }: { intialData?: Partial<ClinicForm
       active: intialData?.active ?? true,
     },
   })
+
+  // CNPJ Mask handler
+  const handleCNPJChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCNPJ(e.target.value)
+    setValue('cnpj', formatted, { shouldValidate: true })
+  }
 
   const onSubmit = async (data: ClinicFormData) => {
     setIsPending(true)
@@ -48,105 +56,116 @@ export function ClinicForm({ intialData, id }: { intialData?: Partial<ClinicForm
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl bg-card text-card-foreground p-6 rounded-lg shadow border">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-2xl bg-card text-card-foreground p-8 rounded-xl shadow-xl border border-border">
       {errorMsg && (
-        <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
+        <div className="bg-destructive/10 text-destructive p-4 rounded-lg text-sm mb-4 border border-destructive/20 animate-in fade-in slide-in-from-top-1">
           {errorMsg}
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-foreground">Nome Fantasia *</label>
+          <label className="block text-sm font-semibold text-foreground mb-1 uppercase tracking-tight">Nome Fantasia *</label>
           <input
             type="text"
             {...register('name')}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+            className="mt-1 block w-full rounded-lg border-input shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-2.5 border bg-background transition-all"
+            placeholder="Ex: Clínica Esperança"
           />
-          {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>}
+          {errors.name && <p className="mt-1 text-xs text-destructive font-bold">{errors.name.message}</p>}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-foreground">CNPJ</label>
-          <input
-            type="text"
-            {...register('cnpj')}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-foreground">CNES</label>
-          <input
-            type="text"
-            {...register('cnes')}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-foreground">Razão Social</label>
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-semibold text-foreground mb-1 uppercase tracking-tight">Razão Social *</label>
           <input
             type="text"
             {...register('corporate_name')}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+            className="mt-1 block w-full rounded-lg border-input shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-2.5 border bg-background transition-all"
+            placeholder="Ex: Clínica Esperança Ltda"
           />
+          {errors.corporate_name && <p className="mt-1 text-xs text-destructive font-bold">{errors.corporate_name.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-1 uppercase tracking-tight">CNPJ *</label>
+          <input
+            type="text"
+            {...register('cnpj')}
+            onChange={handleCNPJChange}
+            className="mt-1 block w-full rounded-lg border-input shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-2.5 border bg-background transition-all font-mono"
+            placeholder="00.000.000/0000-00"
+          />
+          {errors.cnpj && <p className="mt-1 text-xs text-destructive font-bold">{errors.cnpj.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-1 uppercase tracking-tight">CNES *</label>
+          <input
+            type="text"
+            {...register('cnes')}
+            className="mt-1 block w-full rounded-lg border-input shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-2.5 border bg-background transition-all font-mono"
+            placeholder="Ex: 1234567"
+          />
+          {errors.cnes && <p className="mt-1 text-xs text-destructive font-bold">{errors.cnes.message}</p>}
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-foreground">Endereço</label>
+          <label className="block text-sm font-semibold text-foreground mb-1 uppercase tracking-tight">Endereço</label>
           <input
             type="text"
             {...register('address')}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+            className="mt-1 block w-full rounded-lg border-input shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-2.5 border bg-background transition-all"
+            placeholder="Rua, número, bairro..."
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground">Telefone</label>
+          <label className="block text-sm font-semibold text-foreground mb-1 uppercase tracking-tight">Telefone</label>
           <input
             type="text"
             {...register('phone')}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+            className="mt-1 block w-full rounded-lg border-input shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-2.5 border bg-background transition-all"
+            placeholder="(00) 00000-0000"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground">E-mail</label>
+          <label className="block text-sm font-semibold text-foreground mb-1 uppercase tracking-tight">E-mail</label>
           <input
             type="email"
             {...register('email')}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+            className="mt-1 block w-full rounded-lg border-input shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-2.5 border bg-background transition-all"
+            placeholder="contato@clinica.com"
           />
-          {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email.message}</p>}
+          {errors.email && <p className="mt-1 text-xs text-destructive font-bold">{errors.email.message}</p>}
         </div>
 
         <div className="sm:col-span-2">
-          <label className="flex items-center space-x-2">
+          <label className="flex items-center space-x-3 group cursor-pointer">
             <input
               type="checkbox"
               {...register('active')}
-              className="rounded border-input text-primary focus:ring-ring bg-background"
+              className="w-5 h-5 rounded border-input text-primary focus:ring-primary/20 bg-background transition-all"
             />
-            <span className="text-sm font-medium text-foreground">Ativo</span>
+            <span className="text-sm font-bold text-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Clínica Ativa</span>
           </label>
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3 border-t border-border pt-4">
+      <div className="flex justify-end space-x-4 border-t border-border pt-6 mt-8">
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground"
+          className="rounded-lg border border-input bg-background px-6 py-2.5 text-sm font-bold text-muted-foreground shadow-sm hover:bg-accent hover:text-accent-foreground transition-all active:scale-95"
         >
-          Cancelar
+          CANCELAR
         </button>
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex justify-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
+          className="inline-flex justify-center rounded-lg border border-transparent bg-primary px-8 py-2.5 text-sm font-bold text-primary-foreground shadow-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 disabled:opacity-50 transition-all active:scale-95"
         >
-          {isPending ? 'Salvando...' : 'Salvar'}
+          {isPending ? 'SALVANDO...' : 'SALVAR CLÍNICA'}
         </button>
       </div>
     </form>

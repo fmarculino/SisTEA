@@ -1,8 +1,9 @@
 import { z } from 'zod'
 
 export const specialtySchema = z.object({
-  name: z.string().min(1, 'Nome da especialidade é obrigatória'),
+  name: z.string().min(1, 'Nome da especialidade é obrigatório'),
   cbo: z.string().min(1, 'Código CBO é obrigatório'),
+  active: z.boolean().default(true),
 })
 
 export type SpecialtyFormData = z.infer<typeof specialtySchema>

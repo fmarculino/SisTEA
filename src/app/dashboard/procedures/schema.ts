@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const procedureSchema = z.object({
-  code: z.string().regex(/^\d{2}\.\d{2}\.\d{2}\.\d{3}-\d{1}$/, 'Código SUS inválido (00.00.00.000-0)'),
+  code: z.string().min(1, 'Código é obrigatório').regex(/^\d{2}\.\d{2}\.\d{2}\.\d{3}-\d{1}$/, 'Código SUS inválido (00.00.00.000-0)'),
   name: z.string().min(1, 'Nome do procedimento é obrigatório'),
   description: z.string().optional().nullable(),
   valor_sus: z.coerce.number().min(0, 'Valor SUS deve ser positivo'),

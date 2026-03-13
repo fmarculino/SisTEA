@@ -16,7 +16,7 @@ const navigation = [
   { name: 'Usuários', href: '/dashboard/users', icon: Shield, roles: ['SMS_ADMIN'] },
 ]
 
-export function Sidebar({ role }: { role: string }) {
+export function Sidebar({ role, onLinkClick }: { role: string; onLinkClick?: () => void }) {
   const pathname = usePathname()
 
   const filteredNavigation = navigation.filter((item) =>
@@ -24,7 +24,7 @@ export function Sidebar({ role }: { role: string }) {
   )
 
   return (
-    <div className="flex h-full w-64 flex-col overflow-y-auto border-r border-border bg-background">
+    <div className="flex h-full w-full flex-col overflow-y-auto border-r border-border bg-background">
       <div className="flex h-16 shrink-0 items-center px-6 border-b border-border">
         <Activity className="h-8 w-8 text-primary" />
         <span className="ml-3 text-xl font-bold text-foreground">SisTEA</span>
@@ -36,6 +36,7 @@ export function Sidebar({ role }: { role: string }) {
             <Link
               key={item.name}
               href={item.href}
+              onClick={onLinkClick}
               className={`
                 group flex items-center px-2 py-2 text-sm font-medium rounded-md
                 ${
