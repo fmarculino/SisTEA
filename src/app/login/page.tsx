@@ -1,11 +1,13 @@
 import { login } from './actions'
 import { Activity } from 'lucide-react'
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string }
+  searchParams: Promise<{ error?: string }>
 }) {
+  const { error } = await searchParams
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 bg-card p-8 rounded-xl shadow-lg border border-border">
@@ -61,9 +63,9 @@ export default function LoginPage({
             </div>
           </div>
 
-          {searchParams?.error && (
+          {error && (
             <div className="text-sm text-destructive text-center font-medium bg-destructive/10 p-2 rounded-md">
-              {searchParams.error}
+              {error}
             </div>
           )}
 

@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 export default async function EditSpecialtyPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
   const { id } = await params
   const supabase = await createClient()

@@ -5,15 +5,17 @@ import { FileText } from 'lucide-react'
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: { month?: string }
+  searchParams: Promise<{ month?: string }>
 }) {
+  const { month } = await searchParams
+
   const profile = await getUserProfile()
   const supabase = await createClient()
 
   // Default to current YYYY-MM
   const date = new Date()
   const currentMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-  const selectedMonth = searchParams?.month || currentMonth
+  const selectedMonth = month || currentMonth
 
   // Parse first and last day of selected month
   const [yearStr, monthStr] = selectedMonth.split('-')
