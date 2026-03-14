@@ -30,9 +30,9 @@ export default async function EditProfessionalPage({ params }: { params: Promise
   if (!profData) notFound()
 
   const prof = {
-    ...profData,
-    clinic_ids: profData.professional_clinics?.map((pc: any) => pc.clinic_id) || [],
-    specialty_ids: profData.professional_specialties?.map((ps: any) => ps.specialty_id) || []
+    ...(profData as any),
+    clinic_ids: (profData as any).professional_clinics?.map((pc: any) => pc.clinic_id) || [],
+    specialty_ids: (profData as any).professional_specialties?.map((ps: any) => ps.specialty_id) || []
   }
 
   const { data: specialtiesData } = await supabase.from('specialties').select('id, name, cbo').order('name')
