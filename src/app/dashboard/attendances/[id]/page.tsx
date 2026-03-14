@@ -41,7 +41,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
       </div>
       <AttendanceForm 
         id={attendance.id}
-        intialData={attendance}
+        initialData={attendance}
         patients={patients || []}
         professionals={professionals || []}
         procedures={procedures || []}

@@ -17,13 +17,13 @@ const UF_OPTIONS = [
 ]
 
 export function PatientForm({ 
-  intialData, 
+  initialData, 
   id, 
   clinics, 
   userRole, 
   userClinicId 
 }: { 
-  intialData?: Partial<PatientFormData>; 
+  initialData?: Partial<PatientFormData>; 
   id?: string;
   clinics: ClinicOption[];
   userRole: string;
@@ -34,7 +34,7 @@ export function PatientForm({
   const [isPending, setIsPending] = useState(false)
 
   const defaultClinicId = userRole === 'SMS_ADMIN' 
-    ? (intialData?.clinic_id || '') 
+    ? (initialData?.clinic_id || '') 
     : (userClinicId || '')
 
   const {
@@ -46,19 +46,19 @@ export function PatientForm({
   } = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema) as any,
     defaultValues: {
-      name: intialData?.name || '',
-      birth_date: intialData?.birth_date || '',
-      cns_patient: intialData?.cns_patient || '',
-      mother_name: intialData?.mother_name || '',
-      gender: (intialData?.gender as any) || 'Não Informado',
-      phone: intialData?.phone || '',
-      address: intialData?.address || '',
-      race_color: (intialData?.race_color as any) || 'Não Informado',
-      cep: intialData?.cep || '',
-      city: intialData?.city || '',
-      state: intialData?.state || '',
-      medical_record_number: intialData?.medical_record_number || '',
-      active: intialData?.active ?? true,
+      name: initialData?.name || '',
+      birth_date: initialData?.birth_date || '',
+      cns_patient: initialData?.cns_patient || '',
+      mother_name: initialData?.mother_name || '',
+      gender: (initialData?.gender as any) || 'Não Informado',
+      phone: initialData?.phone || '',
+      address: initialData?.address || '',
+      race_color: (initialData?.race_color as any) || 'Não Informado',
+      cep: initialData?.cep || '',
+      city: initialData?.city || '',
+      state: initialData?.state || '',
+      medical_record_number: initialData?.medical_record_number || '',
+      active: initialData?.active ?? true,
       clinic_id: defaultClinicId,
     },
   })

@@ -28,7 +28,7 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
       </div>
       <PatientForm 
         id={patient.id}
-        intialData={patient}
+        initialData={patient}
         clinics={clinics} 
         userRole={profile.role} 
         userClinicId={profile.clinic_id} 

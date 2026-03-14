@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCNPJ } from '@/lib/validation-utils'
 
-export function ClinicForm({ intialData, id }: { intialData?: Partial<ClinicFormData>; id?: string }) {
+export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFormData>; id?: string }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
@@ -21,14 +21,14 @@ export function ClinicForm({ intialData, id }: { intialData?: Partial<ClinicForm
   } = useForm<ClinicFormData>({
     resolver: zodResolver(clinicSchema) as any,
     defaultValues: {
-      name: intialData?.name || '',
-      cnpj: intialData?.cnpj || '',
-      cnes: intialData?.cnes || '',
-      corporate_name: intialData?.corporate_name || '',
-      address: intialData?.address || '',
-      phone: intialData?.phone || '',
-      email: intialData?.email || '',
-      active: intialData?.active ?? true,
+      name: initialData?.name || '',
+      cnpj: initialData?.cnpj || '',
+      cnes: initialData?.cnes || '',
+      corporate_name: initialData?.corporate_name || '',
+      address: initialData?.address || '',
+      phone: initialData?.phone || '',
+      email: initialData?.email || '',
+      active: initialData?.active ?? true,
     },
   })
 

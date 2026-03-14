@@ -18,7 +18,7 @@ export default async function EditClinicPage({ params }: { params: Promise<{ id:
           Editar Clínica
         </h2>
       </div>
-      <ClinicForm id={clinic.id} intialData={clinic} />
+      <ClinicForm id={clinic.id} initialData={clinic} />
     </div>
   )
 }
