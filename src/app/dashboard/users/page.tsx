@@ -10,7 +10,7 @@ import { DataTableFilters } from '@/components/ui/DataTableFilters'
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string }
+  searchParams: { q?: string; status?: string; clinic?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
@@ -20,6 +20,13 @@ export default async function UsersPage({
   }
 
   const supabase = await createClient()
+
+  // Fetch clinics for filter
+  const { data: clinicsList } = await supabase
+    .from('clinics')
+    .select('id, name')
+    .eq('active', true)
+    .order('name')
 
   let query = supabase.from('users').select('*, clinics(name)')
 
@@ -31,6 +38,11 @@ export default async function UsersPage({
   // Apply Status Filter
   if (queryParams.status && queryParams.status !== 'all') {
     query = query.eq('active', queryParams.status === 'true')
+  }
+
+  // Apply Clinic Filter
+  if (queryParams.clinic && queryParams.clinic !== 'all') {
+    query = query.eq('clinic_id', queryParams.clinic)
   }
 
   const { data: users } = await query.order('email')
@@ -55,7 +67,16 @@ export default async function UsersPage({
         </Link>
       </div>
 
-      <DataTableFilters placeholder="Pesquisar por e-mail..." />
+      <DataTableFilters 
+        placeholder="Pesquisar por e-mail..." 
+        extraFilters={[
+          {
+            paramName: 'clinic',
+            placeholder: 'Todas as Clínicas',
+            options: (clinicsList || []).map(c => ({ value: c.id, label: c.name }))
+          }
+        ]}
+      />
 
       <div className="overflow-x-auto shadow-lg ring-1 ring-border sm:rounded-xl">
         <table className="min-w-full divide-y divide-border">

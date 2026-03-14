@@ -35,67 +35,87 @@ export default async function ClinicsPage({
   const { data: clinics } = await query.order('name')
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight text-primary">
-            Clínicas
+          <h2 className="text-3xl font-black leading-tight text-foreground tracking-tight sm:text-4xl">
+            Clínicas <span className="text-primary tracking-tighter">Credenciadas</span>
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie as clínicas credenciadas no sistema.
+          <p className="mt-2 text-base text-muted-foreground font-medium max-w-xl">
+            Painel administrativo para gestão de clínicas parceiras e regulação de credenciamentos.
           </p>
         </div>
         <Link
           href="/dashboard/clinics/new"
-          className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all active:scale-95"
+          className="inline-flex items-center rounded-2xl bg-primary px-6 py-3.5 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary/10 transition-all active:scale-95 group uppercase tracking-widest"
         >
-          <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+          <Plus className="-ml-1 mr-2 h-5 w-5 stroke-[3]" aria-hidden="true" />
           Nova Clínica
         </Link>
       </div>
 
-      <DataTableFilters placeholder="Pesquisar por nome ou CNPJ..." />
+      <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
+        <DataTableFilters placeholder="Pesquisar por nome, CNPJ ou identificador..." />
+      </div>
 
-      <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
-        <table className="min-w-full divide-y divide-border">
-          <thead className="bg-muted">
+      <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
+        <table className="min-w-full divide-y divide-border/30">
+          <thead className="bg-muted/50">
             <tr>
-              <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground sm:pl-6 uppercase tracking-wider">
-                Nome Fantasia
+              <th scope="col" className="py-5 pl-8 pr-3 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                Nome / Razão Social
               </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground uppercase tracking-wider">
-                CNPJ
+              <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                CNPJ / Identificação
               </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground uppercase tracking-wider">
-                Status
+              <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                Status Operacional
               </th>
-              <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+              <th scope="col" className="relative py-5 pl-3 pr-8">
                 <span className="sr-only">Ações</span>
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border bg-card">
+          <tbody className="divide-y divide-border/20">
             {clinics?.map((clinic) => (
-              <tr key={clinic.id} className={!clinic.active ? 'opacity-50 grayscale-[0.5]' : ''}>
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
-                  {clinic.name}
+              <tr 
+                key={clinic.id} 
+                className={`transition-colors group/row hover:bg-muted/30 ${!clinic.active ? 'opacity-60 grayscale-[0.3]' : ''}`}
+              >
+                <td className="whitespace-nowrap py-6 pl-8 pr-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-foreground group-hover/row:text-primary transition-colors">
+                      {clinic.name}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
+                      {clinic.corporate_name || 'Razão Social não informada'}
+                    </span>
+                  </div>
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground font-mono">{clinic.cnpj || '-'}</td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm">
+                <td className="whitespace-nowrap px-3 py-6">
+                  <span className="text-sm font-mono tracking-tight text-muted-foreground">
+                    {clinic.cnpj || '-'}
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-3 py-6">
                   {clinic.active ? (
-                    <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-bold text-green-500 border border-green-500/20">
-                      <CheckCircle className="w-3 h-3 mr-1" /> ATIVO
+                    <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                      <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Ativo
                     </span>
                   ) : (
-                    <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground border border-border">
-                      <XCircle className="w-3 h-3 mr-1" /> INATIVO
+                    <span className="inline-flex items-center rounded-xl bg-muted px-3 py-1.5 text-[10px] font-black text-muted-foreground border border-border uppercase tracking-widest leading-none">
+                      <XCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Inativo
                     </span>
                   )}
                 </td>
-                <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                  <div className="flex items-center justify-end space-x-2">
-                    <Link href={`/dashboard/clinics/${clinic.id}`} className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors">
-                      <Edit2 className="h-4 w-4" />
+                <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right text-sm font-medium">
+                  <div className="flex items-center justify-end space-x-3">
+                    <Link 
+                      href={`/dashboard/clinics/${clinic.id}`} 
+                      className="p-2.5 rounded-xl text-primary bg-primary/5 hover:bg-primary/20 transition-all border border-primary/10 shadow-sm"
+                      title="Editar clínica"
+                    >
+                      <Edit2 className="h-4 w-4 stroke-[2.5]" />
                     </Link>
                     <ClinicActions id={clinic.id} active={clinic.active} name={clinic.name} />
                   </div>
@@ -104,8 +124,16 @@ export default async function ClinicsPage({
             ))}
             {(!clinics || clinics.length === 0) && (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-sm text-muted-foreground uppercase tracking-widest font-bold">
-                  Nenhuma clínica encontrada.
+                <td colSpan={4} className="py-20 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-3">
+                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                      <Plus className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-foreground">Nenhuma clínica encontrada</h3>
+                      <p className="text-sm text-muted-foreground">Tente ajustar seus filtros de pesquisa.</p>
+                    </div>
+                  </div>
                 </td>
               </tr>
             )}

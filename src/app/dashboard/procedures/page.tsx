@@ -10,7 +10,7 @@ import { formatCurrency } from '@/utils/format'
 export default async function ProceduresPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string }
+  searchParams: { q?: string; status?: string; specialty?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
@@ -20,7 +20,30 @@ export default async function ProceduresPage({
 
   const supabase = await createClient()
 
-  let query = supabase.from('procedures').select('*, specialties:procedure_specialties(specialties(name))')
+  // Fetch specialties for filter
+  const { data: specialtiesList } = await supabase
+    .from('specialties')
+    .select('id, name')
+    .eq('active', true)
+    .order('name')
+
+  let selectStr = `
+    *,
+    specialties:procedure_specialties(
+      specialties(id, name)
+    )
+  `
+
+  if (queryParams.specialty && queryParams.specialty !== 'all') {
+    selectStr = `
+      *,
+      specialties:procedure_specialties!inner(
+        specialties(id, name)
+      )
+    `
+  }
+
+  let query = supabase.from('procedures').select(selectStr)
 
   // Apply Search Filter
   if (queryParams.q) {
@@ -30,6 +53,11 @@ export default async function ProceduresPage({
   // Apply Status Filter
   if (queryParams.status && queryParams.status !== 'all') {
     query = query.eq('active', queryParams.status === 'true')
+  }
+
+  // Apply Specialty Filter
+  if (queryParams.specialty && queryParams.specialty !== 'all') {
+    query = query.eq('procedure_specialties.specialty_id', queryParams.specialty)
   }
 
   const { data: procedures } = await query.order('name')
@@ -54,7 +82,16 @@ export default async function ProceduresPage({
         </Link>
       </div>
 
-      <DataTableFilters placeholder="Pesquisar por nome ou código..." />
+      <DataTableFilters 
+        placeholder="Pesquisar por nome ou código..." 
+        extraFilters={[
+          {
+            paramName: 'specialty',
+            placeholder: 'Todas Ocupações',
+            options: (specialtiesList || []).map(s => ({ value: s.id, label: s.name }))
+          }
+        ]}
+      />
 
       <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
         <table className="min-w-full divide-y divide-border">
@@ -87,7 +124,7 @@ export default async function ProceduresPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-card">
-            {procedures?.map((procedure) => (
+            {(procedures as any[])?.map((procedure) => (
               <tr key={procedure.id}>
                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
                   {procedure.code}

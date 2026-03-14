@@ -63,64 +63,91 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="overflow-hidden rounded-lg bg-card border border-border shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Activity className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+        {/* Atendimentos Card */}
+        <div className="bento-card p-6 relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-primary/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
+              <Activity className="h-6 w-6 text-primary" />
             </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="truncate text-sm font-medium text-muted-foreground">Atendimentos Realizados (Mês)</dt>
-                <dd className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{totalAttendances}</dd>
-              </dl>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/5 px-2 py-0.5 rounded-full">Atividade</span>
             </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground mb-1">Atendimentos (Mês)</p>
+            <h3 className="text-3xl font-heading font-bold text-foreground">
+              {totalAttendances}
+            </h3>
+          </div>
+          {/* Subtle background decoration */}
+          <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+            <Activity className="h-24 w-24 text-primary" />
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-lg bg-card border border-border shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <DollarSign className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+        {/* Faturamento Card */}
+        <div className="bento-card p-6 relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-emerald-500/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
+              <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="truncate text-sm font-medium text-muted-foreground">
-                  {profile?.role === 'SMS_ADMIN' ? 'Valor Apurado (Global)' : 'Faturamento Estimado'}
-                </dt>
-                <dd className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
-                  {formatCurrency(totalValue)}
-                </dd>
-              </dl>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-500/5 px-2 py-0.5 rounded-full">Monetário</span>
             </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground mb-1">
+              {profile?.role === 'SMS_ADMIN' ? 'Valor Apurado' : 'Faturamento Est.'}
+            </p>
+            <h3 className="text-3xl font-heading font-bold text-foreground">
+              {formatCurrency(totalValue)}
+            </h3>
+          </div>
+          <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+            <DollarSign className="h-24 w-24 text-emerald-600" />
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-lg bg-card border border-border shadow p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Users className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+        {/* Pacientes Card */}
+        <div className="bento-card p-6 relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-blue-500/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
+              <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="truncate text-sm font-medium text-muted-foreground">Pacientes Vinculados</dt>
-                <dd className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{totalPatients}</dd>
-              </dl>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider bg-blue-500/5 px-2 py-0.5 rounded-full">Pacientes</span>
             </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground mb-1">Pacientes Vinculados</p>
+            <h3 className="text-3xl font-heading font-bold text-foreground">
+              {totalPatients}
+            </h3>
+          </div>
+          <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+            <Users className="h-24 w-24 text-blue-600" />
           </div>
         </div>
 
+        {/* Clínicas Admin Card */}
         {profile?.role === 'SMS_ADMIN' && (
-          <div className="overflow-hidden rounded-lg bg-card border border-border shadow p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Building className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+          <div className="bento-card p-6 relative overflow-hidden group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-amber-500/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                <Building className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="truncate text-sm font-medium text-muted-foreground">Clínicas Ativas</dt>
-                  <dd className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{totalClinicsActive}</dd>
-                </dl>
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-500/5 px-2 py-0.5 rounded-full">Gestão</span>
               </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Clínicas Ativas</p>
+              <h3 className="text-3xl font-heading font-bold text-foreground">
+                {totalClinicsActive}
+              </h3>
+            </div>
+            <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+              <Building className="h-24 w-24 text-amber-600" />
             </div>
           </div>
         )}

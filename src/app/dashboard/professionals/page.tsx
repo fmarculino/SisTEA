@@ -78,104 +78,134 @@ export default async function ProfessionalsPage({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight text-primary">
-            Profissionais
+          <h2 className="text-3xl font-black leading-tight text-foreground tracking-tight sm:text-4xl">
+            Corpo <span className="text-primary tracking-tighter">Clínico</span>
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie os profissionais da saúde credenciados no sistema SisTEA.
+          <p className="mt-2 text-base text-muted-foreground font-medium max-w-xl">
+            Gestão estratégica de profissionais, especialidades e alocações em clínicas credenciadas.
           </p>
         </div>
         <Link
           href="/dashboard/professionals/new"
-          className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all active:scale-95"
+          className="inline-flex items-center rounded-2xl bg-primary px-6 py-3.5 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary/10 transition-all active:scale-95 group uppercase tracking-widest"
         >
-          <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+          <Plus className="-ml-1 mr-2 h-5 w-5 stroke-[3]" aria-hidden="true" />
           Novo Profissional
         </Link>
       </div>
 
-      <DataTableFilters 
-        placeholder="Pesquisar por nome, CNS ou CPF..." 
-        extraFilters={extraFilters}
-      />
+      <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
+        <DataTableFilters 
+          placeholder="Pesquisar por nome, CNS ou CPF..." 
+          extraFilters={extraFilters}
+        />
+      </div>
 
-      <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
-        <table className="min-w-full divide-y divide-border">
-          <thead className="bg-muted">
-            <tr>
-              <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground sm:pl-6 uppercase tracking-wider">
-                Profissional / Documentos
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground uppercase tracking-wider">
-                Especialidade
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground uppercase tracking-wider">
-                Clínica(s)
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground uppercase tracking-wider">
-                Status
-              </th>
-              <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                <span className="sr-only">Ações</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border bg-card">
-            {(professionals as any[])?.map((prof: any) => (
-              <tr key={prof.id} className={!prof.active ? 'opacity-50 grayscale-[0.5]' : ''}>
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
-                  <div className="font-bold">{prof.name}</div>
-                  <div className="text-[11px] text-muted-foreground mt-1 flex flex-col space-y-0.5 font-mono">
-                    {prof.cpf && <span>CPF: {prof.cpf}</span>}
-                    {prof.cns && <span>CNS: {prof.cns}</span>}
-                    {prof.document_type && <span>{prof.document_type}: {prof.document_number}</span>}
-                  </div>
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground italic">
-                  <div className="flex flex-wrap gap-1">
-                    {/* @ts-ignore - many-to-many join */}
-                    {prof.professional_specialties?.map((ps: any, idx: number) => (
-                      <span key={idx} className="block">
-                        {ps.specialties?.name}
-                        {idx < prof.professional_specialties.length - 1 ? ',' : ''}
-                      </span>
-                    )) || '-'}
-                  </div>
-                </td>
-                <td className="px-3 py-4 text-sm text-muted-foreground max-w-xs transition-all hover:max-w-none hover:whitespace-normal">
-                  <div className="flex flex-wrap gap-1">
-                    {/* @ts-ignore - many-to-many join */}
-                    {prof.professional_clinics?.map((pc: any, idx: number) => (
-                      <span key={idx} className="inline-flex items-center rounded-sm bg-accent px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground border border-border">
-                        {pc.clinics?.name}
-                      </span>
-                    )) || '-'}
-                  </div>
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${prof.active ? 'bg-green-500/10 text-green-500 ring-green-600/20 uppercase' : 'bg-muted text-muted-foreground ring-border uppercase'}`}>
-                    {prof.active ? 'Ativo' : 'Inativo'}
-                  </span>
-                </td>
-                <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                  <Link href={`/dashboard/professionals/${prof.id}`} className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors inline-block">
-                    <Edit2 className="h-4 w-4" />
-                  </Link>
-                </td>
-              </tr>
-            ))}
-            {(!professionals || (professionals as any[]).length === 0) && (
+      <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border/30">
+            <thead className="bg-muted/50">
               <tr>
-                <td colSpan={5} className="py-8 text-center text-sm text-muted-foreground uppercase tracking-widest font-bold">
-                  Nenhum profissional encontrado.
-                </td>
+                <th scope="col" className="py-5 pl-8 pr-3 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Profissional / Documentos
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Especialidade
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Clínica(s)
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Status
+                </th>
+                <th scope="col" className="relative py-5 pl-3 pr-8">
+                  <span className="sr-only">Ações</span>
+                </th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border/20">
+              {(professionals as any[])?.map((prof: any) => (
+                <tr 
+                  key={prof.id} 
+                  className={`transition-colors group/row hover:bg-muted/30 ${!prof.active ? 'opacity-60 grayscale-[0.3]' : ''}`}
+                >
+                  <td className="whitespace-nowrap py-6 pl-8 pr-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-foreground group-hover/row:text-primary transition-colors">
+                        {prof.name}
+                      </span>
+                      <div className="text-[10px] text-muted-foreground mt-1.5 flex flex-col space-y-0.5 font-mono uppercase tracking-tight opacity-70">
+                        {prof.cpf && <span>CPF: {prof.cpf}</span>}
+                        {prof.cns && <span>CNS: {prof.cns}</span>}
+                        {prof.document_type && <span>{prof.document_type}: {prof.document_number}</span>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-6">
+                    <div className="flex flex-wrap gap-1.5">
+                      {/* @ts-ignore - many-to-many join */}
+                      {prof.professional_specialties?.map((ps: any, idx: number) => (
+                        <span key={idx} className="inline-flex items-center rounded-xl bg-primary/5 px-2.5 py-1 text-[10px] font-black text-primary border border-primary/10 uppercase tracking-tighter">
+                          {ps.specialties?.name}
+                        </span>
+                      )) || <span className="text-[10px] font-bold text-muted-foreground bg-muted p-1 px-2 rounded-lg opacity-40 uppercase tracking-widest">Nenhuma</span>}
+                    </div>
+                  </td>
+                  <td className="px-3 py-6">
+                    <div className="flex flex-wrap gap-1.5 max-w-xs">
+                      {/* @ts-ignore - many-to-many join */}
+                      {prof.professional_clinics?.map((pc: any, idx: number) => (
+                        <span key={idx} className="inline-flex items-center rounded-lg bg-muted px-2 py-1 text-[9px] font-bold text-muted-foreground border border-border uppercase tracking-tight">
+                          {pc.clinics?.name}
+                        </span>
+                      )) || <span className="text-[10px] font-bold text-muted-foreground bg-muted p-1 px-2 rounded-lg opacity-40 uppercase tracking-widest">Nenhuma</span>}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-6">
+                    {prof.active ? (
+                      <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                        Ativo
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-xl bg-muted px-3 py-1.5 text-[10px] font-black text-muted-foreground border border-border uppercase tracking-widest leading-none">
+                        Inativo
+                      </span>
+                    )}
+                  </td>
+                  <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end">
+                      <Link 
+                        href={`/dashboard/professionals/${prof.id}`} 
+                        className="p-2.5 rounded-xl text-primary bg-primary/5 hover:bg-primary/20 transition-all border border-primary/10 shadow-sm"
+                        title="Editar Profissional"
+                      >
+                        <Edit2 className="h-4 w-4 stroke-[2.5]" />
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {(!professionals || (professionals as any[]).length === 0) && (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                        <Plus className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground">Nenhum profissional encontrado</h3>
+                        <p className="text-sm text-muted-foreground">Tente ajustar seus filtros de pesquisa.</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

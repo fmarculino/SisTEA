@@ -130,82 +130,82 @@ export default async function AttendancesPage({
         placeholder="Pesquisar por paciente ou profissional..." 
         showStatus={false}
         extraFilters={extraFilters}
-      />
+      />      <div className="bento-card overflow-hidden">
+        <div className="overflow-x-auto overflow-y-hidden">
+          <table className="min-w-full divide-y divide-border/40">
+            <thead>
+              <tr className="bg-muted/30">
+                <th scope="col" className="py-4 pl-6 pr-3 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Data</th>
+                <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Paciente</th>
+                <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Profissional</th>
+                <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Procedimento</th>
+                {isAdmin && (
+                  <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Clínica</th>
+                )}
+                <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Sessões</th>
+                <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right pr-6">Valor</th>
+                <th scope="col" className="relative py-4 pl-3 pr-6">
+                  <span className="sr-only">Ações</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/30 bg-card">
+              {attendances?.map((att: any) => {
+                const sessionsCount = att.sessions?.length || 0
+                const doneSessions = att.sessions?.filter((s: any) => s.status === 'Realizada').length || 0
 
-      <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
-        <table className="min-w-full divide-y divide-border">
-          <thead className="bg-muted">
-            <tr>
-              <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground">Data</th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Paciente</th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Profissional</th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Procedimento</th>
-              {isAdmin && (
-                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Clínica</th>
-              )}
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Sessões</th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Valor (R$)</th>
-              <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                <span className="sr-only">Ações</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border bg-card">
-            {attendances?.map((att: any) => {
-              const sessionsCount = att.sessions?.length || 0
-              const doneSessions = att.sessions?.filter((s: any) => s.status === 'Realizada').length || 0
-
-              return (
-                <tr key={att.id}>
-                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground">
-                    {format(new Date(att.attendance_date), 'dd/MM/yyyy')}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                    {att.patient?.name || '-'}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                    {att.professional?.name || '-'}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                    {att.procedure?.name || '-'}
-                  </td>
-                  {isAdmin && (
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                      {att.clinic?.name || '-'}
+                return (
+                  <tr key={att.id} className="group hover:bg-muted/20 transition-colors duration-200">
+                    <td className="whitespace-nowrap py-5 pl-6 pr-3 text-sm font-semibold text-foreground">
+                      {format(new Date(att.attendance_date), 'dd/MM/yyyy')}
                     </td>
-                  )}
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                    <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-500/10 text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-600/20">
-                      {doneSessions} / {sessionsCount} realizadas
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                    {formatCurrency(att.value_applied)}
-                  </td>
-                  <td className="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/dashboard/attendances/${att.id}/edit`}
-                        className="text-primary hover:text-primary/80 transition-colors p-1"
-                        title="Editar Atendimento"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Link>
-                      <DeleteAttendanceButton id={att.id} />
-                    </div>
+                    <td className="whitespace-nowrap px-3 py-5 text-sm font-medium text-foreground/90 max-w-[200px] truncate">
+                      {att.patient?.name || '-'}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground group-hover:text-foreground transition-colors max-w-[150px] truncate">
+                      {att.professional?.name || '-'}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground truncate max-w-[150px]">
+                      {att.procedure?.name || '-'}
+                    </td>
+                    {isAdmin && (
+                      <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground max-w-[200px] truncate">
+                        {att.clinic?.name || '-'}
+                      </td>
+                    )}
+                    <td className="whitespace-nowrap px-3 py-5 text-sm">
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/5 text-primary border border-primary/10">
+                        {doneSessions} / {sessionsCount} <span className="ml-1 opacity-70">Sessões</span>
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-5 text-sm font-bold text-foreground text-right pr-6">
+                      {formatCurrency(att.value_applied)}
+                    </td>
+                    <td className="whitespace-nowrap py-5 pl-3 pr-6 text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/dashboard/attendances/${att.id}/edit`}
+                          className="text-muted-foreground hover:text-primary hover:bg-primary/10 p-2 rounded-lg transition-all"
+                          title="Editar Atendimento"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Link>
+                        <DeleteAttendanceButton id={att.id} />
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+              {(!attendances || attendances.length === 0) && (
+                <tr>
+                  <td colSpan={isAdmin ? 8 : 7} className="py-12 text-center text-sm text-muted-foreground italic">
+                    Nenhum atendimento registrado.
                   </td>
                 </tr>
-              )
-            })}
-            {(!attendances || attendances.length === 0) && (
-              <tr>
-                <td colSpan={isAdmin ? 8 : 7} className="py-4 text-center text-sm text-muted-foreground">
-                  Nenhum atendimento registrado.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
