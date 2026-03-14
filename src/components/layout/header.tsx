@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { ThemeToggle } from '@/components/theme-toggle'
 
-export function Header({ 
-  email, 
-  role, 
-  onMenuClick 
-}: { 
-  email: string; 
+export function Header({
+  email,
+  role,
+  onMenuClick
+}: {
+  email: string;
   role: string;
   onMenuClick?: () => void;
 }) {
@@ -36,10 +36,10 @@ export function Header({
           <h1 className="text-xl md:text-2xl font-black text-foreground tracking-tighter uppercase">
             Visão <span className="text-primary italic">Geral</span>
           </h1>
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-50 mt-1">Status do Sistema • Brasília</p>
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-50 mt-1">SMS-Secretaria Municipal de Saúde - Marabá</p>
         </div>
       </div>
-      
+
       <div className="flex items-center gap-4 md:gap-8">
         <div className="hidden md:flex flex-col text-right">
           <p className="font-black text-xs text-foreground uppercase tracking-widest leading-none mb-1.5">{email}</p>
@@ -49,7 +49,7 @@ export function Header({
             </span>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2 p-1.5 bg-muted/40 backdrop-blur-md rounded-2xl border border-border/30 shadow-sm">
           <ThemeToggle />
           <div className="w-[1px] h-6 bg-border/40 mx-1" />
