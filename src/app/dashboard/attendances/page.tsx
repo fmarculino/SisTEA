@@ -11,12 +11,66 @@ import { DataTableFilters } from '@/components/ui/DataTableFilters'
 export default async function AttendancesPage({
   searchParams,
 }: {
-  searchParams: { q?: string }
+  searchParams: { q?: string; professional?: string; procedure?: string; clinic?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
   const supabase = await createClient()
 
+  // Fetch filter options in parallel
+  const isAdmin = profile?.role === 'SMS_ADMIN'
+
+  const professionalQuery = supabase
+    .from('professionals')
+    .select('id, name')
+    .eq('active', true)
+    .order('name')
+
+  const procedureQuery = supabase
+    .from('procedures')
+    .select('id, name')
+    .eq('active', true)
+    .order('name')
+
+  const queries: PromiseLike<any>[] = [professionalQuery, procedureQuery]
+
+  if (isAdmin) {
+    const clinicQuery = supabase
+      .from('clinics')
+      .select('id, name')
+      .eq('active', true)
+      .order('name')
+    queries.push(clinicQuery)
+  }
+
+  const results = await Promise.all(queries)
+  const professionals = results[0].data || []
+  const procedures = results[1].data || []
+  const clinics = isAdmin ? (results[2]?.data || []) : []
+
+  // Build extra filters
+  const extraFilters: { paramName: string; placeholder: string; options: { value: string; label: string }[] }[] = [
+    {
+      paramName: 'professional',
+      placeholder: 'Todos Profissionais',
+      options: professionals.map((p: any) => ({ value: p.id, label: p.name })),
+    },
+    {
+      paramName: 'procedure',
+      placeholder: 'Todos Procedimentos',
+      options: procedures.map((p: any) => ({ value: p.id, label: p.name })),
+    },
+  ]
+
+  if (isAdmin) {
+    extraFilters.push({
+      paramName: 'clinic',
+      placeholder: 'Todas Clínicas',
+      options: clinics.map((c: any) => ({ value: c.id, label: c.name })),
+    })
+  }
+
+  // Build main query
   let query = supabase
     .from('attendances')
     .select(`
@@ -32,11 +86,18 @@ export default async function AttendancesPage({
 
   // Apply Search Filter
   if (queryParams.q) {
-    // Filter by patient name or professional name
-    // Since Supabase join filters are complex, we'll use a simpler approach if possible
-    // or filter on the client if the dataset is small. 
-    // But let's try Postgres path search if supported, otherwise just name.
     query = query.or(`patient.name.ilike.%${queryParams.q}%,professional.name.ilike.%${queryParams.q}%`)
+  }
+
+  // Apply dropdown filters
+  if (queryParams.professional && queryParams.professional !== 'all') {
+    query = query.eq('professional_id', queryParams.professional)
+  }
+  if (queryParams.procedure && queryParams.procedure !== 'all') {
+    query = query.eq('procedure_id', queryParams.procedure)
+  }
+  if (isAdmin && queryParams.clinic && queryParams.clinic !== 'all') {
+    query = query.eq('clinic_id', queryParams.clinic)
   }
 
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
@@ -67,7 +128,8 @@ export default async function AttendancesPage({
 
       <DataTableFilters 
         placeholder="Pesquisar por paciente ou profissional..." 
-        showStatus={false} 
+        showStatus={false}
+        extraFilters={extraFilters}
       />
 
       <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
@@ -78,7 +140,7 @@ export default async function AttendancesPage({
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Paciente</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Profissional</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Procedimento</th>
-              {profile?.role === 'SMS_ADMIN' && (
+              {isAdmin && (
                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Clínica</th>
               )}
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">Sessões</th>
@@ -107,7 +169,7 @@ export default async function AttendancesPage({
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                     {att.procedure?.name || '-'}
                   </td>
-                  {profile?.role === 'SMS_ADMIN' && (
+                  {isAdmin && (
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                       {att.clinic?.name || '-'}
                     </td>
@@ -137,7 +199,7 @@ export default async function AttendancesPage({
             })}
             {(!attendances || attendances.length === 0) && (
               <tr>
-                <td colSpan={8} className="py-4 text-center text-sm text-muted-foreground">
+                <td colSpan={isAdmin ? 8 : 7} className="py-4 text-center text-sm text-muted-foreground">
                   Nenhum atendimento registrado.
                 </td>
               </tr>

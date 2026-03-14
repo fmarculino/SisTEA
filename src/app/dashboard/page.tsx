@@ -22,8 +22,7 @@ export default async function DashboardPage() {
       supabase.from('attendances')
         .select('value_applied')
         .gte('attendance_date', firstDay)
-        .lte('attendance_date', lastDay)
-        .eq('status', 'present'),
+        .lte('attendance_date', lastDay),
       supabase.from('clinics').select('id', { count: 'exact' }).eq('active', true),
       supabase.from('patients').select('id', { count: 'exact' })
     ])
@@ -41,8 +40,7 @@ export default async function DashboardPage() {
           .select('value_applied')
           .eq('clinic_id', clinicId)
           .gte('attendance_date', firstDay)
-          .lte('attendance_date', lastDay)
-          .eq('status', 'present'),
+          .lte('attendance_date', lastDay),
         supabase.from('patients').select('id', { count: 'exact' }).eq('clinic_id', clinicId)
       ])
 

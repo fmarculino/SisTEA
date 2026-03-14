@@ -22,10 +22,10 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   // Fetch lookup data for selects
   let patientsQuery = supabase.from('patients').select('id, name, clinic_id').order('name')
   
-  // Use professional_clinics for many-to-many join
-  let profSelect = 'id, name, specialties(name), professional_clinics(clinic_id)'
+  // Use professional_clinics for many-to-many join, and professional_specialties for specialties
+  let profSelect = 'id, name, professional_specialties(specialties(name)), professional_clinics(clinic_id)'
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    profSelect = 'id, name, specialties(name), professional_clinics!inner(clinic_id)'
+    profSelect = 'id, name, professional_specialties(specialties(name)), professional_clinics!inner(clinic_id)'
   }
 
   let professionalsQuery = supabase
@@ -51,12 +51,17 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   ])
 
   // Mapeando dados dos profissionais para incluir o nome da especialidade
-  const professionals = (professionalsRaw as any[])?.map(p => ({
-    id: p.id,
-    name: p.name,
-    professional_clinics: p.professional_clinics,
-    specialty: (p.specialties as any)?.name || 'Sem especialidade'
-  }))
+  const professionals = (professionalsRaw as any[])?.map(p => {
+    const specialtyNames = (p.professional_specialties as any[])?.map(
+      (ps: any) => ps.specialties?.name
+    ).filter(Boolean)
+    return {
+      id: p.id,
+      name: p.name,
+      professional_clinics: p.professional_clinics,
+      specialty: specialtyNames?.length > 0 ? specialtyNames.join(', ') : 'Sem especialidade'
+    }
+  })
 
   // Mapeando dados dos procedimentos para as expectativas do formulário
   const mappedProcedures = procedures?.map(p => ({

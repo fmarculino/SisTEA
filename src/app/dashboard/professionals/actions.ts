@@ -16,11 +16,14 @@ export async function createProfessionalAction(data: ProfessionalFormData) {
 
   const { clinic_ids, specialty_ids, ...professionalData } = validatedFields.data
 
-  const { data: prof, error: profError } = await supabase.from('professionals').insert({
+  const profId = crypto.randomUUID()
+
+  const { error: profError } = await supabase.from('professionals').insert({
+    id: profId,
     ...professionalData,
     cpf: professionalData.cpf || null,
     email: professionalData.email || null,
-  }).select().single()
+  })
 
   if (profError) {
     if (profError.code === '23505') {
@@ -33,7 +36,7 @@ export async function createProfessionalAction(data: ProfessionalFormData) {
   // Insert clinic associations
   if (clinic_ids && clinic_ids.length > 0) {
     const associations = clinic_ids.map(clinic_id => ({
-      professional_id: prof.id,
+      professional_id: profId,
       clinic_id
     }))
     const { error: assocError } = await supabase.from('professional_clinics').insert(associations)
@@ -43,7 +46,7 @@ export async function createProfessionalAction(data: ProfessionalFormData) {
   // Insert specialty associations
   if (specialty_ids && specialty_ids.length > 0) {
     const associations = specialty_ids.map(specialty_id => ({
-      professional_id: prof.id,
+      professional_id: profId,
       specialty_id
     }))
     const { error: specError } = await supabase.from('professional_specialties').insert(associations)
