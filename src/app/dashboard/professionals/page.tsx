@@ -124,7 +124,7 @@ export default async function ProfessionalsPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-card">
-            {professionals?.map((prof) => (
+            {(professionals as any[])?.map((prof: any) => (
               <tr key={prof.id} className={!prof.active ? 'opacity-50 grayscale-[0.5]' : ''}>
                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
                   <div className="font-bold">{prof.name}</div>
@@ -167,7 +167,7 @@ export default async function ProfessionalsPage({
                 </td>
               </tr>
             ))}
-            {(!professionals || professionals.length === 0) && (
+            {(!professionals || (professionals as any[]).length === 0) && (
               <tr>
                 <td colSpan={5} className="py-8 text-center text-sm text-muted-foreground uppercase tracking-widest font-bold">
                   Nenhum profissional encontrado.
