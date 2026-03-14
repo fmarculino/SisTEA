@@ -77,7 +77,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
 
       <AttendanceForm
         id={id}
-        intialData={attendance}
+        initialData={attendance}
         patients={patients || []}
         professionals={professionals || []}
         procedures={mappedProcedures || []}
