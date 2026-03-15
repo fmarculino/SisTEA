@@ -14,7 +14,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardShell role={profile.role} email={profile.email || ''}>
+    <DashboardShell 
+      role={profile.role} 
+      email={profile.email || ''} 
+      clinicName={profile.clinic_name}
+    >
       {children}
     </DashboardShell>
   )

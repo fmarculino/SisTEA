@@ -16,11 +16,14 @@ export default async function NewPatientPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <div>
-        <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
-          Novo Paciente
+        <h2 className="text-3xl font-black leading-tight text-foreground tracking-tight sm:text-4xl">
+          Novo <span className="text-primary tracking-tighter">Paciente</span>
         </h2>
+        <p className="mt-2 text-base text-muted-foreground font-medium max-w-xl">
+          Cadastre um novo beneficiário no sistema. Certifique-se de vincular o paciente à clínica correta para acompanhamento.
+        </p>
       </div>
       <PatientForm 
         clinics={clinics} 

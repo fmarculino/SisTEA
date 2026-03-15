@@ -8,17 +8,17 @@ import { X } from 'lucide-react'
 export function DashboardShell({ 
   children, 
   role, 
-  email 
+  email,
+  clinicName
 }: { 
   children: React.ReactNode
   role: string
   email: string
+  clinicName?: string
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Assuming 'profile' is derived from 'role' and 'email' or passed down.
-  // For this change, I'll map 'role' and 'email' to a 'profile' object as used in the new snippet.
-  const profile = { role, email };
+  const profile = { role, email, clinicName };
 
   return (
     <div className="flex h-screen bg-background overflow-hidden relative">
@@ -44,6 +44,7 @@ export function DashboardShell({
         <Header 
           email={email} 
           role={role} 
+          clinicName={clinicName}
           onMenuClick={() => setSidebarOpen(true)} 
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 animate-in">

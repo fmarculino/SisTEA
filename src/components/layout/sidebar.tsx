@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity, Users, UserSquare2, Building2, Stethoscope, FileText, CalendarCheck, FileOutput, Shield } from 'lucide-react'
+import { Activity, Users, UserSquare2, Building2, Stethoscope, FileText, CalendarCheck, FileOutput, Shield, Lock } from 'lucide-react'
 import { AboutMenu } from './about-menu'
 
 const navigation = [
@@ -15,6 +15,7 @@ const navigation = [
   { name: 'Especialidades', href: '/dashboard/specialties', icon: FileText, roles: ['SMS_ADMIN'] },
   { name: 'Relatórios', href: '/dashboard/reports', icon: FileOutput, roles: ['SMS_ADMIN'] },
   { name: 'Usuários', href: '/dashboard/users', icon: Shield, roles: ['SMS_ADMIN'] },
+  { name: 'Segurança', href: '/auth/update-password', icon: Lock, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
 ]
 
 export function Sidebar({ role, onLinkClick }: { role: string; onLinkClick?: () => void }) {

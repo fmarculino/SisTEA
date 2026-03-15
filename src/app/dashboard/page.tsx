@@ -52,13 +52,13 @@ export default async function DashboardPage() {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-12 animate-in fade-in duration-700">
       <div>
-        <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
-          Dashboard
+        <h2 className="text-3xl font-black leading-tight text-foreground tracking-tight sm:text-4xl">
+          Painel de <span className="text-primary tracking-tighter">Controle</span>
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Visão geral do mês ({date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })})
+        <p className="mt-2 text-base text-muted-foreground font-medium max-w-xl italic">
+          Visão geral do mês de <span className="text-foreground font-bold capitalize">{date.toLocaleString('pt-BR', { month: 'long' })}</span> de <span className="text-foreground font-bold">{date.getFullYear()}</span>
         </p>
       </div>
 

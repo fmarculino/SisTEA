@@ -11,11 +11,17 @@ export async function getUserProfile() {
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('*')
+    .select('*, clinic:clinics(name)')
     .eq('id', auth.user.id)
     .single()
 
-  return { ...auth.user, role: profile.role, clinic_id: profile.clinic_id, active: profile.active }
+  return { 
+    ...auth.user, 
+    role: profile.role, 
+    clinic_id: profile.clinic_id, 
+    clinic_name: profile.clinic?.name,
+    active: profile.active 
+  }
 }
 
 export async function logout() {

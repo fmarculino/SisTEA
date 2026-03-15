@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import Link from 'next/link'
-import { Edit2, Shield, Building, UserPlus } from 'lucide-react'
+import { Edit2, Shield, Building, UserPlus, CheckCircle, XCircle } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import UserActions from './UserActions'
 
@@ -48,103 +48,118 @@ export default async function UsersPage({
   const { data: users } = await query.order('email')
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
-            Gestão de Usuários
+          <h2 className="text-3xl font-black leading-tight text-foreground tracking-tight sm:text-4xl">
+            Gestão de <span className="text-primary tracking-tighter">Usuários</span>
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Administre os usuários e permissões de acesso ao sistema.
+          <p className="mt-2 text-base text-muted-foreground font-medium max-w-xl">
+            Administre os usuários do sistema, defina níveis de acesso e vincule profissionais às suas clínicas.
           </p>
         </div>
         <Link
           href="/dashboard/users/new"
-          className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all"
+          className="inline-flex items-center rounded-2xl bg-primary px-6 py-3.5 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary/10 transition-all active:scale-95 group uppercase tracking-widest"
         >
-          <UserPlus className="-ml-0.5 mr-2 h-5 w-5" aria-hidden="true" />
+          <UserPlus className="-ml-1 mr-2 h-5 w-5 stroke-[3]" aria-hidden="true" />
           Novo Usuário
         </Link>
       </div>
 
-      <DataTableFilters 
-        placeholder="Pesquisar por e-mail..." 
-        extraFilters={[
-          {
-            paramName: 'clinic',
-            placeholder: 'Todas as Clínicas',
-            options: (clinicsList || []).map(c => ({ value: c.id, label: c.name }))
-          }
-        ]}
-      />
+      <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
+        <DataTableFilters 
+          placeholder="Pesquisar por e-mail..." 
+          extraFilters={[
+            {
+              paramName: 'clinic',
+              placeholder: 'Todas as Clínicas',
+              options: (clinicsList || []).map(c => ({ value: c.id, label: c.name }))
+            }
+          ]}
+        />
+      </div>
 
-      <div className="overflow-x-auto shadow-lg ring-1 ring-border sm:rounded-xl">
-        <table className="min-w-full divide-y divide-border">
+      <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border/30">
             <thead className="bg-muted/50">
               <tr>
-                <th scope="col" className="py-4 pl-6 pr-3 text-left text-sm font-semibold text-foreground">
-                  E-mail
+                <th scope="col" className="py-5 pl-8 pr-3 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Identificação / Perfil
                 </th>
-                <th scope="col" className="px-3 py-4 text-left text-sm font-semibold text-foreground">
-                  Perfil
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Vínculo
                 </th>
-                <th scope="col" className="px-3 py-4 text-left text-sm font-semibold text-foreground">
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                   Status
                 </th>
-                <th scope="col" className="px-3 py-4 text-left text-sm font-semibold text-foreground">
-                  Clínica
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Membro desde
                 </th>
-                <th scope="col" className="px-3 py-4 text-left text-sm font-semibold text-foreground">
-                  Data de Criação
-                </th>
-                <th scope="col" className="relative py-4 pl-3 pr-6 text-right">
+                <th scope="col" className="relative py-5 pl-3 pr-8">
                   <span className="sr-only">Ações</span>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border bg-card">
+            <tbody className="divide-y divide-border/20">
               {users?.map((user) => (
-                <tr key={user.id} className={`hover:bg-muted/30 transition-colors ${!user.active ? 'opacity-60 bg-muted/10' : ''}`}>
-                  <td className="whitespace-nowrap py-4 pl-6 pr-3 text-sm font-medium text-foreground">
-                    {user.email}
+                <tr 
+                  key={user.id} 
+                  className={`transition-colors group/row hover:bg-muted/30 ${!user.active ? 'opacity-60 grayscale-[0.3]' : ''}`}
+                >
+                  <td className="whitespace-nowrap py-6 pl-8 pr-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-foreground">
+                        {user.email}
+                      </span>
+                      <div className="flex items-center mt-1">
+                        {user.role === 'SMS_ADMIN' ? (
+                          <span className="inline-flex items-center text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest">
+                            <Shield className="mr-1 h-3 w-3 stroke-[3]" /> Administrador Global
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                            <Building className="mr-1 h-3 w-3 stroke-[3]" /> Usuário de Clínica
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
-                      user.role === 'SMS_ADMIN' 
-                        ? 'bg-purple-500/10 text-purple-700 border-purple-200 dark:border-purple-900' 
-                        : 'bg-blue-500/10 text-blue-700 border-blue-200 dark:border-blue-900'
-                    }`}>
-                      <Shield className="mr-1 h-3 w-3" />
-                      {user.role === 'SMS_ADMIN' ? 'Admin SMS' : 'Usuário Clínica'}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
-                      user.active 
-                        ? 'bg-green-500/10 text-green-700 border-green-200 dark:border-green-900' 
-                        : 'bg-red-500/10 text-red-700 border-red-200 dark:border-red-900'
-                    }`}>
-                      {user.active ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
+                  <td className="whitespace-nowrap px-3 py-6">
                     {user.role === 'CLINIC_USER' ? (
-                      <div className="flex items-center">
-                        <Building className="mr-1.5 h-4 w-4 text-muted-foreground/60" />
+                      <span className="inline-flex items-center text-xs font-bold text-foreground/70 bg-secondary/30 px-3 py-1.5 rounded-xl border border-border/50">
                         {/* @ts-ignore */}
                         {user.clinics?.name || 'Não vinculada'}
-                      </div>
+                      </span>
                     ) : (
-                      <span className="text-xs uppercase tracking-widest text-muted-foreground/40 italic">Global</span>
+                      <span className="text-[10px] uppercase font-black text-muted-foreground/40 italic tracking-widest">Global</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                    {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                  <td className="whitespace-nowrap px-3 py-6">
+                    {user.active ? (
+                      <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Ativo
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-xl bg-muted px-3 py-1.5 text-[10px] font-black text-muted-foreground border border-border uppercase tracking-widest leading-none">
+                        <XCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Inativo
+                      </span>
+                    )}
                   </td>
-                  <td className="relative whitespace-nowrap py-4 pl-3 pr-6 text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-1">
-                      <Link href={`/dashboard/users/${user.id}/edit`} className="text-primary hover:text-primary/80 transition-colors p-2 hover:bg-primary/10 rounded-full">
-                        <Edit2 className="h-4 w-4" />
+                  <td className="whitespace-nowrap px-3 py-6">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                    </span>
+                  </td>
+                  <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end space-x-3">
+                      <Link 
+                        href={`/dashboard/users/${user.id}/edit`} 
+                        className="p-2.5 rounded-xl text-primary bg-primary/5 hover:bg-primary/20 transition-all border border-primary/10 shadow-sm"
+                        title="Editar Usuário"
+                      >
+                        <Edit2 className="h-4 w-4 stroke-[2.5]" />
                       </Link>
                       <UserActions userId={user.id} isActive={user.active} />
                     </div>
@@ -153,14 +168,24 @@ export default async function UsersPage({
               ))}
               {(!users || users.length === 0) && (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-sm text-muted-foreground italic">
-                    Nenhum usuário cadastrado além de você.
+                  <td colSpan={5} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                        <Shield className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground">Nenhum usuário encontrado</h3>
+                        <p className="text-sm text-muted-foreground">Tente ajustar seus filtros de pesquisa.</p>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
       </div>
     </div>
   )
 }
+

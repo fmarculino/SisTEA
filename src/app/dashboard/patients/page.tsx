@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import Link from 'next/link'
-import { Edit2, Plus } from 'lucide-react'
+import { Edit2, Plus, User, CheckCircle, XCircle } from 'lucide-react'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
 
@@ -43,84 +43,111 @@ export default async function PatientsPage({
   const { data: patients } = await query.order('name')
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
-            Pacientes
+          <h2 className="text-3xl font-black leading-tight text-foreground tracking-tight sm:text-4xl">
+            Pacientes <span className="text-primary tracking-tighter">Atendidos</span>
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie os pacientes atendidos pelo programa.
+          <p className="mt-2 text-base text-muted-foreground font-medium max-w-xl">
+            Gerenciamento centralizado de prontuários, documentos e histórico de atendimentos dos pacientes.
           </p>
         </div>
         <Link
           href="/dashboard/patients/new"
-          className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex items-center rounded-2xl bg-primary px-6 py-3.5 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary/10 transition-all active:scale-95 group uppercase tracking-widest"
         >
-          <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+          <Plus className="-ml-1 mr-2 h-5 w-5 stroke-[3]" aria-hidden="true" />
           Novo Paciente
         </Link>
       </div>
 
-      <DataTableFilters 
-        placeholder="Pesquisar por nome ou CNS..." 
-        extraFilters={[
-          {
-            paramName: 'clinic',
-            placeholder: 'Todas as Clínicas',
-            options: (clinicsList || []).map(c => ({ value: c.id, label: c.name }))
-          }
-        ]}
-      />
+      <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
+        <DataTableFilters 
+          placeholder="Pesquisar por nome ou CNS..." 
+          extraFilters={[
+            {
+              paramName: 'clinic',
+              placeholder: 'Todas as Clínicas',
+              options: (clinicsList || []).map(c => ({ value: c.id, label: c.name }))
+            }
+          ]}
+        />
+      </div>
 
-      <div className="bento-card overflow-hidden">
+      <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border/40">
-            <thead>
-              <tr className="bg-muted/30 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-left">
-                <th scope="col" className="py-4 pl-6 pr-3">Nome</th>
-                <th scope="col" className="px-3 py-4">Mãe / Responsável</th>
-                <th scope="col" className="px-3 py-4">Nascimento</th>
-                <th scope="col" className="px-3 py-4">Clínica</th>
-                <th scope="col" className="px-3 py-4">Status</th>
-                <th scope="col" className="relative py-4 pl-3 pr-6">
+          <table className="min-w-full divide-y divide-border/30">
+            <thead className="bg-muted/50">
+              <tr>
+                <th scope="col" className="py-5 pl-8 pr-3 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Paciente / Responsável
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Nascimento
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Clínica de Vínculo
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Status
+                </th>
+                <th scope="col" className="relative py-5 pl-3 pr-8">
                   <span className="sr-only">Ações</span>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/30 bg-card">
+            <tbody className="divide-y divide-border/20">
               {patients?.map((patient) => (
-                <tr key={patient.id} className="group hover:bg-muted/20 transition-colors duration-200">
-                  <td className="whitespace-nowrap py-5 pl-6 pr-3 text-sm font-semibold text-foreground">
-                    {patient.name}
+                <tr 
+                  key={patient.id} 
+                  className={`transition-colors group/row hover:bg-muted/30 ${!patient.active ? 'opacity-60 grayscale-[0.3]' : ''}`}
+                >
+                  <td className="whitespace-nowrap py-6 pl-8 pr-3">
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mr-4 group-hover/row:scale-110 transition-transform">
+                        <User className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-foreground group-hover/row:text-primary transition-colors">
+                          {patient.name}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
+                          Mãe: {patient.mother_name || '-'}
+                        </span>
+                      </div>
+                    </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                    {patient.mother_name || '-'}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground">
-                    {new Date(patient.birth_date).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground">
-                    {/* @ts-ignore - foreign key relationship */}
-                    {patient.clinics?.name || '-'}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-5 text-sm">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                      patient.active 
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                    }`}>
-                      {patient.active ? 'Ativo' : 'Inativo'}
+                  <td className="whitespace-nowrap px-3 py-6">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {new Date(patient.birth_date).toLocaleDateString('pt-BR')}
                     </span>
                   </td>
-                  <td className="relative whitespace-nowrap py-5 pl-3 pr-6 text-right text-sm font-medium">
-                    <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <td className="whitespace-nowrap px-3 py-6">
+                    <span className="inline-flex items-center text-xs font-bold text-foreground/70 bg-secondary/30 px-3 py-1.5 rounded-xl border border-border/50">
+                      {/* @ts-ignore */}
+                      {patient.clinics?.name || 'Sem clínica'}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-6">
+                    {patient.active ? (
+                      <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Ativo
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-xl bg-muted px-3 py-1.5 text-[10px] font-black text-muted-foreground border border-border uppercase tracking-widest leading-none">
+                        <XCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Inativo
+                      </span>
+                    )}
+                  </td>
+                  <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end space-x-3">
                       <Link 
                         href={`/dashboard/patients/${patient.id}`} 
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 p-2 rounded-lg transition-all"
-                        title="Editar Paciente"
+                        className="p-2.5 rounded-xl text-primary bg-primary/5 hover:bg-primary/20 transition-all border border-primary/10 shadow-sm"
+                        title="Ver prontuário"
                       >
-                        <Edit2 className="h-4 w-4" />
+                        <Edit2 className="h-4 w-4 stroke-[2.5]" />
                       </Link>
                     </div>
                   </td>
@@ -128,8 +155,16 @@ export default async function PatientsPage({
               ))}
               {(!patients || patients.length === 0) && (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-sm text-muted-foreground italic">
-                    Nenhum paciente encontrado.
+                  <td colSpan={5} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                        <User className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground">Nenhum paciente encontrado</h3>
+                        <p className="text-sm text-muted-foreground">Tente ajustar seus filtros de pesquisa.</p>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -140,3 +175,4 @@ export default async function PatientsPage({
     </div>
   )
 }
+

@@ -8,10 +8,12 @@ import { ThemeToggle } from '@/components/theme-toggle'
 export function Header({
   email,
   role,
+  clinicName,
   onMenuClick
 }: {
   email: string;
   role: string;
+  clinicName?: string;
   onMenuClick?: () => void;
 }) {
   const router = useRouter()
@@ -43,10 +45,15 @@ export function Header({
       <div className="flex items-center gap-4 md:gap-8">
         <div className="hidden md:flex flex-col text-right">
           <p className="font-black text-xs text-foreground uppercase tracking-widest leading-none mb-1.5">{email}</p>
-          <div className="flex justify-end">
+          <div className="flex flex-col items-end">
             <span className="px-3 py-1 rounded-lg bg-primary/10 text-primary text-[9px] font-black uppercase tracking-[0.2em] border border-primary/20">
               {role === 'SMS_ADMIN' ? 'Controlador Geral' : 'Gestor de Clínica'}
             </span>
+            {clinicName && (
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-70">
+                {clinicName}
+              </span>
+            )}
           </div>
         </div>
 
