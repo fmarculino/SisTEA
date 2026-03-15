@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Activity, Users, UserSquare2, Building2, Stethoscope, FileText, CalendarCheck, FileOutput, Shield } from 'lucide-react'
+import { AboutMenu } from './about-menu'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Activity, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
@@ -78,6 +79,10 @@ export function Sidebar({ role, onLinkClick }: { role: string; onLinkClick?: () 
           })}
         </div>
       </nav>
+
+      <div className="mt-auto px-4 pb-4">
+        <AboutMenu />
+      </div>
 
       <div className="p-8 border-t border-border/20">
         <div className="bg-muted/30 p-4 rounded-2xl border border-border/20">
