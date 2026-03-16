@@ -1,12 +1,13 @@
 'use client'
 
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { attendanceSchema, type AttendanceFormData } from './schema'
 import { createAttendanceAction, updateAttendanceAction } from './actions'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 export function AttendanceForm({ 
   initialData, 
@@ -155,47 +156,46 @@ export function AttendanceForm({
 
         <div className="sm:col-span-1">
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Paciente *</label>
-          <select
-            {...register('patient_id')}
-            disabled={userRole === 'SMS_ADMIN' && !selectedClinicId}
-            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all disabled:bg-muted/50 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <option value="">Selecione um paciente...</option>
-            {filteredPatients.length > 0 ? (
-              filteredPatients.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))
-            ) : (
-              <option value="" disabled>
-                {userRole === 'SMS_ADMIN' && !selectedClinicId 
+          <Controller
+            control={control}
+            name="patient_id"
+            render={({ field }) => (
+              <SearchableSelect
+                options={filteredPatients}
+                value={field.value}
+                onChange={field.onChange}
+                disabled={userRole === 'SMS_ADMIN' && !selectedClinicId}
+                placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
                   ? 'Selecione a clínica primeiro' 
-                  : 'Nenhum paciente encontrado'}
-              </option>
+                  : 'Selecione um paciente...'}
+                className="mt-1"
+              />
             )}
-          </select>
+          />
           {errors.patient_id && <p className="mt-1 text-sm text-rose-500">{errors.patient_id.message}</p>}
         </div>
 
         <div className="sm:col-span-1">
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Profissional de Saúde *</label>
-          <select
-            {...register('professional_id')}
-            disabled={userRole === 'SMS_ADMIN' && !selectedClinicId}
-            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all disabled:bg-muted/50 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <option value="">Selecione um profissional...</option>
-            {filteredProfessionals.length > 0 ? (
-              filteredProfessionals.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} — {p.specialty}</option>
-              ))
-            ) : (
-              <option value="" disabled>
-                {userRole === 'SMS_ADMIN' && !selectedClinicId 
+          <Controller
+            control={control}
+            name="professional_id"
+            render={({ field }) => (
+              <SearchableSelect
+                options={filteredProfessionals.map(p => ({
+                  id: p.id,
+                  name: `${p.name} — ${p.specialty}`
+                }))}
+                value={field.value}
+                onChange={field.onChange}
+                disabled={userRole === 'SMS_ADMIN' && !selectedClinicId}
+                placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
                   ? 'Selecione a clínica primeiro' 
-                  : 'Nenhum profissional encontrado'}
-              </option>
+                  : 'Selecione um profissional...'}
+                className="mt-1"
+              />
             )}
-          </select>
+          />
           {errors.professional_id && <p className="mt-1 text-sm text-rose-500">{errors.professional_id.message}</p>}
         </div>
 
