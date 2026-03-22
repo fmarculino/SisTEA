@@ -24,7 +24,7 @@ jobs:
       - name: Check if Tag exists
         id: check_tag
         run: |
-          if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
+          if git rev-parse "V${{ env.VERSION }}" >/dev/null 2>&1; then
             echo "EXISTS=true" >> $GITHUB_OUTPUT
           else
             echo "EXISTS=false" >> $GITHUB_OUTPUT
@@ -34,10 +34,10 @@ jobs:
         if: steps.check_tag.outputs.EXISTS == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.VERSION }}
-          name: Release v${{ env.VERSION }}
+          tag_name: V${{ env.VERSION }}
+          name: V${{ env.VERSION }}
           draft: false
-          prerelease: ${{ contains(env.VERSION, 'beta') || contains(env.VERSION, 'alpha') }}
+          prerelease: false
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
