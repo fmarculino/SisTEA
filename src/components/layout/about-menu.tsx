@@ -51,11 +51,11 @@ export function AboutMenu() {
               <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                 <span className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-500">
-                  V 0.1.0 Verified
+                  V 0.2.0 - Beta Verified
                 </span>
               </div>
               <span className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/40">
-                Secure Architecture & Stable Release
+                Enhanced Analytics & UX Refinements
               </span>
             </div>
           </div>

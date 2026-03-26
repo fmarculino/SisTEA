@@ -1,3 +1,13 @@
+# SisTEA - Sistema Inteligente de Gestão Integrada
+[![Version](https://img.shields.io/badge/version-0.2.0--beta-blue.svg)](./CHANGELOG.md)
+
+Sistema inteligente de Gestão Integrada para acompanhamento Multiprofissional de Autismo e TDAH.
+
+## 🚀 Versão Atual: 0.2.0 - Beta
+Esta versão traz melhorias significativas na precisão dos dados analíticos do dashboard e aprimoramentos na experiência do usuário (UX) com a implementação de busca incremental de procedimentos e fluxos de atendimento otimizados.
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
