@@ -46,7 +46,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
-    supabase.from('procedures').select('id, name, valor_total, active').eq('active', true).order('name'),
+    supabase.from('procedures').select('id, name, code, valor_total, active').eq('active', true).order('name'),
     profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name').order('name') : Promise.resolve({ data: [] })
   ])
 

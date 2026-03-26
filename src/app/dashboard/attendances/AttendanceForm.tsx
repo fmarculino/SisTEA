@@ -201,19 +201,23 @@ export function AttendanceForm({
 
         <div className="sm:col-span-2 pb-2 border-b border-border/30">
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Procedimento / Serviço *</label>
-          <select
-            {...register('procedure_id')}
-            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all"
-          >
-            <option value="">Escolha o procedimento realizado...</option>
-            {procedures.length > 0 ? (
-              procedures.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} (Valor: {formatCurrency(p.valor_total)} / sessão)</option>
-              ))
-            ) : (
-              <option value="" disabled>Nenhum procedimento ativo</option>
+          <Controller
+            control={control}
+            name="procedure_id"
+            render={({ field }) => (
+              <SearchableSelect
+                options={procedures.map(p => ({
+                  id: p.id,
+                  code: p.code,
+                  name: `${p.code ? p.code + ' — ' : ''}${p.name} (Valor: ${formatCurrency(p.valor_total)} / sessão)`
+                }))}
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Escolha o procedimento realizado..."
+                className="mt-1"
+              />
             )}
-          </select>
+          />
           {errors.procedure_id && <p className="mt-1 text-sm text-rose-500">{errors.procedure_id.message}</p>}
         </div>
 

@@ -36,7 +36,7 @@ export function SearchableSelect({
   // Memoize Fuse instance
   const fuse = useMemo(() => {
     return new Fuse(options, {
-      keys: ['name'],
+      keys: ['name', 'code'],
       threshold: 0.4, // Adjust for more/less fuzzy matching
       distance: 100,
       ignoreLocation: true,
