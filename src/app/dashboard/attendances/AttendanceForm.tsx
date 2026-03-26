@@ -222,7 +222,7 @@ export function AttendanceForm({
         </div>
 
         <div className="sm:col-span-1">
-          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data da Guia *</label>
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data da Guia/Atendimento *</label>
           <input
             type="date"
             {...register('attendance_date')}

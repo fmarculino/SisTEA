@@ -49,6 +49,7 @@ export async function createAttendanceAction(data: AttendanceFormData) {
     if (sessionError) return { error: `Erro ao salvar sessões: ${sessionError.message}` }
   }
 
+  revalidatePath('/dashboard')
   revalidatePath('/dashboard/attendances')
   redirect('/dashboard/attendances')
 }
@@ -100,6 +101,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     if (sessionError) return { error: `Erro ao salvar sessões: ${sessionError.message}` }
   }
 
+  revalidatePath('/dashboard')
   revalidatePath('/dashboard/attendances')
   redirect('/dashboard/attendances')
 }
@@ -108,5 +110,6 @@ export async function deleteAttendanceAction(id: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('attendances').delete().eq('id', id)
   if (error) return { error: error.message }
+  revalidatePath('/dashboard')
   revalidatePath('/dashboard/attendances')
 }

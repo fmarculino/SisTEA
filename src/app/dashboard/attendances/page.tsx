@@ -157,7 +157,7 @@ export default async function AttendancesPage({
                 return (
                   <tr key={att.id} className="group hover:bg-muted/20 transition-colors duration-200">
                     <td className="whitespace-nowrap py-5 pl-6 pr-3 text-sm font-semibold text-foreground">
-                      {format(new Date(att.attendance_date), 'dd/MM/yyyy')}
+                      {format(new Date(att.attendance_date + 'T00:00:00'), 'dd/MM/yyyy')}
                     </td>
                     <td className="whitespace-nowrap px-3 py-5 text-sm font-medium text-foreground/90 max-w-[200px] truncate">
                       {att.patient?.name || '-'}
