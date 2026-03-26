@@ -42,6 +42,7 @@ export async function createAttendanceAction(data: AttendanceFormData) {
       start_time: session.start_time,
       end_time: session.end_time,
       status: session.status,
+      justification: session.justification,
     }))
     
     const { error: sessionError } = await supabase.from('attendance_sessions').insert(sessionsToInsert)
@@ -92,6 +93,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
       start_time: session.start_time,
       end_time: session.end_time,
       status: session.status,
+      justification: session.justification,
     }))
     
     const { error: sessionError } = await supabase.from('attendance_sessions').insert(sessionsToInsert)

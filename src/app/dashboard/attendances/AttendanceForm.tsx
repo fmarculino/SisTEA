@@ -55,7 +55,7 @@ export function AttendanceForm({
       authorization_date: initialData?.authorization_date || '',
       authorized_quantity: initialData?.authorized_quantity || 20,
       cid: initialData?.cid || '',
-      attendance_character: initialData?.attendance_character || '',
+      attendance_character: initialData?.attendance_character || 'Eletivo',
       value_applied: initialData?.value_applied || 0,
       notes: initialData?.notes || '',
       sessions: initialData?.sessions || [],
@@ -275,7 +275,6 @@ export function AttendanceForm({
              {...register('attendance_character')}
              className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all"
           >
-            <option value="">Selecione...</option>
             <option value="Eletivo">Eletivo</option>
             <option value="Urgência">Urgência</option>
           </select>
@@ -367,24 +366,53 @@ export function AttendanceForm({
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Situação</label>
                 <select
                   {...register(`sessions.${index}.status` as const)}
-                  className="block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all"
+                  className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
+                    watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 font-bold border-rose-500 bg-rose-50/50' : ''
+                  }`}
                 >
                   <option value="Realizada">Realizada</option>
                   <option value="Falta do Paciente">Falta do Paciente</option>
                   <option value="Falta do Profissional">Falta do Profissional</option>
                   <option value="Feriado">Feriado</option>
                   <option value="Atestado Médico">Atestado Médico</option>
+                  <option value="Glosado" className="text-rose-600 font-bold">Glosado</option>
                 </select>
               </div>
-              <div className="sm:col-span-1 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => remove(index)}
-                  className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
-                >
-                  Remover
-                </button>
-              </div>
+              
+              {watch(`sessions.${index}.status`) === 'Glosado' ? (
+                <div className="sm:col-span-4 mt-2 sm:mt-0 transition-all animate-in fade-in slide-in-from-left-2">
+                  <label className="block text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">Justificativa da Glosa *</label>
+                  <input
+                    type="text"
+                    placeholder="Descreva o motivo da glosa..."
+                    {...register(`sessions.${index}.justification` as const)}
+                    required
+                    className="block w-full rounded-lg border-rose-300 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-rose-500/10 focus:border-rose-500 transition-all placeholder:text-rose-300"
+                  />
+                </div>
+              ) : (
+                <div className="sm:col-span-1 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    Remover
+                  </button>
+                </div>
+              )}
+
+              {watch(`sessions.${index}.status`) === 'Glosado' && (
+                <div className="sm:col-span-1 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    Remover
+                  </button>
+                </div>
+              )}
               <div className="absolute -left-2 top-1/2 -translate-y-1/2 h-8 w-1 rounded-full bg-primary/20 group-hover:bg-primary transition-all" />
             </div>
           ))}
