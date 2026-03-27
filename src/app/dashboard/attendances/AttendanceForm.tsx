@@ -367,14 +367,12 @@ export function AttendanceForm({
                 <select
                   {...register(`sessions.${index}.status` as const)}
                   className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
-                    watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 font-bold border-rose-500 bg-rose-50/50' : ''
+                    watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 font-bold border-rose-500 bg-rose-50/50' : 
+                    watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 font-bold border-amber-500 bg-amber-50/50' : ''
                   }`}
                 >
                   <option value="Realizada">Realizada</option>
-                  <option value="Falta do Paciente">Falta do Paciente</option>
-                  <option value="Falta do Profissional">Falta do Profissional</option>
-                  <option value="Feriado">Feriado</option>
-                  <option value="Atestado Médico">Atestado Médico</option>
+                  <option value="Pendente">Pendente</option>
                   <option value="Glosado" className="text-rose-600 font-bold">Glosado</option>
                 </select>
               </div>
