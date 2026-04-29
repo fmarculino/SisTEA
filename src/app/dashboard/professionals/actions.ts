@@ -18,6 +18,14 @@ export async function createProfessionalAction(data: ProfessionalFormData) {
 
   const profId = crypto.randomUUID()
 
+  // Check for duplicate CNS
+  if (professionalData.cns) {
+    const { data: existing } = await supabase.from('professionals').select('id').eq('cns', professionalData.cns).maybeSingle()
+    if (existing) {
+      return { error: 'Já existe um profissional cadastrado com este CNS.' }
+    }
+  }
+
   const { error: profError } = await supabase.from('professionals').insert({
     id: profId,
     ...professionalData,
@@ -67,6 +75,14 @@ export async function updateProfessionalAction(id: string, data: ProfessionalFor
   }
 
   const { clinic_ids, specialty_ids, ...professionalData } = validatedFields.data
+
+  // Check for duplicate CNS for another professional
+  if (professionalData.cns) {
+    const { data: existing } = await supabase.from('professionals').select('id').eq('cns', professionalData.cns).neq('id', id).maybeSingle()
+    if (existing) {
+      return { error: 'Já existe um profissional cadastrado com este CNS.' }
+    }
+  }
 
   const { error: profError } = await supabase.from('professionals').update({
     ...professionalData,

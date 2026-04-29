@@ -51,7 +51,7 @@ export async function createAttendanceAction(data: AttendanceFormData) {
 
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/attendances')
-  redirect('/dashboard/attendances')
+  redirect(`/dashboard/attendances/${attendance.id}`)
 }
 
 export async function updateAttendanceAction(id: string, data: AttendanceFormData) {

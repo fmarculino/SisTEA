@@ -2,6 +2,23 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.3.0-beta] - 2026-04-29
+
+Esta versão foca na precisão da emissão de documentos oficiais e integridade do cadastro de profissionais.
+
+### 📄 Impressão de Documentos (PDF)
+- **Calibração de Precisão:** Ajuste milimétrico das coordenadas (X, Y) para o formulário de Controle de Frequência do SUS, garantindo que os dados caiam perfeitamente dentro dos campos.
+- **Mapeamento de Dados do Paciente:** Correção na busca de dados demográficos (Nome da Mãe, CNS, Nascimento, Sexo, Endereço e Raça/Cor) garantindo preenchimento completo.
+- **Resumo Mensal:** Realinhamento dos valores para a coluna correta no quadro de resumo lateral.
+- **Tratamento de Raça/Cor:** Implementação de mapeamento automático de nomes de raça para códigos numéricos do SUS (01-05).
+
+### 👥 Gestão de Profissionais
+- **Unicidade por CNS:** Implementada trava de segurança que impede o cadastro de profissionais duplicados com o mesmo número de CNS.
+- **Normalização de Dados:** Adicionada limpeza automática de espaços em branco (trim) em campos críticos como CPF e CNS para evitar duplicidade acidental.
+- **Limpeza de Base:** Realizada normalização retroativa no banco de dados, removendo duplicatas existentes e preservando históricos de atendimento.
+
+---
+
 ## [0.2.0-beta] - 2026-03-26
 
 Esta versão foca na precisão dos dados analíticos e na melhoria contínua da experiência do usuário (UX).

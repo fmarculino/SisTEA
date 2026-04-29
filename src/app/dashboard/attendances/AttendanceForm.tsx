@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { generateFrequencyPDF } from '@/utils/generateFrequencyPDF'
 
 export function AttendanceForm({ 
   initialData, 
@@ -118,6 +119,41 @@ export function AttendanceForm({
     date.setHours(hours)
     date.setMinutes(minutes + minutesToAdd)
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  }
+
+  const handlePrint = async () => {
+    const formData = watch();
+    const clinic = clinics?.find(c => c.id === formData.clinic_id);
+    const patient = patients.find(p => p.id === formData.patient_id);
+    const professional = professionals.find(p => p.id === formData.professional_id);
+    const procedure = procedures.find(p => p.id === formData.procedure_id);
+
+    const fullData = {
+      ...formData,
+      clinic_name: clinic?.name || 'COMUNICARE CENTRO MULTIDISCIPLINAR DE SERVIÇOS DE SAÚDE',
+      cnes: clinic?.cnes || '4352440',
+      professional_name: professional?.name,
+      professional_cns: professional?.cns,
+      professional_cbo: professional?.cbo,
+      patient_name: patient?.name,
+      patient_cns: patient?.cns_patient,
+      patient_birthdate: patient?.birth_date,
+      patient_gender: patient?.gender,
+      patient_mother: patient?.mother_name,
+      patient_phone: patient?.phone,
+      patient_race_color: patient?.race_color,
+      patient_address: patient?.address ? `${patient.address}` : '',
+      patient_cep: patient?.cep,
+      patient_city: patient?.city,
+      procedure_code: procedure?.code,
+    };
+
+    try {
+      await generateFrequencyPDF(fullData);
+    } catch (err) {
+      console.error('Erro ao gerar PDF', err);
+      setErrorMsg('Erro ao gerar PDF da ficha de frequência.');
+    }
   }
 
   return (
@@ -425,6 +461,18 @@ export function AttendanceForm({
         >
           Descartar
         </button>
+        {id && (
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-600/20 transition-all active:scale-95 mr-auto"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+            </svg>
+            Imprimir Ficha
+          </button>
+        )}
         <button
           type="submit"
           disabled={isPending}

@@ -8,12 +8,17 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   const supabase = await createClient()
   const { id } = await params
 
-  const { data: attendance } = await supabase.from('attendances').select('*').eq('id', id).single()
+  const { data: attendance } = await supabase
+    .from('attendances')
+    .select('*, sessions:attendance_sessions(*)')
+    .eq('id', id)
+    .single()
   if (!attendance) notFound()
 
-  // Buscando os dados necessários para os selects do formulário
-  let patientsQuery = supabase.from('patients').select('id, name, clinic_id').order('name')
-  let professionalsQuery = supabase.from('professionals').select('id, name, specialty, clinic_id').order('name')
+
+  // Buscando os dados necessários para os selects e para a geração do PDF
+  let patientsQuery = supabase.from('patients').select('*').order('name')
+  let professionalsQuery = supabase.from('professionals').select('id, name, specialty, clinic_id, cns, cbo').order('name')
   
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
     patientsQuery = patientsQuery.eq('clinic_id', profile.clinic_id)
@@ -28,8 +33,8 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
-    supabase.from('procedures').select('id, name, default_value, active').order('name'),
-    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name').order('name') : Promise.resolve({ data: [] })
+    supabase.from('procedures').select('id, name, code, default_value, active, valor_total').order('name'),
+    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : supabase.from('clinics').select('id, name, cnes').eq('id', profile?.clinic_id || '').order('name')
   ])
 
   return (
