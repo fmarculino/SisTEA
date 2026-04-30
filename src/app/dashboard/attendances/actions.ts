@@ -191,7 +191,7 @@ export async function deleteAttendanceAction(id: string) {
   const { data: attendance } = await supabase.from('attendances').select('attendance_date, clinic_id').eq('id', id).single()
   
   // --- COMPETENCE CHECK ---
-  const compError = await checkCompetenceLock(supabase, attendance.clinic_id, attendance.attendance_date)
+  const compError = await checkCompetenceLock(supabase, attendance!.clinic_id, attendance!.attendance_date)
   if (compError) return compError
 
   const { error } = await supabase.from('attendances').delete().eq('id', id)
