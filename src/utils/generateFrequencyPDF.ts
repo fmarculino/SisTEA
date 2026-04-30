@@ -204,7 +204,7 @@ export async function generateFrequencyPDF(data: any) {
   const pdfBytes = await pdfDoc.save();
 
   // Criar um blob e forçar o download/abertura
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
   const blobUrl = URL.createObjectURL(blob);
   window.open(blobUrl, '_blank');
 }
