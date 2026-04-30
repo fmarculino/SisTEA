@@ -42,6 +42,7 @@ export function AttendanceForm({
     control,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     formState: { errors },
   } = useForm<AttendanceFormData>({
@@ -122,10 +123,21 @@ export function AttendanceForm({
   }
 
   const handlePrint = async () => {
-    const formData = watch();
+    const formData = getValues();
     const clinic = clinics?.find(c => c.id === formData.clinic_id);
-    const patient = patients.find(p => p.id === formData.patient_id);
-    const professional = professionals.find(p => p.id === formData.professional_id);
+    
+    // Preferimos os dados que vieram do servidor via join no initialData para evitar problemas de filtro
+    const isInitialPatient = (initialData as any)?.patient?.id === formData.patient_id;
+    const isInitialProfessional = (initialData as any)?.professional_data?.id === formData.professional_id;
+
+    let patient = isInitialPatient 
+      ? (initialData as any).patient 
+      : patients.find(p => p.id === formData.patient_id);
+      
+    let professional = isInitialProfessional 
+      ? (initialData as any).professional_data 
+      : professionals.find(p => p.id === formData.professional_id);
+
     const procedure = procedures.find(p => p.id === formData.procedure_id);
 
     const fullData = {
@@ -155,6 +167,51 @@ export function AttendanceForm({
       setErrorMsg('Erro ao gerar PDF da ficha de frequência.');
     }
   }
+
+  const handlePrintDigital = () => {
+    const formData = getValues();
+    const clinic = clinics?.find(c => c.id === formData.clinic_id);
+    
+    // Preferimos os dados que vieram do servidor via join no initialData para evitar problemas de filtro
+    const isInitialPatient = (initialData as any)?.patient?.id === formData.patient_id;
+    const isInitialProfessional = (initialData as any)?.professional_data?.id === formData.professional_id;
+
+    let patient = isInitialPatient 
+      ? (initialData as any).patient 
+      : patients.find(p => p.id === formData.patient_id);
+      
+    let professional = isInitialProfessional 
+      ? (initialData as any).professional_data 
+      : professionals.find(p => p.id === formData.professional_id);
+
+    const isInitialProcedure = (initialData as any)?.procedure?.id === formData.procedure_id;
+    const procedure = isInitialProcedure
+      ? (initialData as any).procedure
+      : procedures.find(p => p.id === formData.procedure_id);
+
+    const fullData = {
+      ...formData,
+      clinic_name: clinic?.name || 'COMUNICARE CENTRO MULTIDISCIPLINAR DE SERVIÇOS DE SAÚDE',
+      cnes: clinic?.cnes || '4352440',
+      professional_name: professional?.name,
+      professional_cns: professional?.cns,
+      professional_cbo: professional?.cbo,
+      patient_name: patient?.name,
+      patient_cns: patient?.cns_patient,
+      patient_birthdate: patient?.birth_date,
+      patient_gender: patient?.gender,
+      patient_mother: patient?.mother_name,
+      patient_phone: patient?.phone,
+      patient_race_color: patient?.race_color,
+      patient_address: patient?.address ? `${patient.address}` : '',
+      patient_cep: patient?.cep,
+      patient_city: patient?.city,
+      procedure_code: procedure?.code,
+    };
+
+    localStorage.setItem('print_frequency_data', JSON.stringify(fullData));
+    window.open('/imprimir/frequencia', '_blank');
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-8 rounded-2xl shadow-xl border border-border/40 mb-10">
@@ -462,16 +519,26 @@ export function AttendanceForm({
           Descartar
         </button>
         {id && (
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-600/20 transition-all active:scale-95 mr-auto"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-            </svg>
-            Imprimir Ficha
-          </button>
+          <div className="flex gap-2 mr-auto">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-100 text-indigo-700 px-4 py-2.5 text-sm font-bold shadow-sm hover:bg-indigo-200 focus:outline-none focus:ring-4 focus:ring-indigo-600/20 transition-all active:scale-95"
+              title="Formulário preenchido no PDF original do SUS"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+              PDF Antigo
+            </button>
+            <button
+              type="button"
+              onClick={handlePrintDigital}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-600/20 transition-all active:scale-95"
+              title="Nova versão digital aprimorada"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+              Imprimir Nova Versão Digital
+            </button>
+          </div>
         )}
         <button
           type="submit"

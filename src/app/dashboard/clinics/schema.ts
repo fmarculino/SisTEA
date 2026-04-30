@@ -14,6 +14,8 @@ export const clinicSchema = z.object({
   phone: z.string().optional().nullable(),
   email: z.string().email('E-mail inválido').optional().nullable().or(z.literal('')),
   active: z.boolean().default(true),
+  competence_end_day: z.coerce.number().min(1).max(31).default(31),
+  competence_deadline_day: z.coerce.number().min(1).max(31).default(5),
 })
 
 export type ClinicFormData = z.infer<typeof clinicSchema>

@@ -2,15 +2,17 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity, Users, UserSquare2, Building2, Stethoscope, FileText, CalendarCheck, FileOutput, Shield, Lock, DatabaseBackup } from 'lucide-react'
+import { Activity, Users, UserSquare2, Building2, Stethoscope, FileText, CalendarCheck, FileOutput, Shield, Lock, DatabaseBackup, ScrollText, Archive } from 'lucide-react'
 import { AboutMenu } from './about-menu'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Activity, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
   { name: 'Frequências', href: '/dashboard/attendances', icon: CalendarCheck, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
+  { name: 'Competências', href: '/dashboard/competences', icon: Archive, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
   { name: 'Pacientes', href: '/dashboard/patients', icon: Users, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
   { name: 'Profissionais', href: '/dashboard/professionals', icon: UserSquare2, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
   { name: 'Clínicas', href: '/dashboard/clinics', icon: Building2, roles: ['SMS_ADMIN'] },
+  { name: 'Contratos', href: '/dashboard/contracts', icon: ScrollText, roles: ['SMS_ADMIN'] },
   { name: 'Procedimentos', href: '/dashboard/procedures', icon: Stethoscope, roles: ['SMS_ADMIN'] },
   { name: 'Especialidades', href: '/dashboard/specialties', icon: FileText, roles: ['SMS_ADMIN'] },
   { name: 'Relatórios', href: '/dashboard/reports', icon: FileOutput, roles: ['SMS_ADMIN'] },

@@ -29,6 +29,8 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
       phone: initialData?.phone || '',
       email: initialData?.email || '',
       active: initialData?.active ?? true,
+      competence_end_day: initialData?.competence_end_day || 31,
+      competence_deadline_day: initialData?.competence_deadline_day || 5,
     },
   })
 
@@ -141,6 +143,39 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
             placeholder="contato@clinica.com"
           />
           {errors.email && <p className="mt-1 text-sm text-rose-500">{errors.email.message}</p>}
+        </div>
+
+        <div className="sm:col-span-2 pt-6 border-t border-border/30">
+          <h3 className="text-sm font-black uppercase tracking-widest text-foreground mb-4">Configuração de Competência</h3>
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div className="bg-muted/10 p-5 rounded-2xl border border-border/40">
+              <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Dia Final do Período</label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                {...register('competence_end_day')}
+                className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-3 border bg-background transition-all"
+                placeholder="Ex: 25"
+              />
+              <p className="mt-2 text-[10px] text-muted-foreground">Ex: Se 25, a competência de Abril será do dia 26/03 até 25/04.</p>
+              {errors.competence_end_day && <p className="mt-1 text-sm text-rose-500">{errors.competence_end_day.message}</p>}
+            </div>
+
+            <div className="bg-muted/10 p-5 rounded-2xl border border-border/40">
+              <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Dia Limite p/ Fechamento</label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                {...register('competence_deadline_day')}
+                className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-3 border bg-background transition-all"
+                placeholder="Ex: 10"
+              />
+              <p className="mt-2 text-[10px] text-muted-foreground">Ex: A clínica terá até o dia 10 do mês seguinte para encerrar a competência.</p>
+              {errors.competence_deadline_day && <p className="mt-1 text-sm text-rose-500">{errors.competence_deadline_day.message}</p>}
+            </div>
+          </div>
         </div>
 
         <div className="sm:col-span-2 bg-muted/20 p-6 rounded-2xl border border-border/40">

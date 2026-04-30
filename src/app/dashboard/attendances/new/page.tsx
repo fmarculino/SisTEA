@@ -11,12 +11,12 @@ export default async function NewAttendancePage() {
   // O formulário fará o filtro final no client ou podemos enviar a lista já filtrada aqui.
   // Vamos enviar tudo que for relevante.
 
-  let patientsQuery = supabase.from('patients').select('id, name, clinic_id').order('name')
+  let patientsQuery = supabase.from('patients').select('id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color').order('name')
   
   // Use professional_clinics for many-to-many join, and professional_specialties for specialties
-  let profSelect = 'id, name, professional_specialties(specialties(name)), professional_clinics(clinic_id)'
+  let profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics(clinic_id)'
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    profSelect = 'id, name, professional_specialties(specialties(name)), professional_clinics!inner(clinic_id)'
+    profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics!inner(clinic_id)'
   }
 
   let professionalsQuery = supabase
@@ -38,7 +38,7 @@ export default async function NewAttendancePage() {
     patientsQuery,
     professionalsQuery,
     supabase.from('procedures').select('id, name, code, valor_total, active').eq('active', true).order('name'),
-    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name').order('name') : Promise.resolve({ data: [] })
+    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : Promise.resolve({ data: [] })
   ])
 
   // Mapeando dados dos profissionais para incluir o nome da especialidade
@@ -46,9 +46,16 @@ export default async function NewAttendancePage() {
     const specialtyNames = (p.professional_specialties as any[])?.map(
       (ps: any) => ps.specialties?.name
     ).filter(Boolean)
+    
+    const cbos = (p.professional_specialties as any[])?.map(
+      (ps: any) => ps.specialties?.cbo
+    ).filter(Boolean)
+
     return {
       id: p.id,
       name: p.name,
+      cns: p.cns,
+      cbo: cbos?.length > 0 ? cbos[0] : '',
       professional_clinics: p.professional_clinics,
       specialty: specialtyNames?.length > 0 ? specialtyNames.join(', ') : 'Sem especialidade'
     }
