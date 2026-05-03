@@ -11,7 +11,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { generateFrequencyPDF } from '@/utils/generateFrequencyPDF'
 import { QRCodeModal } from './QRCodeModal'
 import { StatusModal } from '@/components/ui/StatusModal'
-import { Plus, Trash2, Printer, QrCode, Search, AlertCircle } from 'lucide-react'
+import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck } from 'lucide-react'
 
 export function AttendanceForm({ 
   initialData, 
