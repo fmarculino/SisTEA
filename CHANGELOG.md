@@ -2,6 +2,26 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.5.5-beta] - 2026-05-02
+
+Esta versão introduz a arquitetura de **Multiclinicidade de Pacientes**, permitindo que um único cadastro de paciente seja compartilhado e gerenciado de forma independente por múltiplas unidades de atendimento.
+
+### 🏥 Gestão Multi-Clínica de Pacientes
+- **Vínculos Múltiplos:** O sistema agora permite que um paciente seja vinculado a diversas clínicas simultaneamente, eliminando erros de duplicidade de cadastro (CNS).
+- **Inativação Localizada:** Refatoração do status "Ativo/Inativo" para ser específico por unidade. Desativar um paciente em uma clínica não afeta sua elegibilidade em outras unidades vinculadas.
+- **Detecção de Cadastro Existente:** Ao tentar cadastrar um paciente já existente no sistema (via CNS), o atendente é informado e pode optar por vincular o paciente à sua unidade atual com um único clique.
+
+### 🎨 UX & Interface de Gestão
+- **Controle Granular de Status:** Substituição do seletor global por interruptores (Switches) individuais para cada unidade vinculada dentro do formulário do paciente.
+- **Sincronização Ativa:** Implementação de ações de servidor com atualizações otimistas, garantindo que mudanças de status sejam salvas instantaneamente e sincronizadas com o estado do formulário.
+- **Visualização por Cores (Tags):** A listagem de pacientes agora exibe etiquetas coloridas para cada unidade (Azul para Ativo, Vermelho para Inativo), facilitando a identificação rápida do status na rede.
+- **Consistência de Dados:** Correção de bugs de persistência onde o botão "Salvar" sobrescrevia alterações de status feitas via interruptores rápidos.
+
+### 🔒 Segurança & Backend
+- **Políticas de RLS Refinadas:** Atualização das políticas de segurança do Supabase para permitir que clínicas gerenciem seus próprios vínculos de pacientes (reativação/inativação) de forma autônoma.
+- **Filtros Contextuais:** O Dashboard e a tela de "Novo Atendimento" agora filtram pacientes baseando-se estritamente no status ativo dentro da clínica do usuário logado.
+
+
 ## [0.5.0-beta] - 2026-05-02
 
 Esta versão marca a conclusão do sistema de Assinatura Digital e Governança de Sessões, garantindo imutabilidade e segurança no fluxo de validação de atendimentos.

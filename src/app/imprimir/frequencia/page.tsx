@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import packageJson from '../../../../package.json';
 
 export default function DigitalFrequencyPrintPage() {
   const [data, setData] = useState<any>(null);
@@ -76,9 +77,9 @@ export default function DigitalFrequencyPrintPage() {
   const authQty = Number(data.authorized_quantity) || 0;
 
   return (
-    <div className="bg-white text-black min-h-screen font-sans p-6 print:p-0">
+    <div className="bg-white text-black min-h-screen font-sans p-2 print:p-0">
       <div className="max-w-[210mm] mx-auto bg-white print:w-[210mm] print:h-[297mm] print:shadow-none shadow-lg border border-gray-200">
-        <div className="p-8 print:p-4">
+        <div className="p-4 print:p-4">
 
           {/* Header */}
           <div className="flex border-b-2 border-black pb-4 mb-4">
@@ -105,14 +106,14 @@ export default function DigitalFrequencyPrintPage() {
           </div>
 
           {/* Estabelecimento */}
-          <div className="mb-4 border border-black">
+          <div className="mb-2 border border-black">
             <div className="bg-gray-100 text-[10px] font-bold px-2 py-0.5 border-b border-black uppercase">Identificação do Estabelecimento de Saúde Executante</div>
             <div className="flex">
-              <div className="flex-1 p-1 border-r border-black">
+              <div className="flex-1 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Nome do Estabelecimento de Saúde</div>
                 <div className="font-semibold text-xs mt-0.5">{data.clinic_name || ''}</div>
               </div>
-              <div className="w-32 p-1">
+              <div className="w-32 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">CNES</div>
                 <div className="font-semibold text-xs mt-0.5 tracking-widest">{formatCNES(data.cnes)}</div>
               </div>
@@ -120,28 +121,28 @@ export default function DigitalFrequencyPrintPage() {
           </div>
 
           {/* Profissional */}
-          <div className="mb-4 border border-black">
+          <div className="mb-2 border border-black">
             <div className="bg-gray-100 text-[10px] font-bold px-2 py-0.5 border-b border-black uppercase">Identificação do Profissional</div>
             <div className="flex border-b border-black">
-              <div className="w-1/3 p-1 border-r border-black">
+              <div className="w-1/3 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Cartão Nacional de Saúde (CNS)</div>
                 <div className="font-semibold text-xs mt-0.5 tracking-widest">{formatCNS(data.professional_cns)}</div>
               </div>
-              <div className="flex-1 p-1">
+              <div className="flex-1 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Nome do Profissional</div>
                 <div className="font-semibold text-xs mt-0.5">{data.professional_name || ''}</div>
               </div>
             </div>
             <div className="flex">
-              <div className="flex-1 p-1 border-r border-black">
+              <div className="flex-1 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">CBO</div>
                 <div className="font-semibold text-xs mt-0.5">{data.professional_cbo || ''}</div>
               </div>
-              <div className="w-1/3 p-1 border-r border-black">
+              <div className="w-1/3 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Mês/Ano</div>
                 <div className="font-semibold text-xs mt-0.5">{formatMonthYear(data.attendance_date)}</div>
               </div>
-              <div className="w-1/3 p-1">
+              <div className="w-1/3 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Folha</div>
                 <div className="font-semibold text-xs mt-0.5">01/01</div>
               </div>
@@ -149,29 +150,29 @@ export default function DigitalFrequencyPrintPage() {
           </div>
 
           {/* Paciente */}
-          <div className="mb-4 border border-black">
+          <div className="mb-2 border border-black">
             <div className="bg-gray-100 text-[10px] font-bold px-2 py-0.5 border-b border-black uppercase">Identificação do Paciente</div>
             <div className="flex border-b border-black">
-              <div className="flex-1 p-1 border-r border-black">
+              <div className="flex-1 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Nome do Paciente</div>
                 <div className="font-semibold text-xs mt-0.5">{data.patient_name || ''}</div>
               </div>
-              <div className="w-48 p-1">
+              <div className="w-48 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Número do Prontuário</div>
                 <div className="font-semibold text-xs mt-0.5"> </div>
               </div>
             </div>
 
             <div className="flex border-b border-black">
-              <div className="w-1/2 p-1 border-r border-black">
+              <div className="w-1/2 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Cartão Nacional de Saúde (CNS)</div>
                 <div className="font-semibold text-xs mt-0.5 tracking-widest">{formatCNS(data.patient_cns)}</div>
               </div>
-              <div className="w-1/4 p-1 border-r border-black">
+              <div className="w-1/4 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Data de Nascimento</div>
                 <div className="font-semibold text-xs mt-0.5">{formatDate(data.patient_birthdate)}</div>
               </div>
-              <div className="w-1/4 p-1">
+              <div className="w-1/4 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none mb-0.5">Sexo</div>
                 <div className="flex gap-4 text-xs font-semibold">
                   <label className="flex items-center gap-1">
@@ -189,33 +190,33 @@ export default function DigitalFrequencyPrintPage() {
             </div>
 
             <div className="flex border-b border-black">
-              <div className="flex-1 p-1 border-r border-black">
+              <div className="flex-1 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Nome da Mãe</div>
                 <div className="font-semibold text-xs mt-0.5">{data.patient_mother || ''}</div>
               </div>
-              <div className="w-48 p-1">
+              <div className="w-48 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Telefone de Contato</div>
                 <div className="font-semibold text-xs mt-0.5">{data.patient_phone || ''}</div>
               </div>
             </div>
 
             <div className="flex border-b border-black">
-              <div className="flex-1 p-1 border-r border-black">
+              <div className="flex-1 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Endereço (Rua, Nº, Bairro)</div>
                 <div className="font-semibold text-xs mt-0.5 truncate">{data.patient_address || ''}</div>
               </div>
-              <div className="w-24 p-1 border-r border-black">
+              <div className="w-24 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Raça/Cor</div>
                 <div className="font-semibold text-xs mt-0.5">{data.patient_race_color || ''}</div>
               </div>
-              <div className="w-32 p-1">
+              <div className="w-32 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">CEP</div>
                 <div className="font-semibold text-xs mt-0.5 tracking-widest">{formatCEP(data.patient_cep)}</div>
               </div>
             </div>
 
             <div className="flex">
-              <div className="flex-1 p-1">
+              <div className="flex-1 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Município de Residência</div>
                 <div className="font-semibold text-xs mt-0.5">{data.patient_city || ''}</div>
               </div>
@@ -223,44 +224,44 @@ export default function DigitalFrequencyPrintPage() {
           </div>
 
           {/* Procedimento */}
-          <div className="mb-4 border border-black">
+          <div className="mb-2 border border-black">
             <div className="bg-gray-100 text-[10px] font-bold px-2 py-0.5 border-b border-black uppercase">Procedimento Realizado</div>
             <div className="flex border-b border-black">
-              <div className="w-1/4 p-1 border-r border-black">
+              <div className="w-1/4 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Data do Atendimento</div>
                 <div className="font-semibold text-xs mt-0.5">{formatDate(data.attendance_date)}</div>
               </div>
-              <div className="flex-1 p-1 border-r border-black">
+              <div className="flex-1 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Código do Procedimento</div>
                 <div className="font-semibold text-xs mt-0.5 tracking-widest">{String(data.procedure_code || '').replace(/\D/g, '').padStart(10, '0')}</div>
               </div>
-              <div className="w-16 p-1 border-r border-black">
+              <div className="w-16 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Qtde</div>
                 <div className="font-semibold text-xs mt-0.5">{String(authQty).padStart(2, '0')}</div>
               </div>
-              <div className="w-20 p-1 border-r border-black">
+              <div className="w-20 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Serviço</div>
                 <div className="font-semibold text-xs mt-0.5">135</div>
               </div>
-              <div className="w-20 p-1">
+              <div className="w-20 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Classificação</div>
                 <div className="font-semibold text-xs mt-0.5">010</div>
               </div>
             </div>
             <div className="flex">
-              <div className="w-1/4 p-1 border-r border-black">
+              <div className="w-1/4 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">CID</div>
                 <div className="font-semibold text-xs mt-0.5">{data.cid || ''}</div>
               </div>
-              <div className="w-1/4 p-1 border-r border-black">
+              <div className="w-1/4 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Caráter de Atendimento</div>
                 <div className="font-semibold text-xs mt-0.5">{data.attendance_character || ''}</div>
               </div>
-              <div className="w-1/4 p-1 border-r border-black">
+              <div className="w-1/4 p-0.5 border-r border-black">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Nº da Autorização</div>
                 <div className="font-semibold text-xs mt-0.5">{data.auth_number || ''}</div>
               </div>
-              <div className="w-1/4 p-1">
+              <div className="w-1/4 p-0.5">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Data da Autorização</div>
                 <div className="font-semibold text-xs mt-0.5">{formatDate(data.authorization_date)}</div>
               </div>
@@ -285,18 +286,18 @@ export default function DigitalFrequencyPrintPage() {
               <table className="w-full border-collapse border border-black text-xs">
                 <thead>
                   <tr className="bg-gray-100 border-b border-black">
-                    <th className="border-r border-black p-1 text-[9px] w-8">Seq.</th>
-                    <th className="border-r border-black p-1 text-[9px] w-20">Data do Atend.</th>
-                    <th className="border-r border-black p-1 text-[9px] w-20">Horário Inicial</th>
-                    <th className="border-r border-black p-1 text-[9px] w-20">Horário Final</th>
-                    <th className="p-1 text-[9px]">Assinatura do Paciente ou Responsável</th>
+                    <th className="border-r border-black p-0.5 text-[9px] w-8">Seq.</th>
+                    <th className="border-r border-black p-0.5 text-[9px] w-20">Data do Atend.</th>
+                    <th className="border-r border-black p-0.5 text-[9px] w-20">Horário Inicial</th>
+                    <th className="border-r border-black p-0.5 text-[9px] w-20">Horário Final</th>
+                    <th className="p-0.5 text-[9px]">Assinatura do Paciente ou Responsável</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Array.from({ length: 15 }).map((_, i) => {
                     const session = sessions[i];
                     return (
-                      <tr key={i} className="border-b border-black h-[18px]">
+                      <tr key={i} className="border-b border-black h-[17px]">
                         <td className="border-r border-black text-center text-[10px]">{i + 1}</td>
                         <td className="border-r border-black text-center text-[10px]">{session ? formatDate(session.session_date).substring(0, 5) : ''}</td>
                         <td className="border-r border-black text-center text-[10px]">{session?.start_time || ''}</td>
@@ -344,7 +345,7 @@ export default function DigitalFrequencyPrintPage() {
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-2">
                 <div className="text-[9px] font-bold text-center mb-1 text-blue-800">Observação:</div>
                 <div className="border border-yellow-400 bg-yellow-200 p-2 text-center text-[10px] font-bold">
                   O paciente ou o responsável só deve assinar a ficha de frequência após a efetiva relização do procedimento.
@@ -354,35 +355,35 @@ export default function DigitalFrequencyPrintPage() {
           </div>
 
           {/* Validação do Gestor */}
-          <div className="mt-6 border border-black">
+          <div className="mt-2 border border-black">
             <div className="bg-gray-100 text-[10px] font-bold px-2 py-0.5 border-b border-black uppercase text-center">Conferência e Validação do Gestor</div>
 
-            <div className="flex p-4 gap-8">
+            <div className="flex p-2 gap-8">
               <div className="flex-1">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Nome do Profissional</div>
-                <div className="border-b border-black h-6 mt-1 font-semibold text-xs">{data.professional_name || ''}</div>
+                <div className="border-b border-black h-5 mt-1 font-semibold text-xs">{data.professional_name || ''}</div>
               </div>
               <div className="flex-1">
                 <div className="text-[9px] uppercase text-gray-600 leading-none text-center">Assinatura do Profissional</div>
-                <div className="border-b border-black h-6 mt-1"></div>
+                <div className="border-b border-black h-5 mt-1"></div>
               </div>
             </div>
 
-            <div className="flex px-4 pb-4 gap-8">
+            <div className="flex px-2 pb-2 gap-8">
               <div className="flex-[2]">
                 <div className="text-[9px] uppercase text-gray-600 leading-none">Órgão Autorizador</div>
-                <div className="border-b border-black h-6 mt-1 font-semibold text-xs">{/* Pode ser hardcoded M150420801 como na imagem? */} M150420801</div>
+                <div className="border-b border-black h-5 mt-1 font-semibold text-xs">M150420801</div>
               </div>
               <div className="flex-1">
                 <div className="text-[9px] uppercase text-gray-600 leading-none text-center">Data</div>
-                <div className="border-b border-black h-6 mt-1"></div>
+                <div className="border-b border-black h-5 mt-1"></div>
               </div>
             </div>
           </div>
 
           {/* Watermark / Print Info */}
-          <div className="mt-4 text-center text-[8px] text-gray-400 print:block">
-            Impresso via SisTEA em {new Date().toLocaleString('pt-BR')}
+          <div className="mt-2 text-center text-[8px] text-gray-400 print:block">
+            Impresso via SisTEA v{packageJson.version} em {new Date().toLocaleString('pt-BR')}
           </div>
 
         </div>

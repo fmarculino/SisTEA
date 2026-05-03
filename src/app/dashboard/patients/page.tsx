@@ -23,7 +23,7 @@ export default async function PatientsPage({
 
   let query = supabase
     .from('patients')
-    .select('*, clinics(name)')
+    .select('*, patient_clinics(clinic_id, active, clinics(name))')
 
   // Apply Search Filter
   if (queryParams.q) {
@@ -37,7 +37,15 @@ export default async function PatientsPage({
 
   // Apply Clinic Filter
   if (queryParams.clinic && queryParams.clinic !== 'all') {
-    query = query.eq('clinic_id', queryParams.clinic)
+    // We use a separate sub-select or just filter the main query if we used !inner
+    // For simplicity with Supabase JS and RLS, we can filter by the legacy clinic_id 
+    // OR use the new relationship. Let's use the new relationship with !inner if filtered.
+    if (queryParams.clinic && queryParams.clinic !== 'all') {
+        query = supabase
+          .from('patients')
+          .select('*, clinics(name), patient_clinics!inner(clinic_id, clinics(name))')
+          .eq('patient_clinics.clinic_id', queryParams.clinic)
+    }
   }
 
   const { data: patients } = await query.order('name')
@@ -124,21 +132,47 @@ export default async function PatientsPage({
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-6">
-                    <span className="inline-flex items-center text-xs font-bold text-foreground/70 bg-secondary/30 px-3 py-1.5 rounded-xl border border-border/50">
+                    <div className="flex flex-wrap gap-2">
                       {/* @ts-ignore */}
-                      {patient.clinics?.name || 'Sem clínica'}
-                    </span>
+                      {patient.patient_clinics && patient.patient_clinics.length > 0 ? (
+                        /* @ts-ignore */
+                        patient.patient_clinics.map((pc: any, idx: number) => (
+                          <span 
+                            key={idx} 
+                            className={`inline-flex items-center text-[10px] font-black px-2 py-1 rounded-lg border uppercase tracking-tighter shadow-sm ${
+                              pc.active 
+                                ? 'text-primary bg-primary/5 border-primary/20' 
+                                : 'text-rose-600 bg-rose-50 border-rose-200 dark:bg-rose-500/10 dark:border-rose-500/20'
+                            }`}
+                          >
+                            {pc.clinics?.name}
+                            {!pc.active && <span className="ml-1 text-[8px] opacity-80">(INATIVO)</span>}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="inline-flex items-center text-[10px] font-black text-foreground/70 bg-secondary/30 px-2 py-1 rounded-lg border border-border/50 uppercase tracking-tighter">
+                          {/* @ts-ignore */}
+                          {patient.clinics?.name || 'Sem clínica'}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-6">
-                    {patient.active ? (
-                      <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-widest leading-none">
-                        <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Ativo
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-xl bg-muted px-3 py-1.5 text-[10px] font-black text-muted-foreground border border-border uppercase tracking-widest leading-none">
-                        <XCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Inativo
-                      </span>
-                    )}
+                    {(() => {
+                      // Se houver vínculos, usamos o status do primeiro vínculo (que para Clinic User será o único)
+                      const link = patient.patient_clinics && patient.patient_clinics.length > 0 ? patient.patient_clinics[0] : null;
+                      const isActive = link ? link.active : patient.active;
+
+                      return isActive ? (
+                        <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                          <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Ativo
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-xl bg-muted px-3 py-1.5 text-[10px] font-black text-muted-foreground border border-border uppercase tracking-widest leading-none">
+                          <XCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Inativo
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-3">

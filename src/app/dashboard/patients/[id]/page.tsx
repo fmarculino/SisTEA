@@ -10,7 +10,11 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
   const supabase = await createClient()
   const { id } = await params
   
-  const { data: patient } = await supabase.from('patients').select('*').eq('id', id).single()
+  const { data: patient } = await supabase
+    .from('patients')
+    .select('*, patient_clinics(clinic_id, active, clinics(name))')
+    .eq('id', id)
+    .single()
   if (!patient) notFound()
 
   let clinics: any[] = []
@@ -21,6 +25,22 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
 
   // Only pass auth_token to admin users
   const authToken = profile.role === 'SMS_ADMIN' ? patient.auth_token : null
+
+  // Map patient_clinics to a simpler format for the form
+  const linkedClinics = (patient.patient_clinics || []).map((pc: any) => ({
+    clinic_id: pc.clinic_id,
+    name: pc.clinics?.name || 'Clínica desconhecida',
+    active: pc.active
+  }))
+
+  // Determine the 'active' status for the current context (clinic user or default)
+  const currentLink = profile.clinic_id 
+    ? linkedClinics.find(lc => lc.clinic_id === profile.clinic_id)
+    : null;
+  
+  if (currentLink) {
+    patient.active = currentLink.active;
+  }
 
   return (
     <div className="space-y-10">
@@ -39,6 +59,7 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
         userRole={profile.role} 
         userClinicId={profile.clinic_id}
         authToken={authToken}
+        linkedClinics={linkedClinics}
       />
     </div>
   )

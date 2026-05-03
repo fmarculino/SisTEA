@@ -49,14 +49,22 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
 
 
   // Buscando os dados necessários para os selects e para a geração do PDF
-  let patientsQuery = supabase.from('patients').select('id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color').order('name')
-  
-  // Use professional_clinics for many-to-many join, and professional_specialties for specialties
+  let patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color'
   let profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics(clinic_id)'
+
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics!inner(clinic_id)'
+    // Note: We use !inner only if we want to filter. 
+    // In Edit, we want to see the patient/professional of the attendance even if they are not in the current filter list.
+    // However, for professionals, the system previously used !inner.
+    patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color, patient_clinics(clinic_id)'
+    profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics(clinic_id)'
   }
 
+  let patientsQuery = supabase
+    .from('patients')
+    .select(patientsSelect)
+    .order('name')
+  
   let professionalsQuery = supabase
     .from('professionals')
     .select(profSelect)

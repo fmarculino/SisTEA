@@ -3,10 +3,10 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { patientSchema, type PatientFormData } from './schema'
-import { createPatientAction, updatePatientAction, resetPatientTokenAction } from './actions'
-import { useState } from 'react'
+import { createPatientAction, updatePatientAction, resetPatientTokenAction, checkPatientByCNSAction, linkPatientToClinicAction, togglePatientClinicStatusAction } from './actions'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw } from 'lucide-react'
+import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw, Building } from 'lucide-react'
 
 type ClinicOption = { id: string; name: string }
 
@@ -22,7 +22,8 @@ export function PatientForm({
   clinics, 
   userRole, 
   userClinicId,
-  authToken 
+  authToken,
+  linkedClinics = []
 }: { 
   initialData?: Partial<PatientFormData>; 
   id?: string;
@@ -30,18 +31,20 @@ export function PatientForm({
   userRole: string;
   userClinicId?: string | null;
   authToken?: string | null;
+  linkedClinics?: { clinic_id: string; name: string }[];
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [currentToken, setCurrentToken] = useState(authToken || '')
+  const [localLinkedClinics, setLocalLinkedClinics] = useState(linkedClinics)
   const [isResettingToken, setIsResettingToken] = useState(false)
-
-  const defaultClinicId = userRole === 'SMS_ADMIN' 
-    ? (initialData?.clinic_id || '') 
-    : (userClinicId || '')
-
+  const [existingPatient, setExistingPatient] = useState<any>(null)
+  const [showLinkModal, setShowLinkModal] = useState(false)
+  const [isLinking, setIsLinking] = useState(false)
+  const [lastCheckedCNS, setLastCheckedCNS] = useState('')
+  
   const {
     register,
     handleSubmit,
@@ -64,9 +67,90 @@ export function PatientForm({
       state: initialData?.state || '',
       medical_record_number: initialData?.medical_record_number || '',
       active: initialData?.active ?? true,
-      clinic_id: defaultClinicId,
+      clinic_id: userRole === 'SMS_ADMIN' ? (initialData?.clinic_id || '') : (userClinicId || ''),
     },
   })
+
+  // Para Admin: Quando trocar a clínica no dropdown, atualizar o toggle de Ativo 
+  // com o status que o paciente tem naquela clínica específica.
+  const selectedClinicId = watch('clinic_id')
+  useEffect(() => {
+    if (userRole === 'SMS_ADMIN' && id && selectedClinicId) {
+      const link = linkedClinics.find(lc => lc.clinic_id === selectedClinicId)
+      if (link) {
+        setValue('active', link.active)
+      } else {
+        setValue('active', true) // Novo vínculo, padrão ativo
+      }
+    }
+  }, [selectedClinicId, userRole, id, linkedClinics, setValue])
+
+  const cnsValue = watch('cns_patient')
+  const rawCNS = cnsValue?.replace(/\D/g, '')
+
+  useEffect(() => {
+    async function checkCNS() {
+      if (!id && rawCNS?.length === 15 && rawCNS !== lastCheckedCNS) {
+        setLastCheckedCNS(rawCNS)
+        setIsPending(true)
+        const result = await checkPatientByCNSAction(cnsValue)
+        setIsPending(false)
+        
+        if (result?.patient) {
+          setExistingPatient(result.patient)
+          setShowLinkModal(true)
+        }
+      }
+    }
+    checkCNS()
+  }, [rawCNS, id, cnsValue, lastCheckedCNS])
+
+  const handleLinkPatient = async () => {
+    if (!existingPatient || !userClinicId) return
+    
+    setIsLinking(true)
+    setErrorMsg('')
+    
+    try {
+      const result = await linkPatientToClinicAction(existingPatient.id, userClinicId)
+      if (result.error) {
+        setErrorMsg(result.error)
+        setShowLinkModal(false)
+      } else {
+        router.push('/dashboard/patients')
+      }
+    } catch (err) {
+      setErrorMsg('Ocorreu um erro ao vincular o paciente.')
+    } finally {
+      setIsLinking(false)
+    }
+  }
+
+  const handleToggleClinic = async (clinicId: string, currentStatus: boolean) => {
+    if (!id) return;
+    
+    const newStatus = !currentStatus;
+    
+    // Optimistic update
+    setLocalLinkedClinics(prev => prev.map(lc => 
+      lc.clinic_id === clinicId ? { ...lc, active: newStatus } : lc
+    ));
+
+    // Sync with form state if the toggled clinic is the currently selected one
+    const currentSelectedClinic = watch('clinic_id');
+    if (clinicId === currentSelectedClinic || (userRole !== 'SMS_ADMIN' && clinicId === userClinicId)) {
+      setValue('active', newStatus);
+    }
+
+    const res = await togglePatientClinicStatusAction(id, clinicId, newStatus);
+    if (res.error) {
+      setErrorMsg(res.error);
+      // Revert on error
+      setLocalLinkedClinics(prev => prev.map(lc => 
+        lc.clinic_id === clinicId ? { ...lc, active: currentStatus } : lc
+      ));
+    }
+  }
 
   // Funções simples de máscara
   const maskCNS = (value: string) => {
@@ -280,7 +364,7 @@ export function PatientForm({
         <SectionTitle icon={CreditCard} title="Configurações e Vínculo" />
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
           {userRole === 'SMS_ADMIN' ? (
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-6">
               <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Unidade/Clínica de Atendimento *</label>
               <div className="relative group/select">
                 <select
@@ -295,28 +379,119 @@ export function PatientForm({
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
               </div>
               {errors.clinic_id && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.clinic_id.message}</p>}
+
+              {/* Exibição de clínicas vinculadas com toggle individual */}
+              {id && (
+                <div className="mt-6 space-y-4">
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block border-b border-border/40 pb-2">Status por Unidade:</span>
+                  <div className="grid grid-cols-1 gap-3">
+                    {localLinkedClinics.length > 0 ? (
+                      localLinkedClinics.map((lc) => (
+                        <div 
+                          key={lc.clinic_id} 
+                          className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                            lc.active 
+                              ? 'bg-primary/[0.03] border-primary/20 shadow-sm' 
+                              : 'bg-muted/30 border-border/40 opacity-80'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-xl ${lc.active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                              <Building className="w-4 h-4" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className={`text-[11px] font-black uppercase tracking-tight ${lc.active ? 'text-primary' : 'text-muted-foreground'}`}>
+                                {lc.name}
+                              </span>
+                              <span className="text-[10px] font-medium text-muted-foreground">
+                                {lc.active ? 'Atendimento Habilitado' : 'Atendimento Suspenso nesta unidade'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => handleToggleClinic(lc.clinic_id, lc.active)}
+                            className="relative inline-flex items-center cursor-pointer group"
+                          >
+                            <div className={`w-10 h-5 rounded-full transition-colors duration-200 ease-in-out ${lc.active ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+                              <div className={`absolute top-[2px] left-[2px] bg-white w-4 h-4 rounded-full shadow-sm transition-transform duration-200 ease-in-out ${lc.active ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </div>
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center p-6 border-2 border-dashed border-border/40 rounded-2xl">
+                        <p className="text-xs text-muted-foreground font-medium italic">Nenhuma unidade vinculada encontrada.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
-            <input type="hidden" {...register('clinic_id')} />
+            <div className="sm:col-span-6 space-y-4">
+               {/* Para Clinic User: Mostra apenas o seu status de forma elegante */}
+               {id && localLinkedClinics.map((lc) => (
+                 lc.clinic_id === userClinicId && (
+                   <div 
+                    key={lc.clinic_id}
+                    className={`flex items-center justify-between p-6 rounded-3xl border transition-all ${
+                      lc.active 
+                        ? 'bg-primary/[0.03] border-primary/20 shadow-lg shadow-primary/5' 
+                        : 'bg-muted/30 border-border/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-2xl ${lc.active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                        <CheckCircle className="w-6 h-6" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black uppercase tracking-widest text-foreground">Status do Paciente</span>
+                        <p className="text-xs text-muted-foreground font-medium">
+                          {lc.active 
+                            ? 'Este paciente está ATIVO e pode realizar agendamentos nesta unidade.' 
+                            : 'Este paciente está INATIVO nesta unidade.'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={() => handleToggleClinic(lc.clinic_id, lc.active)}
+                      className="relative inline-flex items-center cursor-pointer scale-125"
+                    >
+                      <div className={`w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${lc.active ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+                        <div className={`absolute top-[2px] left-[2px] bg-white w-5 h-5 rounded-full shadow-md transition-transform duration-200 ease-in-out ${lc.active ? 'translate-x-6' : 'translate-x-0'}`} />
+                      </div>
+                    </button>
+                    <input type="hidden" {...register('active')} />
+                    <input type="hidden" {...register('clinic_id')} />
+                  </div>
+                 )
+               ))}
+               {!id && (
+                 <>
+                   <input type="hidden" {...register('clinic_id')} />
+                   <label className="flex items-center space-x-4 bg-muted/30 p-4 rounded-[1.25rem] border border-border/40 w-full cursor-pointer hover:bg-muted/50 transition-all border-dashed hover:border-primary/30 group">
+                      <div className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          {...register('active')}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-border/60 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/10 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary shadow-inner"></div>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-black text-foreground uppercase tracking-widest group-hover:text-primary transition-colors">Ativar Paciente no Cadastro</span>
+                        <p className="text-[10px] text-muted-foreground leading-tight font-medium">Define se o paciente iniciará como ativo nesta unidade.</p>
+                      </div>
+                    </label>
+                 </>
+               )}
+            </div>
           )}
-
-          <div className={`flex items-end pb-1 ${userRole === 'SMS_ADMIN' ? 'sm:col-span-2' : 'sm:col-span-6'}`}>
-            <label className="flex items-center space-x-4 bg-muted/30 p-4 rounded-[1.25rem] border border-border/40 w-full cursor-pointer hover:bg-muted/50 transition-all border-dashed hover:border-primary/30 group">
-              <div className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  {...register('active')}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-border/60 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/10 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary shadow-inner"></div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-black text-foreground uppercase tracking-widest group-hover:text-primary transition-colors">Paciente Ativo</span>
-                <p className="text-[10px] text-muted-foreground leading-tight font-medium">Permite agendamentos e atendimentos.</p>
-              </div>
-            </label>
           </div>
-        </div>
       </section>
 
       {/* Seção 4: Token de Validação (Somente Admin) */}
@@ -403,6 +578,72 @@ export function PatientForm({
           )}
         </button>
       </div>
+
+      {/* Modal de Vínculo de Paciente Existente */}
+      {showLinkModal && existingPatient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-card w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-border p-8 animate-in zoom-in-95 duration-300">
+            <div className="flex items-center gap-4 text-amber-500 mb-6">
+              <div className="p-3 rounded-2xl bg-amber-500/10">
+                <CreditCard className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tight">Paciente já Cadastrado</h3>
+                <p className="text-sm text-muted-foreground font-medium">O CNS informado já existe no sistema.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 bg-muted/30 p-6 rounded-3xl border border-border/40 mb-8">
+              <div>
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome do Paciente</span>
+                <p className="font-bold text-foreground">{existingPatient.name}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nascimento</span>
+                  <p className="font-bold text-foreground">
+                    {new Date(existingPatient.birth_date).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mãe</span>
+                  <p className="font-bold text-foreground truncate">{existingPatient.mother_name || 'Não informado'}</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-8 text-center px-4">
+              Este paciente está cadastrado em outra unidade. Deseja <strong>vincular</strong> ele também à sua clínica?
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLinkModal(false)
+                  setValue('cns_patient', '')
+                }}
+                className="flex-1 rounded-2xl border border-border bg-background px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isLinking}
+                onClick={handleLinkPatient}
+                className="flex-1 rounded-2xl bg-primary px-6 py-4 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLinking ? (
+                  <RotateCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                Sim, Vincular
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }

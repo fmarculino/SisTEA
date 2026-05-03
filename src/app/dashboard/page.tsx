@@ -106,7 +106,7 @@ export default async function DashboardPage({
 
       const [sessionsRes, patientsRes] = await Promise.all([
         sessionsQuery,
-        supabase.from('patients').select('id', { count: 'exact' }).eq('clinic_id', clinicId)
+        supabase.from('patient_clinics').select('id', { count: 'exact' }).eq('clinic_id', clinicId).eq('active', true)
       ])
 
       const sessions = sessionsRes.data || []
