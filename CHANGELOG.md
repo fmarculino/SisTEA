@@ -2,6 +2,25 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.8.0-beta] - 2026-05-03
+
+Esta versão marca um salto significativo na **Governança e Transparência Administrativa** do SisTEA, introduzindo o sistema completo de **Auditoria Digital Imutável** com ferramentas forenses e relatórios avançados.
+
+### 🔍 Auditoria Digital & Fiscalização Forense
+- **Registro Imutável:** Implementação de logs de auditoria append-only (somente adição) que registram todas as operações críticas do sistema: Criação, Alteração, Exclusão e Logins.
+- **Data-Diff (Snapshot):** Novo sistema de comparação que permite visualizar exatamente o que mudou em um registro (valores antigos vs. novos), garantindo rastreabilidade total de modificações.
+- **Detalhamento Técnico:** Captura automática de metadados forenses para cada ação, incluindo Endereço IP, Device User-Agent e carimbo de tempo rigoroso.
+
+### 📊 Relatórios & Exportação Profissional
+- **Exportação PDF (Relatórios de Auditoria):** Novo gerador de relatórios em PDF com alta densidade de dados, cabeçalho formal e layout otimizado para impressão e fiscalização formal.
+- **Exportação CSV:** Funcionalidade para exportação de grandes volumes de logs para análise externa em planilhas.
+- **Barra de Ferramentas Avançada:** Filtros inteligentes por Tipo de Ação, Recurso (Tabela), Clínica, Busca por texto e intervalo de datas.
+
+### 🎨 UI/UX: Dashboard de Alta Densidade
+- **Layout Compacto (Audit Rows):** Reformulação da interface de auditoria para um formato de linhas compactas e alinhadas, dobrando a quantidade de informações visíveis por tela sem perder a clareza.
+- **Filtro de Data Inteligente:** Novo seletor de data vertical com padrão automático para os últimos 30 dias, otimizando o carregamento inicial de dados.
+- **Alinhamento Rigoroso:** Padronização das colunas de logs para garantir uma visualização de "visão tabular" perfeita, facilitando o escaneamento visual por parte do controlador.
+
 ## [0.7.2-beta] - 2026-05-03
 
 Esta versão introduz a **Governança de Fuso Horário Dinâmico**, permitindo que o SisTEA opere de forma precisa em diferentes regiões geográficas através de configurações administrativas globais.

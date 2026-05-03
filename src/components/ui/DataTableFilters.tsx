@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 interface DataTableFiltersProps {
   placeholder?: string
   showStatus?: boolean
+  className?: string
   extraFilters?: {
     paramName: string;
     placeholder: string;
@@ -17,6 +18,7 @@ interface DataTableFiltersProps {
 export function DataTableFilters({ 
   placeholder = "Pesquisar...", 
   showStatus = true,
+  className = "mb-8",
   extraFilters = []
 }: DataTableFiltersProps) {
   const router = useRouter()
@@ -47,7 +49,7 @@ export function DataTableFilters({
   }, [searchValue, searchParams, updateParams])
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 mb-8 items-stretch sm:items-center flex-wrap">
+    <div className={`flex flex-col sm:flex-row gap-4 items-stretch sm:items-center flex-wrap ${className}`}>
       <div className="relative flex-1 min-w-[280px] group">
         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
           <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />

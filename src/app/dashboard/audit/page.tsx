@@ -2,17 +2,30 @@ import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import { redirect } from 'next/navigation'
 import { format } from 'date-fns'
-import { ShieldCheck, MapPin, Tablet, Globe, Search, Download, CalendarCheck } from 'lucide-react'
+import { ShieldCheck, Search } from 'lucide-react'
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { AuditLogList } from './AuditLogList'
+import { Pagination } from '@/components/ui/Pagination'
+import { DateRangeFilter } from './DateRangeFilter'
 
 import { ExportAuditButton } from './ExportAuditButton'
+import { ExportAuditPDFButton } from './ExportAuditPDFButton'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: { q?: string; clinic?: string; action?: string; table?: string }
+  searchParams: { 
+    q?: string; 
+    clinic?: string; 
+    action?: string; 
+    table?: string;
+    page?: string;
+    limit?: string;
+    startDate?: string;
+    endDate?: string;
+  }
 }) {
   const profile = await getUserProfile()
   if (profile?.role !== 'SMS_ADMIN') {
@@ -21,6 +34,12 @@ export default async function AuditPage({
 
   const queryParams = await searchParams
   const supabase = await createClient()
+
+  // Pagination defaults
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 25
+  const from = (page - 1) * limit
+  const to = from + limit - 1
 
   // Fetch clinics for filter
   const { data: clinics } = await supabase
@@ -63,9 +82,10 @@ export default async function AuditPage({
   // Main query for audit logs
   let query = supabase
     .from('audit_logs')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
 
+  // Apply filters
   if (queryParams.action && queryParams.action !== 'all') {
     query = query.eq('action', queryParams.action)
   }
@@ -74,18 +94,24 @@ export default async function AuditPage({
     query = query.eq('table_name', queryParams.table)
   }
 
-  const { data: logs } = await query.limit(300)
+  if (queryParams.startDate) {
+    query = query.gte('created_at', `${queryParams.startDate}T00:00:00`)
+  }
 
-  // Client-side search for description and user
-  const filteredLogs = queryParams.q 
-    ? logs?.filter((log: any) => 
-        log.description?.toLowerCase().includes(queryParams.q!.toLowerCase()) ||
-        log.user_email?.toLowerCase().includes(queryParams.q!.toLowerCase())
-      )
-    : logs
+  if (queryParams.endDate) {
+    query = query.lte('created_at', `${queryParams.endDate}T23:59:59`)
+  }
+
+  if (queryParams.q) {
+    // Supabase search is limited, for production consider Full Text Search
+    // Here we use or filter but it might be heavy for many rows
+    query = query.or(`description.ilike.%${queryParams.q}%,user_email.ilike.%${queryParams.q}%`)
+  }
+
+  const { data: logs, count } = await query.range(from, to)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight flex items-center gap-3">
@@ -96,105 +122,38 @@ export default async function AuditPage({
             Registro imutável de todas as ações e alterações realizadas no sistema.
           </p>
         </div>
-        <ExportAuditButton data={filteredLogs || []} />
+        <div className="flex flex-wrap items-center gap-3">
+          <ExportAuditPDFButton data={logs || []} />
+          <ExportAuditButton data={logs || []} />
+        </div>
       </div>
 
-      <DataTableFilters 
-        placeholder="Pesquisar por descrição, usuário ou ação..." 
-        showStatus={false}
-        extraFilters={extraFilters}
-      />
-
-      <div className="grid grid-cols-1 gap-4">
-        {filteredLogs?.map((log: any) => (
-          <div key={log.id} className="bento-card p-6 hover:border-primary/30 transition-all group">
-            <div className="flex flex-col lg:flex-row gap-6">
-              {/* Main Info */}
-              <div className="flex-1 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest border ${
-                      log.action === 'CREATE' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                      log.action === 'DELETE' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
-                      log.action === 'UPDATE' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                      'bg-sky-500/10 text-sky-500 border-sky-500/20'
-                    }`}>
-                      {log.action}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      ID: {log.id.split('-')[0]}
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold text-foreground">
-                    {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm:ss")}
-                  </span>
-                </div>
-
-                <div>
-                  <p className="text-sm font-bold text-foreground leading-relaxed">
-                    {log.description}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Usuário</p>
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-xs text-foreground">{log.user_email}</p>
-                      <span className="px-2 py-0.5 rounded-md bg-muted text-[9px] font-bold text-muted-foreground uppercase">
-                        {log.user_role === 'SMS_ADMIN' ? 'Controlador' : 'Gestor'}
-                      </span>
-                    </div>
-                  </div>
-                  {log.table_name && (
-                    <div>
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Tabela / Recurso</p>
-                      <p className="text-xs font-medium text-foreground/80 uppercase">{log.table_name}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Audit Metadata */}
-              <div className="lg:w-72 bg-muted/30 rounded-2xl p-4 border border-border/40 space-y-3">
-                <div className="flex items-center gap-3 text-xs">
-                  <Globe className="h-4 w-4 text-sky-500 shrink-0" />
-                  <div className="overflow-hidden">
-                    <p className="font-bold text-foreground">Endereço IP</p>
-                    <p className="text-muted-foreground font-mono truncate">{log.ip_address}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 text-xs">
-                  <Tablet className="h-4 w-4 text-purple-500 shrink-0" />
-                  <div className="overflow-hidden">
-                    <p className="font-bold text-foreground">Dispositivo</p>
-                    <p className="text-muted-foreground truncate text-[10px]" title={log.user_agent}>
-                      {log.user_agent?.split('(')[0] || 'Desconhecido'}
-                    </p>
-                  </div>
-                </div>
-
-                {(log.old_data || log.new_data) && (
-                  <div className="pt-2 border-t border-border/40">
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase">
-                      <Search className="h-3 w-3" />
-                      Dados Alterados
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+      <div className="bg-card/30 p-4 rounded-3xl border border-border/40 backdrop-blur-xl space-y-4">
+        <div className="flex flex-col xl:flex-row gap-4 items-center">
+          <div className="flex-1 w-full">
+            <DataTableFilters 
+              placeholder="Pesquisar por descrição, usuário ou ação..." 
+              showStatus={false}
+              className="mb-0"
+              extraFilters={extraFilters}
+            />
           </div>
-        ))}
+          <div className="xl:w-auto w-full pt-4 xl:pt-0 xl:border-l xl:border-border/10 xl:pl-4">
+            <DateRangeFilter />
+          </div>
+        </div>
+      </div>
 
-        {(!filteredLogs || filteredLogs.length === 0) && (
-          <div className="py-20 text-center bento-card border-dashed">
-            <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="h-8 w-8 text-muted-foreground/40" />
-            </div>
-            <h3 className="text-lg font-bold text-foreground">Nenhum log encontrado</h3>
-            <p className="text-sm text-muted-foreground">Não foram encontrados registros de auditoria com os filtros selecionados.</p>
+      <div className="bg-card/50 rounded-3xl border border-border/40 overflow-hidden shadow-xl shadow-black/20">
+        <AuditLogList logs={logs || []} />
+        
+        {count && count > 0 && (
+          <div className="bg-muted/10 border-t border-border/10">
+            <Pagination 
+              totalItems={count || 0}
+              itemsPerPage={limit}
+              currentPage={page}
+            />
           </div>
         )}
       </div>
