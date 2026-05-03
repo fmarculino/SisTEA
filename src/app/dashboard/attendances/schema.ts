@@ -7,6 +7,11 @@ export const attendanceSessionSchema = z.object({
   end_time: z.string().min(1, 'Hora final é obrigatória'),
   status: z.enum(['Realizada', 'Pendente', 'Glosado']),
   justification: z.string().optional().nullable(),
+  // Audit fields (read-only)
+  validated_at: z.string().optional().nullable(),
+  validation_ip: z.string().optional().nullable(),
+  validation_ua: z.string().optional().nullable(),
+  validation_geo: z.any().optional().nullable(),
 })
 
 export const attendanceSchema = z.object({

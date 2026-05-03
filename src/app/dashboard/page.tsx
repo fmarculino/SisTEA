@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
-import { Users, Activity, Building, DollarSign, TrendingUp } from 'lucide-react'
+import { Users, Activity, Building, DollarSign, TrendingUp, ShieldCheck } from 'lucide-react'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { DashboardFilters } from './DashboardFilters'
 
@@ -37,11 +37,13 @@ export default async function DashboardPage({
   let totalPatients = 0
   let totalClinicsActive = 0
   let clinicStats: { name: string; count: number; value: number }[] = []
+  let sessions: any[] = []
 
   if (profile?.role === 'SMS_ADMIN') {
     let sessionsQuery = supabase.from('attendance_sessions')
       .select(`
         status,
+        validated_at,
         attendance:attendances!inner(
           clinic:clinics!inner(name),
           procedure:procedures!inner(valor_total)
@@ -59,7 +61,7 @@ export default async function DashboardPage({
       supabase.from('patients').select('id', { count: 'exact' })
     ])
 
-    const sessions = sessionsRes.data || []
+    sessions = sessionsRes.data || []
     totalAttendances = sessions.length
     
     // Grouping by clinic
@@ -91,6 +93,7 @@ export default async function DashboardPage({
       let sessionsQuery = supabase.from('attendance_sessions')
         .select(`
           status,
+          validated_at,
           attendance:attendances!inner(
             clinic_id,
             clinic:clinics!inner(name),
@@ -109,7 +112,7 @@ export default async function DashboardPage({
         supabase.from('patient_clinics').select('id', { count: 'exact' }).eq('clinic_id', clinicId).eq('active', true)
       ])
 
-      const sessions = sessionsRes.data || []
+      sessions = sessionsRes.data || []
       totalAttendances = sessions.length
       
       const statsMap = new Map<string, { count: number; value: number }>()
@@ -138,6 +141,14 @@ export default async function DashboardPage({
 
   // Max value for chart scaling
   const maxValue = clinicStats.reduce((max, c) => Math.max(max, c.value), 0) || 1
+
+  // Digital Validation Stats
+  // We need to fetch all realized sessions for the rate calculation if not already done
+  const digitalValidatedCount = sessions.filter((s: any) => s.validated_at).length
+  
+  const digitalValidationRate = totalAttendances > 0 
+    ? (digitalValidatedCount / totalAttendances) * 100 
+    : 0
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -218,6 +229,36 @@ export default async function DashboardPage({
           </div>
           <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
             <Users className="h-24 w-24 text-blue-600" />
+          </div>
+        </div>
+
+        {/* Taxa de Validação Digital Card */}
+        <div className="bento-card p-6 relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-emerald-500/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
+              <ShieldCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-500/5 px-2 py-0.5 rounded-full">Auditoria</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground mb-1">Adoção Digital (QR Code)</p>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-heading font-bold text-foreground">
+                {digitalValidationRate.toFixed(1)}%
+              </h3>
+              <span className="text-xs text-muted-foreground">da produção</span>
+            </div>
+            <div className="mt-3 h-1.5 w-full bg-muted/30 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+                style={{ width: `${digitalValidationRate}%` }}
+              />
+            </div>
+          </div>
+          <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+            <ShieldCheck className="h-24 w-24 text-emerald-600" />
           </div>
         </div>
 

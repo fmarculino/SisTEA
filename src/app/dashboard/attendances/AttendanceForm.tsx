@@ -10,6 +10,7 @@ import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { generateFrequencyPDF } from '@/utils/generateFrequencyPDF'
 import { QRCodeModal } from './QRCodeModal'
+import { ShieldCheck } from 'lucide-react'
 
 export function AttendanceForm({ 
   initialData, 
@@ -533,18 +534,52 @@ export function AttendanceForm({
               <div className="sm:col-span-1">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Situação</label>
                 {userRole === 'SMS_ADMIN' ? (
-                  <select
-                    {...register(`sessions.${index}.status` as const)}
-                    className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
-                      watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 
-                      watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 font-bold border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
-                      watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : ''
-                    }`}
-                  >
-                    <option value="Realizada">Realizada</option>
-                    <option value="Pendente">Pendente</option>
-                    <option value="Glosado" className="text-rose-600 font-bold">Glosado</option>
-                  </select>
+                  <div className="relative group/audit">
+                    <select
+                      {...register(`sessions.${index}.status` as const)}
+                      className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
+                        watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 
+                        watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 font-bold border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
+                        watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : ''
+                      }`}
+                    >
+                      <option value="Realizada">Realizada</option>
+                      <option value="Pendente">Pendente</option>
+                      <option value="Glosado" className="text-rose-600 font-bold">Glosado</option>
+                    </select>
+                    
+                    {/* Audit Info Badge for SMS_ADMIN */}
+                    {watch(`sessions.${index}.status`) === 'Realizada' && watch(`sessions.${index}.validated_at`) && (
+                      <div className="absolute -top-2 -right-2 z-10">
+                        <div className="bg-emerald-500 text-white p-1 rounded-full shadow-lg cursor-help group/tooltip">
+                          <ShieldCheck className="h-3 w-3" />
+                          
+                          {/* Tooltip Content */}
+                          <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-none border border-white/10 backdrop-blur-md">
+                            <p className="font-bold border-b border-white/10 pb-1 mb-1 text-emerald-400 uppercase tracking-widest">Auditoria de Assinatura</p>
+                            <div className="space-y-1">
+                              <p><span className="opacity-50">Data/Hora:</span> {new Date(watch(`sessions.${index}.validated_at`)!).toLocaleString('pt-BR')}</p>
+                              <p><span className="opacity-50">IP:</span> {watch(`sessions.${index}.validation_ip`)}</p>
+                              <p className="truncate"><span className="opacity-50">Dispositivo:</span> {watch(`sessions.${index}.validation_ua`)}</p>
+                              {watch(`sessions.${index}.validation_geo`) && (
+                                <div className="space-y-0.5 border-t border-white/10 pt-1 mt-1">
+                                  <p className="text-sky-400 font-medium">
+                                    📍 Localização: {watch(`sessions.${index}.validation_geo`).lat.toFixed(4)}, {watch(`sessions.${index}.validation_geo`).lng.toFixed(4)}
+                                  </p>
+                                  {watch(`sessions.${index}.validation_distance`) !== undefined && watch(`sessions.${index}.validation_distance`) !== null && (
+                                    <p className={`font-bold ${watch(`sessions.${index}.is_out_of_range`) ? 'text-amber-400' : 'text-emerald-400/80'}`}>
+                                      📏 Distância: {Math.round(watch(`sessions.${index}.validation_distance`) as number)}m da clínica
+                                      {watch(`sessions.${index}.is_out_of_range`) && ' ⚠️ ASSINATURA REMOTA'}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <>
                     <input type="hidden" {...register(`sessions.${index}.status` as const)} />

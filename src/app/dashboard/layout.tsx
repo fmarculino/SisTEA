@@ -13,6 +13,14 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  if (profile.active === false) {
+    redirect('/login?error=Seu usuário está desativado. Entre em contato com o suporte.')
+  }
+
+  if (!profile.clinic_active) {
+    redirect('/login?error=Esta clínica está desativada. O acesso foi bloqueado.')
+  }
+
   return (
     <DashboardShell 
       role={profile.role} 

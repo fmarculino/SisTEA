@@ -246,19 +246,19 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     .select('id, validated_at')
     .eq('attendance_id', id)
 
-  const validatedSessionIds = (existingSessions || [])
-    .filter((s: any) => s.validated_at)
+  const sessionsToKeepIds = (existingSessions || [])
+    .filter((s: any) => {
+      if (profile?.role === 'SMS_ADMIN') {
+        const incoming = sessions?.find(is => is.id === s.id)
+        // If admin sets it to Pendente or Glosado, we DON'T keep the old validated version
+        // so it can be deleted and re-inserted with the new status/justification
+        if (incoming && (incoming.status === 'Pendente' || incoming.status === 'Glosado')) {
+          return false
+        }
+      }
+      return !!s.validated_at
+    })
     .map((s: any) => s.id)
-
-  // Identify sessions that MUST stay (validated ones that are NOT being reset by Admin)
-  const sessionsToKeepIds = validatedSessionIds.filter(vId => {
-    if (profile?.role === 'SMS_ADMIN') {
-      const incoming = sessions?.find(s => s.id === vId)
-      // If admin sets it to Pendente, we DON'T keep the validated version (we want to re-insert it as fresh Pendente)
-      if (incoming && incoming.status === 'Pendente') return false
-    }
-    return true
-  })
 
   // Delete all sessions except those we are explicitly keeping
   if (sessionsToKeepIds.length > 0) {
@@ -444,7 +444,11 @@ export async function validateSessionAction(data: {
   // 5. Get the attendance
   const { data: attendance } = await supabase
     .from('attendances')
-    .select('patient_id, clinic_id, procedure_id, attendance_date')
+    .select(`
+      *,
+      patient:patients(id, name, auth_token),
+      clinic:clinics(id, name, latitude, longitude)
+    `)
     .eq('id', session.attendance_id)
     .single()
 
@@ -479,11 +483,48 @@ export async function validateSessionAction(data: {
     }
   }
 
-  // 9. SUCCESS — Update session status
+  // 9. GEOFENCING — Calculate distance if geo info is available
+  // 9. GEOFENCING & SETTINGS — Fetch configuration
   const headersList = await headers()
   const ip = headersList.get('x-forwarded-for') || 'unknown'
   const userAgent = headersList.get('user-agent') || 'unknown'
 
+  const { data: settings } = await supabase
+    .from('system_settings')
+    .select('key, value')
+    .in('key', ['enable_token_rotation', 'geofencing_threshold_meters'])
+
+  const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
+  const threshold = Number(settingsMap.get('geofencing_threshold_meters')) || 500
+  const isRotationEnabled = settingsMap.get('enable_token_rotation') === true || settingsMap.get('enable_token_rotation') === 'true'
+
+  let validation_distance = null
+  let is_out_of_range = false
+
+  if (geo && (attendance as any).clinic?.latitude && (attendance as any).clinic?.longitude) {
+    const R = 6371e3 // metres
+    const lat1 = (attendance as any).clinic.latitude
+    const lon1 = (attendance as any).clinic.longitude
+    const lat2 = geo.lat
+    const lon2 = geo.lng
+
+    const φ1 = lat1 * Math.PI / 180
+    const φ2 = lat2 * Math.PI / 180
+    const Δφ = (lat2 - lat1) * Math.PI / 180
+    const Δλ = (lon2 - lon1) * Math.PI / 180
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    
+    validation_distance = R * c
+    if (validation_distance > threshold) {
+      is_out_of_range = true
+    }
+  }
+
+  // 10. SUCCESS — Update session status
   const { error: updateError } = await supabase
     .from('attendance_sessions')
     .update({
@@ -492,6 +533,8 @@ export async function validateSessionAction(data: {
       validation_ip: ip,
       validation_ua: userAgent,
       validation_geo: geo,
+      validation_distance,
+      is_out_of_range: is_out_of_range,
       validation_nonce: null,
     })
     .eq('id', sessionId)
@@ -500,7 +543,19 @@ export async function validateSessionAction(data: {
     return { error: 'Erro ao atualizar sessão' }
   }
 
-  // 10. RECALCULATE TOTAL VALUE
+  // 10. TOKEN ROTATION — Optional based on settings
+  if (isRotationEnabled) {
+    const newToken = Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
+    await supabase
+      .from('patients')
+      .update({ 
+        auth_token: newToken,
+        token_updated_at: new Date().toISOString()
+      })
+      .eq('id', attendance.patient_id)
+  }
+
+  // 11. RECALCULATE TOTAL VALUE
   const { data: allSessions } = await supabase
     .from('attendance_sessions')
     .select('status')

@@ -7,6 +7,7 @@ import { createClinicAction, updateClinicAction } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCNPJ } from '@/lib/validation-utils'
+import { MapPin, ExternalLink } from 'lucide-react'
 
 export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFormData>; id?: string }) {
   const router = useRouter()
@@ -17,6 +18,7 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ClinicFormData>({
     resolver: zodResolver(clinicSchema) as any,
@@ -31,6 +33,8 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
       active: initialData?.active ?? true,
       competence_end_day: initialData?.competence_end_day || 31,
       competence_deadline_day: initialData?.competence_deadline_day || 5,
+      latitude: initialData?.latitude || null,
+      longitude: initialData?.longitude || null,
     },
   })
 
@@ -38,6 +42,23 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
   const handleCNPJChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCNPJ(e.target.value)
     setValue('cnpj', formatted, { shouldValidate: true })
+  }
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocalização não é suportada pelo seu navegador.')
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setValue('latitude', position.coords.latitude)
+        setValue('longitude', position.coords.longitude)
+      },
+      (error) => {
+        alert('Erro ao obter localização: ' + error.message)
+      }
+    )
   }
 
   const onSubmit = async (data: ClinicFormData) => {
@@ -179,6 +200,62 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
               {errors.competence_deadline_day && <p className="mt-1 text-sm text-rose-500">{errors.competence_deadline_day.message}</p>}
             </div>
           </div>
+        </div>
+
+        <div className="sm:col-span-2 pt-6 border-t border-border/30">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Coordenadas de Auditoria (Geofencing)</h3>
+            <div className="flex items-center gap-2">
+              {watch('latitude') && watch('longitude') && (
+                <a
+                  href={`https://www.google.com/maps/place/${watch('latitude')},${watch('longitude')}/@${watch('latitude')},${watch('longitude')},20z`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1 uppercase tracking-widest bg-muted/20 px-3 py-1.5 rounded-lg border border-border transition-all active:scale-95"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Ver no Mapa (Zoom 10m)
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={getCurrentLocation}
+                className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 uppercase tracking-widest bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/20 transition-all active:scale-95"
+              >
+                <MapPin className="h-3 w-3" />
+                Obter Localização Atual
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div className="bg-muted/10 p-5 rounded-2xl border border-border/40">
+              <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Latitude</label>
+              <input
+                type="text"
+                {...register('latitude', {
+                  setValueAs: (v) => v ? parseFloat(v.toString().replace(',', '.')) : null
+                })}
+                className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-3 border bg-background transition-all font-mono"
+                placeholder="Ex: -5.362346"
+              />
+            </div>
+
+            <div className="bg-muted/10 p-5 rounded-2xl border border-border/40">
+              <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Longitude</label>
+              <input
+                type="text"
+                {...register('longitude', {
+                  setValueAs: (v) => v ? parseFloat(v.toString().replace(',', '.')) : null
+                })}
+                className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-3 border bg-background transition-all font-mono"
+                placeholder="Ex: -49.115798"
+              />
+            </div>
+          </div>
+          <p className="mt-4 text-[10px] text-muted-foreground italic bg-amber-500/5 p-3 rounded-lg border border-amber-500/10">
+            * Estas coordenadas são usadas para validar a presença física durante a assinatura do QR Code. 
+            Recomenda-se capturar as coordenadas estando fisicamente na recepção da clínica.
+          </p>
         </div>
 
         <div className="sm:col-span-2 bg-muted/20 p-6 rounded-2xl border border-border/40">

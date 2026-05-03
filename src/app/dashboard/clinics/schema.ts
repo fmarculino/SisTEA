@@ -16,6 +16,8 @@ export const clinicSchema = z.object({
   active: z.boolean().default(true),
   competence_end_day: z.coerce.number().min(1).max(31).default(31),
   competence_deadline_day: z.coerce.number().min(1).max(31).default(5),
+  latitude: z.coerce.number().optional().nullable(),
+  longitude: z.coerce.number().optional().nullable(),
 })
 
 export type ClinicFormData = z.infer<typeof clinicSchema>

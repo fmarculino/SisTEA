@@ -44,6 +44,42 @@ export async function updateSession(request: NextRequest) {
     const authRoutes = ['/auth/callback', '/auth/update-password']
     const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname.startsWith(route))
     const isAuthRoute = authRoutes.some(route => request.nextUrl.pathname.startsWith(route))
+
+    // --- CHECK ACTIVE STATUS ---
+    if (user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('active, role, clinic:clinics(active)')
+        .eq('id', user.id)
+        .single()
+
+      if (profile) {
+        let blockMessage = ''
+        if (profile.active === false) {
+          blockMessage = 'Seu usuário está desativado. Entre em contato com o suporte.'
+        } else if (profile.role !== 'SMS_ADMIN' && profile.clinic && !(profile.clinic as any).active) {
+          blockMessage = 'Esta clínica está desativada. O acesso foi bloqueado.'
+        }
+
+        if (blockMessage) {
+          // Sign out to clear session in Supabase client
+          await supabase.auth.signOut()
+          
+          // Create redirect response
+          const url = request.nextUrl.clone()
+          url.pathname = '/login'
+          url.searchParams.set('error', blockMessage)
+          const redirectResponse = NextResponse.redirect(url)
+
+          // IMPORTANT: Copy the cleared cookies from supabaseResponse (updated by signOut) to the redirectResponse
+          supabaseResponse.cookies.getAll().forEach(cookie => {
+            redirectResponse.cookies.set(cookie.name, cookie.value)
+          })
+
+          return redirectResponse
+        }
+      }
+    }
     
     if (!user && !isPublicRoute && !isAuthRoute) {
       const url = request.nextUrl.clone()
