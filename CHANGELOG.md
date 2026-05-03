@@ -2,19 +2,23 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
-## [0.5.6-beta] - 2026-05-03
+## [0.6.0-beta] - 2026-05-03
 
-Esta versão foca na estabilidade do fluxo de faturamento e na resolução de conflitos de estado na interface de atendimentos, garantindo uma experiência fluida para usuários de clínicas.
+Esta versão representa um marco de estabilidade no fluxo de atendimento e governança, resolvendo gargalos críticos de interface e reforçando a integridade das auditorias.
 
-### 🛠️ Estabilidade & Correções de Fluxo
-- **Correção Crítica no Formulário de Atendimento:** Resolução do bug que tornava o botão "Atualizar Guia" inoperante para usuários de clínica. O problema foi rastreado até uma validação de esquema (Schema) legada que bloqueava o envio silenciosamente.
-- **Sincronização de Estado (Form Refresh):** Implementação de mecanismo de "Auto-Reset" que sincroniza os IDs das sessões recém-criadas com o banco de dados imediatamente após o salvamento. Isso permite que o botão de **Assinatura Digital** apareça instantaneamente sem necessidade de recarregar a página manualmente.
-- **Melhoria no Diagnóstico de Erros:** Introdução de um resumo visual de erros no topo do formulário, facilitando a identificação de campos obrigatórios não preenchidos ou dados inválidos.
-- **Refatoração de Ações (Server Actions):** Ajuste na comunicação entre frontend e backend para tratar redirecionamentos e revalidações de forma mais resiliente, evitando "travamentos" visuais durante o processamento.
+### 🚀 Estabilização do Fluxo de Atendimento
+- **Correção da Submissão (Freeze Fix):** Resolução definitiva do bug que impedia o salvamento de guias por usuários de clínica. O problema era causado por um conflito de validação em campos legados do esquema.
+- **Sincronização de Assinaturas Digital:** Implementação de um fluxo de re-sincronização automática que atualiza os IDs das sessões imediatamente após o salvamento. Isso permite que o botão **📱 ASSINAR** apareça e funcione sem que o usuário precise recarregar a página.
+- **Resiliência em Server Actions:** Refatoração da comunicação entre cliente e servidor para usar objetos de estado, prevenindo erros de redirecionamento e garantindo que o estado de "Carregando" seja limpo corretamente.
 
-### 💻 Performance & Build
-- **Otimização TypeScript:** Correção de erros de tipagem em cascata relacionados ao mapeamento de vínculos de pacientes e clínicas, garantindo estabilidade no ambiente de produção e CI/CD.
-- **Ajuste de Tipagem de Campos:** Reforço na conversão de tipos para campos numéricos (como quantidade autorizada e valores aplicados), prevenindo inconsistências de dados.
+### 🛡️ Governança & Auditoria
+- **Padronização de Status (Glosado):** Correção de inconsistências ortográficas ("Glosada" vs "Glosado") em todo o sistema, garantindo que regras de segurança e filtros de busca funcionem com 100% de precisão.
+- **Marcação Visual na Impressão:** A ficha de frequência do SUS agora exibe **"FREQUÊNCIA GLOSADA"** em vermelho no campo de assinatura para sessões negadas, tanto na visualização de impressão quanto no PDF exportado.
+- **Imutabilidade Reforçada:** Travamento rigoroso de guias que possuem sessões já processadas (Realizadas ou Glosadas), impedindo alterações retroativas por parte das clínicas.
+
+### 💻 Melhorias Técnicas
+- **Build de Produção:** Resolução de erros de tipagem TypeScript (Union Types) que impediam a compilação em ambientes de produção.
+- **Diagnóstico Ativo:** Inclusão de um resumo de erros de validação no topo do formulário para facilitar o suporte e o preenchimento correto pelos usuários.
 
 ## [0.5.5-beta] - 2026-05-02
 

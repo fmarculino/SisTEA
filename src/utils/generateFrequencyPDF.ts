@@ -21,13 +21,13 @@ export async function generateFrequencyPDF(data: any) {
   // Vou usar posições aproximadas para o formato padrão A4, 
   // mas depois podemos ajustar fino se precisar.
   
-  const drawText = (text: string, x: number, y: number, size = fontSize) => {
+  const drawText = (text: string, x: number, y: number, size = fontSize, textColor = color) => {
     if (!text) return;
     firstPage.drawText(String(text), {
       x,
       y,
       size,
-      color,
+      color: textColor,
     });
   };
 
@@ -188,6 +188,13 @@ export async function generateFrequencyPDF(data: any) {
       
       drawText(session.start_time || '', 105, y);
       drawText(session.end_time || '', 165, y);
+      
+      // Signature column
+      if (session.status === 'Realizada') {
+        drawText('Assinado Digitalmente', 260, y, 6);
+      } else if (session.status === 'Glosado') {
+        drawText('FREQUÊNCIA GLOSADA', 260, y, 6, rgb(0.8, 0, 0));
+      }
     }
   }
 

@@ -142,7 +142,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   if (!currentAttendance) return { error: 'Atendimento não encontrado' }
 
   const dbSessions = (currentAttendance as any).sessions || []
-  const hasValidatedInDb = dbSessions.some((s: any) => s.status === 'Realizada' || s.status === 'Glosada')
+  const hasValidatedInDb = dbSessions.some((s: any) => s.status === 'Realizada' || s.status === 'Glosado')
 
   if (profile?.role === 'CLINIC_USER' && hasValidatedInDb) {
     // If ANY session is validated, critical header fields become IMMUTABLE
@@ -313,7 +313,7 @@ export async function deleteAttendanceAction(id: string) {
   // --- SECURITY: CLINIC_USER cannot delete if any session is Realizada or Glosada ---
   if (profile?.role === 'CLINIC_USER') {
     const sessions = (attendance as any).sessions || []
-    const hasValidated = sessions.some((s: any) => s.status === 'Realizada' || s.status === 'Glosada')
+    const hasValidated = sessions.some((s: any) => s.status === 'Realizada' || s.status === 'Glosado')
     if (hasValidated) {
       return { error: 'Não é possível excluir um atendimento que possui sessões já realizadas ou glosadas.' }
     }

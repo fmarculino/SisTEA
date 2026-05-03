@@ -302,8 +302,8 @@ export default function DigitalFrequencyPrintPage() {
                         <td className="border-r border-black text-center text-[10px]">{session ? formatDate(session.session_date).substring(0, 5) : ''}</td>
                         <td className="border-r border-black text-center text-[10px]">{session?.start_time || ''}</td>
                         <td className="border-r border-black text-center text-[10px]">{session?.end_time || ''}</td>
-                        <td className="text-center font-bold text-[7px] uppercase tracking-tighter">
-                          {session?.status === 'Realizada' ? 'Assinado Digitalmente' : ''}
+                        <td className={`text-center font-bold text-[7px] uppercase tracking-tighter ${session?.status === 'Glosado' ? 'text-rose-600' : ''}`}>
+                          {session?.status === 'Realizada' ? 'Assinado Digitalmente' : session?.status === 'Glosado' ? 'FREQUÊNCIA GLOSADA' : ''}
                         </td>
                       </tr>
                     );
