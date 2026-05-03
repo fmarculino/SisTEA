@@ -2,7 +2,23 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
-## [0.7.1-beta] - 2026-05-03
+## [0.7.2-beta] - 2026-05-03
+
+Esta versão introduz a **Governança de Fuso Horário Dinâmico**, permitindo que o SisTEA opere de forma precisa em diferentes regiões geográficas através de configurações administrativas globais.
+
+### 🌎 Localização & Fuso Horário Dinâmico
+- **Desacoplamento de UTC:** Migração da lógica de tempo "hardcoded" (-03:00) para um sistema dinâmico baseado em banco de dados. O sistema agora consulta as configurações `system_timezone` e `system_timezone_offset` para todas as validações críticas.
+- **Flexibilidade Regional:** Suporte nativo para diferentes fusos horários (ex: America/Manaus, America/Sao_Paulo), permitindo que o sistema se adapte automaticamente a regras de horário de verão e deslocamentos regionais sem alterações no código.
+- **Gestão Administrativa:** Novo módulo "Localização e Tempo" no painel de configurações, permitindo que administradores definam a região de operação do sistema via interface.
+
+### 🛡️ Refinamento de Validação de Tempo
+- **Sincronização de Janela de Assinatura:** Ajuste rigoroso da janela de assinatura (QR Code) para respeitar o fuso horário configurado, garantindo que o limite de horas (antes/depois) seja aplicado corretamente independente da localização do servidor.
+- **Consistência de Datas Futuras:** Padronização do bloqueio de atendimentos e frequências futuras utilizando o calendário local da clínica definido na configuração global.
+
+### 🔧 UI & Configurações
+- **Iconografia Temática:** Adição de ícones de `Globe` e `Clock` para facilitar a identificação visual das configurações de tempo.
+- **Melhoria na Experiência de Edição:** Campos de configuração de timezone agora possuem placeholders e valores padrão robustos para evitar erros de configuração.
+
 
 Esta versão foca na padronização da experiência do usuário (UX) e no reforço das regras de governança para registros retroativos e futuros.
 

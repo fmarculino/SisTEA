@@ -55,21 +55,25 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   }
 
   // --- SECURITY: Future Date Check ---
-  const { data: futureSetting } = await supabase.from('system_settings').select('value').eq('key', 'allow_future_attendances').maybeSingle()
-  const allowFuture = futureSetting?.value === undefined ? true : (futureSetting?.value === true || futureSetting?.value === 'true')
+  const { data: settings } = await supabase.from('system_settings').select('key, value').in('key', ['allow_future_attendances', 'system_timezone', 'system_timezone_offset'])
+  const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
+  const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
+  const systemTimezone = settingsMap.get('system_timezone') || 'America/Sao_Paulo'
+  const timezoneOffset = settingsMap.get('system_timezone_offset') || '-03:00'
   
   if (!allowFuture) {
     const now = new Date()
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+    const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now)
+    const todayEnd = new Date(`${todayLocal}T23:59:59.999${timezoneOffset}`)
     
     // Check main attendance date
-    if (new Date(rawAttendanceData.attendance_date + 'T00:00:00') > todayEnd) {
+    if (new Date(rawAttendanceData.attendance_date + `T00:00:00${timezoneOffset}`) > todayEnd) {
       return { error: 'O sistema está configurado para não permitir o registro de atendimentos com data futura.' }
     }
 
     // Check sessions
     if (sessions) {
-      const hasFuture = sessions.some(s => new Date(s.session_date + 'T00:00:00') > todayEnd)
+      const hasFuture = sessions.some(s => new Date(s.session_date + `T00:00:00${timezoneOffset}`) > todayEnd)
       if (hasFuture) return { error: 'O sistema está configurado para não permitir o registro de frequências com data futura.' }
     }
   }
@@ -153,21 +157,25 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   }
 
   // --- SECURITY: Future Date Check ---
-  const { data: futureSetting } = await supabase.from('system_settings').select('value').eq('key', 'allow_future_attendances').maybeSingle()
-  const allowFuture = futureSetting?.value === undefined ? true : (futureSetting?.value === true || futureSetting?.value === 'true')
+  const { data: settings } = await supabase.from('system_settings').select('key, value').in('key', ['allow_future_attendances', 'system_timezone', 'system_timezone_offset'])
+  const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
+  const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
+  const systemTimezone = settingsMap.get('system_timezone') || 'America/Sao_Paulo'
+  const timezoneOffset = settingsMap.get('system_timezone_offset') || '-03:00'
   
   if (!allowFuture) {
     const now = new Date()
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+    const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now)
+    const todayEnd = new Date(`${todayLocal}T23:59:59.999${timezoneOffset}`)
     
     // Check main attendance date
-    if (new Date(rawAttendanceData.attendance_date + 'T00:00:00') > todayEnd) {
+    if (new Date(rawAttendanceData.attendance_date + `T00:00:00${timezoneOffset}`) > todayEnd) {
       return { error: 'O sistema está configurado para não permitir o registro de atendimentos com data futura.' }
     }
 
     // Check sessions
     if (sessions) {
-      const hasFuture = sessions.some(s => new Date(s.session_date + 'T00:00:00') > todayEnd)
+      const hasFuture = sessions.some(s => new Date(s.session_date + `T00:00:00${timezoneOffset}`) > todayEnd)
       if (hasFuture) return { error: 'O sistema está configurado para não permitir o registro de frequências com data futura.' }
     }
   }
@@ -402,16 +410,19 @@ export async function generateValidationLinkAction(attendanceId: string, session
   const { data: settings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .in('key', ['allow_future_attendances', 'signature_window_hours'])
+    .in('key', ['allow_future_attendances', 'signature_window_hours', 'system_timezone', 'system_timezone_offset'])
 
   const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
   const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
   const windowHours = Number(settingsMap.get('signature_window_hours')) || 2
+  const systemTimezone = settingsMap.get('system_timezone') || 'America/Sao_Paulo'
+  const timezoneOffset = settingsMap.get('system_timezone_offset') || '-03:00'
 
   // --- VALIDATION: Future Date Check ---
   const now = new Date()
-  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-  const sessionDate = new Date(session.session_date + 'T00:00:00')
+  const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now)
+  const todayEnd = new Date(`${todayLocal}T23:59:59.999${timezoneOffset}`)
+  const sessionDate = new Date(session.session_date + `T00:00:00${timezoneOffset}`)
   
   if (!allowFuture && sessionDate > todayEnd) {
     return { error: 'O registro de frequências futuras não é permitido pelas configurações do sistema.' }
@@ -426,7 +437,7 @@ export async function generateValidationLinkAction(attendanceId: string, session
     .single()
 
   if (sessionWithTime?.start_time) {
-    const scheduledDateTime = new Date(`${session.session_date}T${sessionWithTime.start_time}`)
+    const scheduledDateTime = new Date(`${session.session_date}T${sessionWithTime.start_time}${timezoneOffset}`)
     const diffMs = now.getTime() - scheduledDateTime.getTime()
     const diffHours = Math.abs(diffMs / (1000 * 60 * 60))
     
@@ -571,25 +582,28 @@ export async function validateSessionAction(data: {
   const { data: settings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .in('key', ['enable_token_rotation', 'geofencing_threshold_meters', 'allow_future_attendances', 'signature_window_hours'])
+    .in('key', ['enable_token_rotation', 'geofencing_threshold_meters', 'allow_future_attendances', 'signature_window_hours', 'system_timezone', 'system_timezone_offset'])
 
   const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
   const threshold = Number(settingsMap.get('geofencing_threshold_meters')) || 500
   const isRotationEnabled = settingsMap.get('enable_token_rotation') === true || settingsMap.get('enable_token_rotation') === 'true'
   const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
   const windowHours = Number(settingsMap.get('signature_window_hours')) || 2
+  const systemTimezone = settingsMap.get('system_timezone') || 'America/Sao_Paulo'
+  const timezoneOffset = settingsMap.get('system_timezone_offset') || '-03:00'
 
   // --- VALIDATION: FUTURE DATE CHECK ---
   const now = new Date()
-  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-  const sessionDate = new Date(session.session_date + 'T00:00:00')
+  const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now)
+  const todayEnd = new Date(`${todayLocal}T23:59:59.999${timezoneOffset}`)
+  const sessionDate = new Date(session.session_date + `T00:00:00${timezoneOffset}`)
   
   if (!allowFuture && sessionDate > todayEnd) {
     return { error: 'O registro de frequências futuras não é permitido pelas configurações do sistema.' }
   }
 
   // --- VALIDATION: SIGNATURE WINDOW CHECK ---
-  const scheduledDateTime = new Date(`${session.session_date}T${session.start_time}`)
+  const scheduledDateTime = new Date(`${session.session_date}T${session.start_time}${timezoneOffset}`)
   const diffMs = now.getTime() - scheduledDateTime.getTime()
   const diffHours = Math.abs(diffMs / (1000 * 60 * 60))
   
