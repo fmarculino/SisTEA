@@ -2,6 +2,35 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.7.0-beta] - 2026-05-03
+
+Esta versão introduz o **Módulo de Auditoria Digital** e o **Painel de Configurações Globais**, elevando o nível de segurança, fiscalização e customização do SisTEA.
+
+### 🔍 Módulo de Auditoria Digital & Geofencing
+- **Forense de Sessões:** Novo dashboard exclusivo para `SMS_ADMIN` que permite rastrear cada validação com carimbo de data, hora, IP e geolocalização.
+- **Fiscalização Geográfica (Geofencing):** Implementação de validação de presença física. O sistema agora calcula a distância entre o local da assinatura e as coordenadas oficiais da clínica.
+- **Alerta de Assinatura Remota:** Identificação visual imediata de sessões validadas fora do raio permitido, facilitando a identificação de possíveis irregularidades.
+- **Exportação de Dados:** Funcionalidade de exportação em CSV para auditorias externas do SUS.
+
+### ⚙️ Painel de Configurações Globais
+- **Central de Controle:** Interface unificada para administradores gerenciarem o comportamento do sistema sem necessidade de código.
+- **Segurança Dinâmica (Token Rotation):** Opção para ativar a regeneração automática de tokens QR Code a cada assinatura, garantindo que o mesmo código não seja reutilizado.
+- **Limites de Proximidade:** Configuração editável do raio de distância (em metros) considerado aceitável para validações locais.
+
+### 🗺️ Gestão de Clínicas & Precisão Geográfica
+- **Visualização de Alta Precisão:** Integração com Google Maps para verificação instantânea das coordenadas da clínica com zoom de 10 metros.
+- **Localização Inteligente:** Botão para capturar coordenadas GPS automaticamente baseado na posição atual da recepção da clínica.
+- **Suporte a Formatação Brasileira:** Os campos de coordenadas agora aceitam vírgula e ponto, convertendo automaticamente para o padrão técnico do banco de dados.
+
+### 🎨 UX & Reorganização de Interface
+- **Sidebar Renovada:** Redesenho completo da navegação com menus agrupados e submenus colapsáveis (Operação, Cadastros, Auditoria & Gestão, Sistema).
+- **KPI de Adoção Digital:** Novo indicador no Dashboard principal que mede o percentual de sessões validadas digitalmente em comparação ao total.
+- **Performance de Menu:** Implementação de auto-expansão inteligente dos menus baseada na rota ativa.
+
+### 🔒 Segurança & Backend
+- **Tabela de Configurações:** Nova arquitetura de banco de dados `system_settings` com políticas de RLS granulares.
+- **Eficiência de Query:** Validação de sessão otimizada para buscar configurações globais em uma única consulta ao banco.
+
 ## [0.6.0-beta] - 2026-05-03
 
 Esta versão representa um marco de estabilidade no fluxo de atendimento e governança, resolvendo gargalos críticos de interface e reforçando a integridade das auditorias.
