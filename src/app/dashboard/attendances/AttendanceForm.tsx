@@ -549,7 +549,7 @@ export function AttendanceForm({
                     </select>
                     
                     {/* Audit Info Badge for SMS_ADMIN */}
-                    {watch(`sessions.${index}.status`) === 'Realizada' && watch(`sessions.${index}.validated_at`) && (
+                    {watch(`sessions.${index}.status` as any) === 'Realizada' && watch(`sessions.${index}.validated_at` as any) && (
                       <div className="absolute -top-2 -right-2 z-10">
                         <div className="bg-emerald-500 text-white p-1 rounded-full shadow-lg cursor-help group/tooltip">
                           <ShieldCheck className="h-3 w-3" />
@@ -558,18 +558,18 @@ export function AttendanceForm({
                           <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-none border border-white/10 backdrop-blur-md">
                             <p className="font-bold border-b border-white/10 pb-1 mb-1 text-emerald-400 uppercase tracking-widest">Auditoria de Assinatura</p>
                             <div className="space-y-1">
-                              <p><span className="opacity-50">Data/Hora:</span> {new Date(watch(`sessions.${index}.validated_at`)!).toLocaleString('pt-BR')}</p>
-                              <p><span className="opacity-50">IP:</span> {watch(`sessions.${index}.validation_ip`)}</p>
-                              <p className="truncate"><span className="opacity-50">Dispositivo:</span> {watch(`sessions.${index}.validation_ua`)}</p>
-                              {watch(`sessions.${index}.validation_geo`) && (
+                              <p><span className="opacity-50">Data/Hora:</span> {new Date(watch(`sessions.${index}.validated_at` as any)!).toLocaleString('pt-BR')}</p>
+                              <p><span className="opacity-50">IP:</span> {watch(`sessions.${index}.validation_ip` as any)}</p>
+                              <p className="truncate"><span className="opacity-50">Dispositivo:</span> {watch(`sessions.${index}.validation_ua` as any)}</p>
+                              {watch(`sessions.${index}.validation_geo` as any) && (
                                 <div className="space-y-0.5 border-t border-white/10 pt-1 mt-1">
                                   <p className="text-sky-400 font-medium">
-                                    📍 Localização: {watch(`sessions.${index}.validation_geo`).lat.toFixed(4)}, {watch(`sessions.${index}.validation_geo`).lng.toFixed(4)}
+                                    📍 Localização: {(watch(`sessions.${index}.validation_geo` as any) as any).lat.toFixed(4)}, {(watch(`sessions.${index}.validation_geo` as any) as any).lng.toFixed(4)}
                                   </p>
-                                  {watch(`sessions.${index}.validation_distance`) !== undefined && watch(`sessions.${index}.validation_distance`) !== null && (
-                                    <p className={`font-bold ${watch(`sessions.${index}.is_out_of_range`) ? 'text-amber-400' : 'text-emerald-400/80'}`}>
-                                      📏 Distância: {Math.round(watch(`sessions.${index}.validation_distance`) as number)}m da clínica
-                                      {watch(`sessions.${index}.is_out_of_range`) && ' ⚠️ ASSINATURA REMOTA'}
+                                  {watch(`sessions.${index}.validation_distance` as any) !== undefined && watch(`sessions.${index}.validation_distance` as any) !== null && (
+                                    <p className={`font-bold ${watch(`sessions.${index}.is_out_of_range` as any) ? 'text-amber-400' : 'text-emerald-400/80'}`}>
+                                      📏 Distância: {Math.round(watch(`sessions.${index}.validation_distance` as any) as number)}m da clínica
+                                      {watch(`sessions.${index}.is_out_of_range` as any) && ' ⚠️ ASSINATURA REMOTA'}
                                     </p>
                                   )}
                                 </div>
@@ -584,34 +584,31 @@ export function AttendanceForm({
                   <>
                     <input type="hidden" {...register(`sessions.${index}.status` as const)} />
                     <div className={`block w-full rounded-lg shadow-sm py-2 px-3 text-sm border font-bold text-center ${
-                      watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 
-                      watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
-                      watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : 'border-border/60 bg-background'
+                      watch(`sessions.${index}.status` as any) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 
+                      watch(`sessions.${index}.status` as any) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
+                      watch(`sessions.${index}.status` as any) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500 dark:border-emerald-500/50 bg-amber-50/50 dark:bg-emerald-500/10' : 'border-border/60 bg-background'
                     }`}>
-                      {watch(`sessions.${index}.status`) === 'Realizada' ? '✓ Realizada' : 
-                       watch(`sessions.${index}.status`) === 'Pendente' ? '⏳ Pendente' : 
-                       watch(`sessions.${index}.status`) === 'Glosado' ? '✗ Glosado' : watch(`sessions.${index}.status`)}
+                      {watch(`sessions.${index}.status` as any) === 'Realizada' ? '✓ Realizada' : 
+                       watch(`sessions.${index}.status` as any) === 'Pendente' ? '⏳ Pendente' : 
+                       watch(`sessions.${index}.status` as any) === 'Glosado' ? '✗ Glosado' : watch(`sessions.${index}.status` as any)}
                     </div>
                   </>
                 )}
               </div>
               
-              {watch(`sessions.${index}.status`) === 'Glosado' && (
+              {watch(`sessions.${index}.status` as any) === 'Glosado' && (
                 <div className="sm:col-span-4 mt-2 sm:mt-0 transition-all animate-in fade-in slide-in-from-left-2">
-                  <label className="block text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">Justificativa da Glosa *</label>
+                  <label className="block text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1 ml-1 opacity-80">Motivo da Glosa</label>
                   <input
-                    type="text"
+                    {...register(`sessions.${index}.justification` as any)}
+                    className="block w-full rounded-lg border-rose-200 dark:border-rose-900/50 shadow-sm focus:border-rose-500 focus:ring-rose-500/20 sm:text-xs px-3 py-2 border bg-rose-500/5 transition-all"
                     placeholder="Descreva o motivo da glosa..."
-                    {...register(`sessions.${index}.justification` as const)}
-                    required={userRole === 'SMS_ADMIN'}
-                    readOnly={userRole !== 'SMS_ADMIN'}
-                    className="block w-full rounded-lg border-rose-300 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-rose-500/10 focus:border-rose-500 transition-all placeholder:text-rose-300"
                   />
                 </div>
               )}
 
               {/* Action buttons area */}
-              {watch(`sessions.${index}.status`) !== 'Glosado' && (
+              {watch(`sessions.${index}.status` as any) !== 'Glosado' && (
                 <div className="sm:col-span-1 flex items-end justify-end gap-2">
                   {/* Solicitar Assinatura button — only for CLINIC_USER with Pendente status */}
                   {userRole === 'CLINIC_USER' && watch(`sessions.${index}.status`) === 'Pendente' && id && watch(`sessions.${index}.id`) && (
