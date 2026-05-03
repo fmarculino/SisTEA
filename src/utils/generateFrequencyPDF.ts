@@ -162,7 +162,13 @@ export async function generateFrequencyPDF(data: any) {
   // === Sessões (Tabela) ===
   const startY = 428.5;
   const rowHeight = 16.5;
-  const sessions = data.sessions || [];
+  
+  // Sort sessions chronologically for the PDF
+  const sessions = [...(data.sessions || [])].sort((a: any, b: any) => {
+    const dateCompare = (a.session_date || '').localeCompare(b.session_date || '');
+    if (dateCompare !== 0) return dateCompare;
+    return (a.start_time || '').localeCompare(b.start_time || '');
+  });
   
   for (let i = 0; i < 15; i++) { 
     const session = sessions[i];

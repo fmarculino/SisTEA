@@ -67,7 +67,11 @@ export default function DigitalFrequencyPrintPage() {
     return String(cnes).padStart(7, '0');
   };
 
-  const sessions = data.sessions || [];
+  const sessions = [...(data.sessions || [])].sort((a: any, b: any) => {
+    const dateCompare = (a.session_date || '').localeCompare(b.session_date || '');
+    if (dateCompare !== 0) return dateCompare;
+    return (a.start_time || '').localeCompare(b.start_time || '');
+  });
   const realizedSessions = sessions.filter((s: any) => s.status === 'Realizada').length;
   const authQty = Number(data.authorized_quantity) || 0;
 
@@ -297,7 +301,9 @@ export default function DigitalFrequencyPrintPage() {
                         <td className="border-r border-black text-center text-[10px]">{session ? formatDate(session.session_date).substring(0, 5) : ''}</td>
                         <td className="border-r border-black text-center text-[10px]">{session?.start_time || ''}</td>
                         <td className="border-r border-black text-center text-[10px]">{session?.end_time || ''}</td>
-                        <td></td>
+                        <td className="text-center font-bold text-[7px] uppercase tracking-tighter">
+                          {session?.status === 'Realizada' ? 'Assinado Digitalmente' : ''}
+                        </td>
                       </tr>
                     );
                   })}

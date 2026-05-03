@@ -3,10 +3,10 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { patientSchema, type PatientFormData } from './schema'
-import { createPatientAction, updatePatientAction } from './actions'
+import { createPatientAction, updatePatientAction, resetPatientTokenAction } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle } from 'lucide-react'
+import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw } from 'lucide-react'
 
 type ClinicOption = { id: string; name: string }
 
@@ -21,17 +21,22 @@ export function PatientForm({
   id, 
   clinics, 
   userRole, 
-  userClinicId 
+  userClinicId,
+  authToken 
 }: { 
   initialData?: Partial<PatientFormData>; 
   id?: string;
   clinics: ClinicOption[];
   userRole: string;
   userClinicId?: string | null;
+  authToken?: string | null;
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
+  const [showToken, setShowToken] = useState(false)
+  const [currentToken, setCurrentToken] = useState(authToken || '')
+  const [isResettingToken, setIsResettingToken] = useState(false)
 
   const defaultClinicId = userRole === 'SMS_ADMIN' 
     ? (initialData?.clinic_id || '') 
@@ -82,15 +87,18 @@ export function PatientForm({
     setIsPending(true)
     setErrorMsg('')
 
-    let result
-    if (id) {
-      result = await updatePatientAction(id, data)
-    } else {
-      result = await createPatientAction(data)
-    }
+    try {
+      let result
+      if (id) {
+        result = await updatePatientAction(id, data)
+      } else {
+        result = await createPatientAction(data)
+      }
 
-    if (result && result.error) {
-      setErrorMsg(result.error)
+      if (result && result.error) {
+        setErrorMsg(result.error)
+      }
+    } finally {
       setIsPending(false)
     }
   }
@@ -310,6 +318,61 @@ export function PatientForm({
           </div>
         </div>
       </section>
+
+      {/* Seção 4: Token de Validação (Somente Admin) */}
+      {userRole === 'SMS_ADMIN' && id && (
+        <section className="space-y-8 pt-4">
+          <SectionTitle icon={KeyRound} title="Token de Validação Digital" />
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
+            <div className="sm:col-span-6 bg-emerald-500/5 p-6 rounded-[1.25rem] border border-emerald-500/20">
+              <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-widest mb-4">
+                Este token deve ser informado ao paciente/responsável para validar as sessões via QR Code.
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1 max-w-[220px]">
+                  <input
+                    type={showToken ? 'text' : 'password'}
+                    value={currentToken}
+                    readOnly
+                    className="block w-full rounded-2xl border-border/60 bg-background px-5 py-3.5 text-2xl font-mono font-black tracking-[0.5em] text-center border shadow-sm select-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowToken(!showToken)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    title={showToken ? 'Ocultar Token' : 'Revelar Token'}
+                  >
+                    {showToken ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  disabled={isResettingToken}
+                  onClick={async () => {
+                    if (!confirm('Tem certeza? O token atual será invalidado e um novo será gerado. O paciente/responsável precisará ser informado do novo token.')) return
+                    setIsResettingToken(true)
+                    try {
+                      const result = await resetPatientTokenAction(id!)
+                      if (result?.error) {
+                        setErrorMsg(result.error)
+                      } else if (result?.token) {
+                        setCurrentToken(result.token)
+                        setShowToken(true)
+                      }
+                    } finally {
+                      setIsResettingToken(false)
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <RotateCw className={`w-4 h-4 ${isResettingToken ? 'animate-spin' : ''}`} />
+                  {isResettingToken ? 'Gerando...' : 'Reset Token'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-4 border-t border-border/30 pt-10 mt-12">
         <button

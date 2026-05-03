@@ -19,6 +19,9 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
     clinics = data || []
   }
 
+  // Only pass auth_token to admin users
+  const authToken = profile.role === 'SMS_ADMIN' ? patient.auth_token : null
+
   return (
     <div className="space-y-10">
       <div>
@@ -34,7 +37,8 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
         initialData={patient}
         clinics={clinics} 
         userRole={profile.role} 
-        userClinicId={profile.clinic_id} 
+        userClinicId={profile.clinic_id}
+        authToken={authToken}
       />
     </div>
   )

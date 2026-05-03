@@ -44,15 +44,18 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
     setIsPending(true)
     setErrorMsg('')
 
-    let result
-    if (id) {
-      result = await updateClinicAction(id, data)
-    } else {
-      result = await createClinicAction(data)
-    }
+    try {
+      let result
+      if (id) {
+        result = await updateClinicAction(id, data)
+      } else {
+        result = await createClinicAction(data)
+      }
 
-    if (result && result.error) {
-      setErrorMsg(result.error)
+      if (result && result.error) {
+        setErrorMsg(result.error)
+      }
+    } finally {
       setIsPending(false)
     }
   }

@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { generateFrequencyPDF } from '@/utils/generateFrequencyPDF'
+import { QRCodeModal } from './QRCodeModal'
 
 export function AttendanceForm({ 
   initialData, 
@@ -32,6 +33,7 @@ export function AttendanceForm({
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
+  const [qrModalSession, setQrModalSession] = useState<{ index: number; sessionId: string } | null>(null)
 
   const defaultClinicId = userRole === 'SMS_ADMIN' 
     ? (initialData?.clinic_id || '') 
@@ -72,7 +74,9 @@ export function AttendanceForm({
   // Watch for procedure_id change to auto-fill the value
   const selectedProcedureId = watch('procedure_id')
   const authorizedQuantity = watch('authorized_quantity')
-  const sessions = watch('sessions')
+  const sessions = watch('sessions') || []
+  const hasValidatedSession = sessions.some(s => s.status === 'Realizada' || s.status === 'Glosado');
+  const isLocked = userRole === 'CLINIC_USER' && hasValidatedSession;
 
   // Calculate value based on realized sessions
   useEffect(() => {
@@ -90,15 +94,18 @@ export function AttendanceForm({
     setIsPending(true)
     setErrorMsg('')
 
-    let result
-    if (id) {
-      result = await updateAttendanceAction(id, data)
-    } else {
-      result = await createAttendanceAction(data)
-    }
+    try {
+      let result
+      if (id) {
+        result = await updateAttendanceAction(id, data)
+      } else {
+        result = await createAttendanceAction(data)
+      }
 
-    if (result && result.error) {
-      setErrorMsg(result.error)
+      if (result && result.error) {
+        setErrorMsg(result.error)
+      }
+    } finally {
       setIsPending(false)
     }
   }
@@ -214,6 +221,7 @@ export function AttendanceForm({
   };
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-8 rounded-2xl shadow-xl border border-border/40 mb-10">
       {errorMsg && (
         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-sm animate-in fade-in slide-in-from-top-4 duration-300">
@@ -230,7 +238,8 @@ export function AttendanceForm({
             <label className="block text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2">Unidade de Saúde (Clínica)</label>
             <select
               {...register('clinic_id')}
-              className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background/50 transition-all"
+              disabled={isLocked}
+              className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background/50 transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
             >
               <option value="">Selecione a clínica responsável...</option>
               {clinics?.map((c) => (
@@ -257,7 +266,7 @@ export function AttendanceForm({
                 options={filteredPatients}
                 value={field.value}
                 onChange={field.onChange}
-                disabled={userRole === 'SMS_ADMIN' && !selectedClinicId}
+                disabled={isLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
                 placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
                   ? 'Selecione a clínica primeiro' 
                   : 'Selecione um paciente...'}
@@ -281,7 +290,7 @@ export function AttendanceForm({
                 }))}
                 value={field.value}
                 onChange={field.onChange}
-                disabled={userRole === 'SMS_ADMIN' && !selectedClinicId}
+                disabled={isLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
                 placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
                   ? 'Selecione a clínica primeiro' 
                   : 'Selecione um profissional...'}
@@ -306,6 +315,7 @@ export function AttendanceForm({
                 }))}
                 value={field.value}
                 onChange={field.onChange}
+                disabled={isLocked}
                 placeholder="Escolha o procedimento realizado..."
                 className="mt-1"
               />
@@ -319,7 +329,8 @@ export function AttendanceForm({
           <input
             type="date"
             {...register('attendance_date')}
-            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all"
+            readOnly={isLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
           {errors.attendance_date && <p className="mt-1 text-sm text-rose-500">{errors.attendance_date.message}</p>}
         </div>
@@ -330,7 +341,8 @@ export function AttendanceForm({
             type="text"
             placeholder="Ex: 12345678"
             {...register('auth_number')}
-            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all"
+            readOnly={isLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
         </div>
 
@@ -339,7 +351,8 @@ export function AttendanceForm({
           <input
             type="date"
             {...register('authorization_date')}
-            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all"
+            readOnly={isLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
         </div>
 
@@ -348,7 +361,8 @@ export function AttendanceForm({
           <input
             type="number"
             {...register('authorized_quantity')}
-            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all"
+            readOnly={isLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
         </div>
 
@@ -358,7 +372,8 @@ export function AttendanceForm({
             type="text"
             placeholder="Ex: F84.0"
             {...register('cid')}
-            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all"
+            readOnly={isLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
         </div>
 
@@ -366,17 +381,18 @@ export function AttendanceForm({
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Caráter de Atendimento</label>
           <select
              {...register('attendance_character')}
-             className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all"
+             disabled={isLocked}
+             className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           >
             <option value="Eletivo">Eletivo</option>
             <option value="Urgência">Urgência</option>
           </select>
         </div>
 
-        <div className="sm:col-span-2 bg-primary/5 p-6 rounded-2xl border border-primary/10">
-          <label className="block text-xs font-bold text-primary uppercase tracking-widest mb-1">Valor Total Estimado (R$)</label>
+        <div className="sm:col-span-2 bg-primary/5 dark:bg-primary/10 p-6 rounded-2xl border border-primary/10 dark:border-primary/20">
+          <label className="block text-xs font-bold text-primary dark:text-primary/90 uppercase tracking-widest mb-1">Valor Total Estimado (R$)</label>
           <div className="flex items-center gap-4">
-            <div className="mt-1 block w-full max-w-[200px] rounded-xl border-transparent shadow-sm sm:text-lg font-bold px-4 py-2.5 bg-background text-primary min-h-[46px] flex items-center">
+            <div className="mt-1 block w-full max-w-[200px] rounded-xl border-transparent shadow-sm sm:text-lg font-bold px-4 py-2.5 bg-background dark:bg-muted/50 text-primary dark:text-primary min-h-[46px] flex items-center">
               {formatNumberBR(watch('value_applied'))}
               <input type="hidden" {...register('value_applied', { valueAsNumber: true })} />
             </div>
@@ -408,7 +424,7 @@ export function AttendanceForm({
           <button
             type="button"
             disabled={sessionFields.length >= authorizedQuantity}
-            onClick={() => append({ session_date: new Date().toISOString().split('T')[0], start_time: '08:00', end_time: '08:50', status: 'Realizada' })}
+            onClick={() => append({ session_date: new Date().toISOString().split('T')[0], start_time: '08:00', end_time: '08:50', status: userRole === 'CLINIC_USER' ? 'Pendente' : 'Realizada' })}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
           >
             {sessionFields.length >= authorizedQuantity ? 'Limite Atingido' : '+ Adicionar Sessão'}
@@ -429,7 +445,10 @@ export function AttendanceForm({
                 <input
                   type="date"
                   {...register(`sessions.${index}.session_date` as const)}
-                  className="block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all"
+                  readOnly={userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado')}
+                  className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
+                    userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado') ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                  }`}
                 />
               </div>
               <div className="sm:col-span-1">
@@ -444,7 +463,10 @@ export function AttendanceForm({
                       }
                     }
                   })}
-                  className="block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all"
+                  readOnly={userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado')}
+                  className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
+                    userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado') ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                  }`}
                 />
               </div>
               <div className="sm:col-span-1">
@@ -452,56 +474,96 @@ export function AttendanceForm({
                 <input
                   type="time"
                   {...register(`sessions.${index}.end_time` as const)}
-                  className="block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all"
+                  readOnly={userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado')}
+                  className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
+                    userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado') ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                  }`}
                 />
               </div>
               <div className="sm:col-span-1">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Situação</label>
-                <select
-                  {...register(`sessions.${index}.status` as const)}
-                  className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
-                    watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 font-bold border-rose-500 bg-rose-50/50' : 
-                    watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 font-bold border-amber-500 bg-amber-50/50' : ''
-                  }`}
-                >
-                  <option value="Realizada">Realizada</option>
-                  <option value="Pendente">Pendente</option>
-                  <option value="Glosado" className="text-rose-600 font-bold">Glosado</option>
-                </select>
+                {userRole === 'SMS_ADMIN' ? (
+                  <select
+                    {...register(`sessions.${index}.status` as const)}
+                    className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
+                      watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 
+                      watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 font-bold border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
+                      watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : ''
+                    }`}
+                  >
+                    <option value="Realizada">Realizada</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Glosado" className="text-rose-600 font-bold">Glosado</option>
+                  </select>
+                ) : (
+                  <>
+                    <input type="hidden" {...register(`sessions.${index}.status` as const)} />
+                    <div className={`block w-full rounded-lg shadow-sm py-2 px-3 text-sm border font-bold text-center ${
+                      watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 
+                      watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
+                      watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : 'border-border/60 bg-background'
+                    }`}>
+                      {watch(`sessions.${index}.status`) === 'Realizada' ? '✓ Realizada' : 
+                       watch(`sessions.${index}.status`) === 'Pendente' ? '⏳ Pendente' : 
+                       watch(`sessions.${index}.status`) === 'Glosado' ? '✗ Glosado' : watch(`sessions.${index}.status`)}
+                    </div>
+                  </>
+                )}
               </div>
               
-              {watch(`sessions.${index}.status`) === 'Glosado' ? (
+              {watch(`sessions.${index}.status`) === 'Glosado' && (
                 <div className="sm:col-span-4 mt-2 sm:mt-0 transition-all animate-in fade-in slide-in-from-left-2">
                   <label className="block text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">Justificativa da Glosa *</label>
                   <input
                     type="text"
                     placeholder="Descreva o motivo da glosa..."
                     {...register(`sessions.${index}.justification` as const)}
-                    required
+                    required={userRole === 'SMS_ADMIN'}
+                    readOnly={userRole !== 'SMS_ADMIN'}
                     className="block w-full rounded-lg border-rose-300 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-rose-500/10 focus:border-rose-500 transition-all placeholder:text-rose-300"
                   />
                 </div>
-              ) : (
-                <div className="sm:col-span-1 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
-                  >
-                    Remover
-                  </button>
+              )}
+
+              {/* Action buttons area */}
+              {watch(`sessions.${index}.status`) !== 'Glosado' && (
+                <div className="sm:col-span-1 flex items-end justify-end gap-2">
+                  {/* Solicitar Assinatura button — only for CLINIC_USER with Pendente status */}
+                  {userRole === 'CLINIC_USER' && watch(`sessions.${index}.status`) === 'Pendente' && id && watch(`sessions.${index}.id`) && (
+                    <button
+                      type="button"
+                      onClick={() => setQrModalSession({ index, sessionId: watch(`sessions.${index}.id`)! })}
+                      className="text-primary hover:text-white hover:bg-primary p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
+                      title="Solicitar assinatura via QR Code"
+                    >
+                      📱 Assinar
+                    </button>
+                  )}
+
+                  {/* Remove button — allowed for CLINIC_USER if status is Pendente */}
+                  {(userRole === 'SMS_ADMIN' || watch(`sessions.${index}.status`) === 'Pendente') && (
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
+                    >
+                      Remover
+                    </button>
+                  )}
                 </div>
               )}
 
               {watch(`sessions.${index}.status`) === 'Glosado' && (
                 <div className="sm:col-span-1 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
-                  >
-                    Remover
-                  </button>
+                  {(userRole === 'SMS_ADMIN' || watch(`sessions.${index}.status`) === 'Pendente') && (
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
+                    >
+                      Remover
+                    </button>
+                  )}
                 </div>
               )}
               <div className="absolute -left-2 top-1/2 -translate-y-1/2 h-8 w-1 rounded-full bg-primary/20 group-hover:bg-primary transition-all" />
@@ -559,5 +621,18 @@ export function AttendanceForm({
         </button>
       </div>
     </form>
+
+      {/* QR Code Modal for session validation */}
+      {qrModalSession && id && (
+        <QRCodeModal
+          sessionId={qrModalSession.sessionId}
+          sessionIndex={qrModalSession.index}
+          attendanceId={id}
+          patientName={patients.find(p => p.id === watch('patient_id'))?.name || 'Paciente'}
+          sessionDate={watch(`sessions.${qrModalSession.index}.session_date`) || ''}
+          onClose={() => setQrModalSession(null)}
+        />
+      )}
+    </>
   )
 }

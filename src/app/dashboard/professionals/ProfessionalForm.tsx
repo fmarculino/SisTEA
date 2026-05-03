@@ -52,15 +52,18 @@ export function ProfessionalForm({
     setIsPending(true)
     setErrorMsg('')
 
-    let result
-    if (id) {
-      result = await updateProfessionalAction(id, data)
-    } else {
-      result = await createProfessionalAction(data)
-    }
+    try {
+      let result
+      if (id) {
+        result = await updateProfessionalAction(id, data)
+      } else {
+        result = await createProfessionalAction(data)
+      }
 
-    if (result && result.error) {
-      setErrorMsg(result.error)
+      if (result && result.error) {
+        setErrorMsg(result.error)
+      }
+    } finally {
       setIsPending(false)
     }
   }

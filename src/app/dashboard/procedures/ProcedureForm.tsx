@@ -89,15 +89,18 @@ export function ProcedureForm({
     setIsPending(true)
     setErrorMsg('')
 
-    let result
-    if (id) {
-      result = await updateProcedureAction(id, data)
-    } else {
-      result = await createProcedureAction(data)
-    }
+    try {
+      let result
+      if (id) {
+        result = await updateProcedureAction(id, data)
+      } else {
+        result = await createProcedureAction(data)
+      }
 
-    if (result && result.error) {
-      setErrorMsg(result.error)
+      if (result && result.error) {
+        setErrorMsg(result.error)
+      }
+    } finally {
       setIsPending(false)
     }
   }

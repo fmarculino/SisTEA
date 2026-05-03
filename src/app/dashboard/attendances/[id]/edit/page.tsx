@@ -24,6 +24,15 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
     .single()
   
   if (!attendance) notFound()
+  
+  // Sort sessions chronologically by date and start time
+  if (attendance.sessions) {
+    attendance.sessions.sort((a: any, b: any) => {
+      const dateCompare = a.session_date.localeCompare(b.session_date)
+      if (dateCompare !== 0) return dateCompare
+      return a.start_time.localeCompare(b.start_time)
+    })
+  }
 
   // Mapeando dados do profissional do atendimento (caso precise de fallback)
   if (attendance.professional) {

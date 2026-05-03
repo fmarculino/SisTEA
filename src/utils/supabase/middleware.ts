@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    const publicRoutes = ['/login', '/forgot-password']
+    const publicRoutes = ['/login', '/forgot-password', '/validar']
     const authRoutes = ['/auth/callback', '/auth/update-password']
     const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname.startsWith(route))
     const isAuthRoute = authRoutes.some(route => request.nextUrl.pathname.startsWith(route))
@@ -51,7 +51,9 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    if (user && isPublicRoute) {
+    // Redirect logged-in users away from auth routes (login/forgot) to dashboard
+    // But allow them to see /validar pages
+    if (user && isPublicRoute && !request.nextUrl.pathname.startsWith('/validar')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)

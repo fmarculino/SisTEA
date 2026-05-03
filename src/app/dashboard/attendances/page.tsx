@@ -190,7 +190,11 @@ export default async function AttendancesPage({
                         >
                           <Edit2 className="h-4 w-4" />
                         </Link>
-                        <DeleteAttendanceButton id={att.id} />
+                        
+                        {/* Only show delete button if admin OR if clinic user and NO session is Realizada/Glosada */}
+                        {(isAdmin || !att.sessions?.some((s: any) => s.status === 'Realizada' || s.status === 'Glosada')) && (
+                          <DeleteAttendanceButton id={att.id} />
+                        )}
                       </div>
                     </td>
                   </tr>
