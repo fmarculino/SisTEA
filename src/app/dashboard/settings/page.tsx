@@ -55,7 +55,10 @@ export default async function SettingsPage() {
                 </p>
               </div>
               
-              <form action={updateSystemSettingAction}>
+              <form action={async (formData) => {
+                'use server'
+                await updateSystemSettingAction(formData)
+              }}>
                 <input type="hidden" name="key" value="enable_token_rotation" />
                 <input type="hidden" name="value" value={rotationEnabled === 'true' || rotationEnabled === true ? 'false' : 'true'} />
                 <button
@@ -94,7 +97,10 @@ export default async function SettingsPage() {
                 </p>
               </div>
               
-              <form action={updateSystemSettingAction} className="flex items-center gap-2">
+              <form action={async (formData) => {
+                'use server'
+                await updateSystemSettingAction(formData)
+              }} className="flex items-center gap-2">
                 <input type="hidden" name="key" value="geofencing_threshold_meters" />
                 <div className="relative">
                   <input 
