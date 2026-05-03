@@ -27,7 +27,7 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
   const authToken = profile.role === 'SMS_ADMIN' ? patient.auth_token : null
 
   // Map patient_clinics to a simpler format for the form
-  const linkedClinics = (patient.patient_clinics || []).map((pc: any) => ({
+  const linkedClinics: { clinic_id: string; name: string; active: boolean }[] = (patient.patient_clinics || []).map((pc: any) => ({
     clinic_id: pc.clinic_id,
     name: pc.clinics?.name || 'Clínica desconhecida',
     active: pc.active

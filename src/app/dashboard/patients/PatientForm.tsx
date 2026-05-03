@@ -31,14 +31,14 @@ export function PatientForm({
   userRole: string;
   userClinicId?: string | null;
   authToken?: string | null;
-  linkedClinics?: { clinic_id: string; name: string }[];
+  linkedClinics?: { clinic_id: string; name: string; active: boolean }[];
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [currentToken, setCurrentToken] = useState(authToken || '')
-  const [localLinkedClinics, setLocalLinkedClinics] = useState(linkedClinics)
+  const [localLinkedClinics, setLocalLinkedClinics] = useState<{ clinic_id: string; name: string; active: boolean }[]>(linkedClinics)
   const [isResettingToken, setIsResettingToken] = useState(false)
   const [existingPatient, setExistingPatient] = useState<any>(null)
   const [showLinkModal, setShowLinkModal] = useState(false)
