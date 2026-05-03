@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { professionalSchema, type ProfessionalFormData } from './schema'
+import { logAudit } from '@/lib/audit'
 
 export async function createProfessionalAction(data: ProfessionalFormData) {
   const supabase = await createClient()
@@ -62,6 +63,16 @@ export async function createProfessionalAction(data: ProfessionalFormData) {
   }
 
   revalidatePath('/dashboard/professionals')
+
+  // Log audit
+  await logAudit({
+    action: 'CREATE',
+    table_name: 'professionals',
+    record_id: profId,
+    new_data: { ...professionalData, specialty_ids, clinic_ids },
+    description: `Cadastrou o profissional: ${data.name} (CNS: ${data.cns}).`
+  })
+
   redirect('/dashboard/professionals')
 }
 
@@ -121,6 +132,16 @@ export async function updateProfessionalAction(id: string, data: ProfessionalFor
   }
 
   revalidatePath('/dashboard/professionals')
+
+  // Log audit
+  await logAudit({
+    action: 'UPDATE',
+    table_name: 'professionals',
+    record_id: id,
+    new_data: { ...professionalData, specialty_ids, clinic_ids },
+    description: `Atualizou dados do profissional: ${data.name}.`
+  })
+
   redirect('/dashboard/professionals')
 }
 
@@ -129,4 +150,14 @@ export async function deleteProfessionalAction(id: string) {
   const { error } = await supabase.from('professionals').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/dashboard/professionals')
+
+  // Log audit
+  await logAudit({
+    action: 'DELETE',
+    table_name: 'professionals',
+    record_id: id,
+    description: `Excluiu o registro do profissional ID: ${id}.`
+  })
+
+  return { success: true }
 }

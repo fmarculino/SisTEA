@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { attendanceSchema, type AttendanceFormData } from './schema'
+import { logAudit } from '@/lib/audit'
 import { buildValidationURL, generateValidationHMAC, isLinkExpired, verifyValidationHMAC } from '@/utils/token'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -139,6 +140,16 @@ export async function createAttendanceAction(data: AttendanceFormData) {
 
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/attendances')
+
+  // Log audit
+  await logAudit({
+    action: 'CREATE',
+    table_name: 'attendances',
+    record_id: attendance.id,
+    new_data: attendance,
+    description: `Cadastrou novo atendimento/guia para o paciente ID: ${rawAttendanceData.patient_id}.`
+  })
+
   return { success: true, id: attendance.id }
 }
 
@@ -341,6 +352,17 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/attendances')
   revalidatePath(`/dashboard/attendances/${id}/edit`)
+
+  // Log audit
+  await logAudit({
+    action: 'UPDATE',
+    table_name: 'attendances',
+    record_id: id,
+    old_data: currentAttendance,
+    new_data: { ...rawAttendanceData, sessions },
+    description: `Atualizou atendimento/guia ID: ${id}.`
+  })
+
   return { success: true }
 }
 
@@ -702,6 +724,15 @@ export async function validateSessionAction(data: {
     .from('attendances')
     .update({ value_applied: realizedCount * unitValue })
     .eq('id', session.attendance_id)
+
+  // Log audit
+  await logAudit({
+    action: 'UPDATE',
+    table_name: 'attendance_sessions',
+    record_id: sessionId,
+    new_data: { status: 'Realizada', validation_method: 'Digital' },
+    description: `Validou assinatura digital para a sessão ID: ${sessionId} (Paciente: ${attendance.patient_id}).`
+  })
 
   return { success: true }
 }

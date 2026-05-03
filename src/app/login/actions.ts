@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { logAudit } from '@/lib/audit'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -39,6 +40,26 @@ export async function login(formData: FormData) {
     }
   }
 
+  // Log audit
+  await logAudit({
+    action: 'LOGIN',
+    description: `Usuário ${data.email} realizou login no sistema.`
+  })
+
   revalidatePath('/', 'layout')
   redirect('/dashboard')
+}
+
+export async function logout() {
+  const supabase = await createClient()
+  
+  // Log audit BEFORE signing out while session is active
+  await logAudit({
+    action: 'LOGOUT',
+    description: 'Usuário encerrou a sessão no sistema.'
+  })
+
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  redirect('/login')
 }

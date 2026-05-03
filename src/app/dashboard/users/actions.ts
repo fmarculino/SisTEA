@@ -3,6 +3,7 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { userSchema, UserFormData } from './schema'
+import { logAudit } from '@/lib/audit'
 
 // Helper to create an admin client (direct client, no cookie handling needed for admin operations)
 function createAdminClient() {
@@ -67,6 +68,16 @@ export async function createUser(data: UserFormData) {
     }
 
     revalidatePath('/dashboard/users')
+
+    // Log audit
+    await logAudit({
+      action: 'CREATE',
+      table_name: 'users',
+      record_id: authUser.user.id,
+      new_data: { email, role, clinic_id },
+      description: `Criou novo usuário: ${email} (${role}).`
+    })
+
     return { success: true }
   } catch (error: any) {
     console.error('Create User Error:', error)
@@ -105,36 +116,22 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
     }
 
     revalidatePath('/dashboard/users')
+
+    // Log audit
+    await logAudit({
+      action: 'UPDATE',
+      table_name: 'users',
+      record_id: id,
+      new_data: { email: data.email, role: data.role, clinic_id: data.clinic_id },
+      description: `Atualizou dados do usuário: ${data.email || id}.`
+    })
+
     return { success: true }
   } catch (error: any) {
     console.error('Update User Error:', error)
     return { error: error.message || 'Erro inesperado ao atualizar usuário' }
   }
 }
-
-/*
-export async function deleteUser(id: string) {
-  try {
-    const supabase = createAdminClient()
-
-    // 1. Delete from Auth (this usually triggers deletion in public if configured, but let's be explicit)
-    const { error: authError } = await supabase.auth.admin.deleteUser(id)
-
-    if (authError) {
-      return { error: authError.message }
-    }
-
-    // Row in public.users should be deleted via cascade or manual if not
-    // supabase.from('users').delete().eq('id', id)
-
-    revalidatePath('/dashboard/users')
-    return { success: true }
-  } catch (error: any) {
-    console.error('Delete User Error:', error)
-    return { error: error.message || 'Erro inesperado ao excluir usuário' }
-  }
-}
-*/
 
 export async function toggleUserStatus(id: string, currentStatus: boolean) {
   try {
@@ -150,6 +147,15 @@ export async function toggleUserStatus(id: string, currentStatus: boolean) {
     }
 
     revalidatePath('/dashboard/users')
+
+    // Log audit
+    await logAudit({
+      action: 'UPDATE',
+      table_name: 'users',
+      record_id: id,
+      description: `${!currentStatus ? 'Ativou' : 'Desativou'} o acesso do usuário ID: ${id}.`
+    })
+
     return { success: true }
   } catch (error: any) {
     console.error('Toggle Status Error:', error)

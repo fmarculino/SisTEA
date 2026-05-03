@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { patientSchema, type PatientFormData } from './schema'
+import { logAudit } from '@/lib/audit'
 import { generateToken } from '@/utils/token'
 
 export async function checkPatientByCNSAction(cns: string) {
@@ -34,6 +35,15 @@ export async function linkPatientToClinicAction(patientId: string, clinicId: str
   }
   
   revalidatePath('/dashboard/patients')
+
+  // Log audit
+  await logAudit({
+    action: 'UPDATE',
+    table_name: 'patient_clinics',
+    record_id: `${patientId}_${clinicId}`,
+    description: `Vinculou o paciente ID: ${patientId} à clínica ID: ${clinicId}.`
+  })
+
   return { success: true }
 }
 
@@ -49,6 +59,16 @@ export async function togglePatientClinicStatusAction(patientId: string, clinicI
   
   revalidatePath('/dashboard/patients')
   revalidatePath(`/dashboard/patients/${patientId}`)
+
+  // Log audit
+  await logAudit({
+    action: 'UPDATE',
+    table_name: 'patient_clinics',
+    record_id: `${patientId}_${clinicId}`,
+    new_data: { active },
+    description: `${active ? 'Ativou' : 'Desativou'} o vínculo do paciente ID: ${patientId}.`
+  })
+
   return { success: true }
 }
 
@@ -105,6 +125,16 @@ export async function createPatientAction(data: PatientFormData) {
   if (linkError) return { error: linkError.message }
 
   revalidatePath('/dashboard/patients')
+
+  // Log audit
+  await logAudit({
+    action: 'CREATE',
+    table_name: 'patients',
+    record_id: newPatient.id,
+    new_data: { ...patientData, clinic_id },
+    description: `Cadastrou o paciente: ${data.name} (CNS: ${data.cns_patient}).`
+  })
+
   redirect('/dashboard/patients')
 }
 
@@ -142,6 +172,16 @@ export async function updatePatientAction(id: string, data: PatientFormData) {
   }
 
   revalidatePath('/dashboard/patients')
+
+  // Log audit
+  await logAudit({
+    action: 'UPDATE',
+    table_name: 'patients',
+    record_id: patientId,
+    new_data: { ...patientData, active, clinic_id },
+    description: `Atualizou dados do paciente: ${data.name}.`
+  })
+
   redirect('/dashboard/patients')
 }
 
@@ -171,6 +211,15 @@ export async function resetPatientTokenAction(patientId: string) {
   if (error) return { error: error.message }
 
   revalidatePath('/dashboard/patients')
+
+  // Log audit
+  await logAudit({
+    action: 'UPDATE',
+    table_name: 'patients',
+    record_id: patientId,
+    description: `Resetou o Token de Acesso (QR Code) do paciente ID: ${patientId}.`
+  })
+
   return { token: newToken }
 }
 
@@ -179,4 +228,14 @@ export async function deletePatientAction(id: string) {
   const { error } = await supabase.from('patients').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/dashboard/patients')
+
+  // Log audit
+  await logAudit({
+    action: 'DELETE',
+    table_name: 'patients',
+    record_id: id,
+    description: `Excluiu o registro do paciente ID: ${id}.`
+  })
+
+  return { success: true }
 }

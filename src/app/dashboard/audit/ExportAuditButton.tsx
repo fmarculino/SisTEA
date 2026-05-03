@@ -13,36 +13,30 @@ export function ExportAuditButton({ data }: ExportAuditButtonProps) {
 
     const headers = [
       'ID',
-      'Data Validacao',
+      'Data/Hora',
+      'Acao',
+      'Usuario',
+      'Papel',
+      'Descricao',
+      'Tabela',
+      'Record ID',
       'IP',
-      'Dispositivo',
-      'Latitude',
-      'Longitude',
-      'Distancia (m)',
-      'Remota',
-      'Paciente',
-      'Profissional',
-      'Clinica',
-      'Data Sessao',
-      'Hora Inicio'
+      'Dispositivo'
     ]
 
     const csvContent = [
       headers.join(';'),
       ...data.map(log => [
         log.id,
-        format(new Date(log.validated_at), 'dd/MM/yyyy HH:mm:ss'),
-        log.validation_ip,
-        `"${log.validation_ua?.replace(/"/g, '""')}"`,
-        log.validation_geo?.lat || '',
-        log.validation_geo?.lng || '',
-        Math.round(log.validation_distance || 0),
-        log.is_out_of_range ? 'SIM' : 'NAO',
-        `"${log.attendance?.patient?.name || ''}"`,
-        `"${log.attendance?.professional?.name || ''}"`,
-        `"${log.attendance?.clinic?.name || ''}"`,
-        log.session_date,
-        log.start_time
+        format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss'),
+        log.action,
+        log.user_email,
+        log.user_role,
+        `"${log.description?.replace(/"/g, '""')}"`,
+        log.table_name || '',
+        log.record_id || '',
+        log.ip_address,
+        `"${log.user_agent?.replace(/"/g, '""')}"`
       ].join(';'))
     ].join('\n')
 
