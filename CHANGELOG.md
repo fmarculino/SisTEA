@@ -2,6 +2,20 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.5.6-beta] - 2026-05-03
+
+Esta versão foca na estabilidade do fluxo de faturamento e na resolução de conflitos de estado na interface de atendimentos, garantindo uma experiência fluida para usuários de clínicas.
+
+### 🛠️ Estabilidade & Correções de Fluxo
+- **Correção Crítica no Formulário de Atendimento:** Resolução do bug que tornava o botão "Atualizar Guia" inoperante para usuários de clínica. O problema foi rastreado até uma validação de esquema (Schema) legada que bloqueava o envio silenciosamente.
+- **Sincronização de Estado (Form Refresh):** Implementação de mecanismo de "Auto-Reset" que sincroniza os IDs das sessões recém-criadas com o banco de dados imediatamente após o salvamento. Isso permite que o botão de **Assinatura Digital** apareça instantaneamente sem necessidade de recarregar a página manualmente.
+- **Melhoria no Diagnóstico de Erros:** Introdução de um resumo visual de erros no topo do formulário, facilitando a identificação de campos obrigatórios não preenchidos ou dados inválidos.
+- **Refatoração de Ações (Server Actions):** Ajuste na comunicação entre frontend e backend para tratar redirecionamentos e revalidações de forma mais resiliente, evitando "travamentos" visuais durante o processamento.
+
+### 💻 Performance & Build
+- **Otimização TypeScript:** Correção de erros de tipagem em cascata relacionados ao mapeamento de vínculos de pacientes e clínicas, garantindo estabilidade no ambiente de produção e CI/CD.
+- **Ajuste de Tipagem de Campos:** Reforço na conversão de tipos para campos numéricos (como quantidade autorizada e valores aplicados), prevenindo inconsistências de dados.
+
 ## [0.5.5-beta] - 2026-05-02
 
 Esta versão introduz a arquitetura de **Multiclinicidade de Pacientes**, permitindo que um único cadastro de paciente seja compartilhado e gerenciado de forma independente por múltiplas unidades de atendimento.

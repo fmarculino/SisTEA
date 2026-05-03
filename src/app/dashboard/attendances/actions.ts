@@ -115,7 +115,7 @@ export async function createAttendanceAction(data: AttendanceFormData) {
 
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/attendances')
-  redirect(`/dashboard/attendances/${attendance.id}/edit`)
+  return { success: true, id: attendance.id }
 }
 
 export async function updateAttendanceAction(id: string, data: AttendanceFormData) {
@@ -293,7 +293,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/attendances')
   revalidatePath(`/dashboard/attendances/${id}/edit`)
-  redirect(`/dashboard/attendances/${id}/edit`)
+  return { success: true }
 }
 
 export async function deleteAttendanceAction(id: string) {

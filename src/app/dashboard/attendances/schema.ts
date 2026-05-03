@@ -23,7 +23,6 @@ export const attendanceSchema = z.object({
   cid: z.string().optional().nullable(),
   attendance_character: z.string().optional().nullable(),
   
-  status: z.enum(['present', 'absent_justified', 'absent_unjustified']).optional(),
   value_applied: z.coerce.number().min(0, 'Valor não pode ser negativo'),
   notes: z.string().optional().nullable(),
   

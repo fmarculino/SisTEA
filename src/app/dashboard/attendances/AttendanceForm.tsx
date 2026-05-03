@@ -46,6 +46,7 @@ export function AttendanceForm({
     watch,
     getValues,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<AttendanceFormData>({
     resolver: zodResolver(attendanceSchema) as any,
@@ -65,6 +66,17 @@ export function AttendanceForm({
       sessions: initialData?.sessions || [],
     },
   })
+
+  // Sync form when initialData changes (after redirect/revalidate)
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        ...initialData,
+        clinic_id: defaultClinicId,
+        attendance_date: initialData.attendance_date || new Date().toISOString().split('T')[0],
+      });
+    }
+  }, [initialData, reset, defaultClinicId]);
 
   const { fields: sessionFields, append, remove } = useFieldArray({
     control,
@@ -94,21 +106,30 @@ export function AttendanceForm({
     setIsPending(true)
     setErrorMsg('')
 
-    try {
-      let result
-      if (id) {
-        result = await updateAttendanceAction(id, data)
-      } else {
-        result = await createAttendanceAction(data)
-      }
+    const result = id 
+      ? await updateAttendanceAction(id, data)
+      : await createAttendanceAction(data)
 
-      if (result && result.error) {
-        setErrorMsg(result.error)
-      }
-    } finally {
+    if (result && result.error) {
+      setErrorMsg(result.error)
       setIsPending(false)
+    } else {
+      // Success!
+      router.refresh()
+      if (!id && result?.id) {
+        router.push(`/dashboard/attendances/${result.id}/edit`)
+      } else {
+        setIsPending(false)
+      }
     }
   }
+
+  // Debug: Log validation errors to console
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log("Validation Errors:", errors);
+    }
+  }, [errors]);
 
   // Filter patients and professionals by selected clinic if SMS_ADMIN
   const selectedClinicId = watch('clinic_id')
@@ -229,6 +250,35 @@ export function AttendanceForm({
             <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
             {errorMsg}
           </div>
+        </div>
+      )}
+
+      {/* Validation Errors Debug List */}
+      {Object.keys(errors).length > 0 && (
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-sm mb-4">
+          <p className="font-bold mb-2 uppercase tracking-tight text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Campos com erro de preenchimento:
+          </p>
+          <ul className="list-disc list-inside space-y-1 opacity-90 text-[13px]">
+            {Object.entries(errors).map(([key, error]: [string, any]) => {
+              if (key === 'sessions' && Array.isArray(error)) {
+                return error.map((sessionErr: any, index: number) => {
+                  if (!sessionErr) return null;
+                  return Object.entries(sessionErr).map(([subKey, subErr]: [string, any]) => (
+                    <li key={`${key}.${index}.${subKey}`}>
+                      Sessão {index + 1}: <span className="font-semibold">{subKey}</span> — {subErr.message || 'Valor inválido'}
+                    </li>
+                  ));
+                });
+              }
+              return (
+                <li key={key}>
+                  <span className="font-semibold">{key}:</span> {error.message || (error.root?.message) || 'Valor inválido'}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 
@@ -360,7 +410,7 @@ export function AttendanceForm({
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Qtd. Autorizada</label>
           <input
             type="number"
-            {...register('authorized_quantity')}
+            {...register('authorized_quantity', { valueAsNumber: true })}
             readOnly={isLocked}
             className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
