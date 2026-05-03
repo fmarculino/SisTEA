@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { validateSessionAction } from '@/app/dashboard/attendances/actions'
 
 interface SessionInfo {
   sessionId: string
@@ -97,21 +98,15 @@ export function ValidationClient({
         // Geolocation not available or denied — proceed without it
       }
 
-      const response = await fetch('/api/validate-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: sessionInfo.sessionId,
-          token,
-          hmac,
-          timestamp: Number(timestamp),
-          geo,
-        }),
+      const result = await validateSessionAction({
+        sessionId: sessionInfo.sessionId,
+        token,
+        hmac,
+        timestamp: Number(timestamp),
+        geo,
       })
 
-      const result = await response.json()
-
-      if (response.ok && result.success) {
+      if (result.success) {
         setSuccess(true)
       } else {
         setError(result.error || 'Erro ao validar')
@@ -125,8 +120,9 @@ export function ValidationClient({
         setTokenDigits(['', '', '', '', '', ''])
         inputRefs.current[0]?.focus()
       }
-    } catch {
-      setError('Erro de conexão. Verifique sua internet e tente novamente.')
+    } catch (e: any) {
+      console.error('Validation error:', e)
+      setError('Ocorreu um erro inesperado. Tente novamente ou peça um novo QR Code.')
     } finally {
       setLoading(false)
     }

@@ -4,8 +4,9 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { attendanceSchema, type AttendanceFormData } from './schema'
-import { buildValidationURL, generateValidationHMAC } from '@/utils/token'
+import { buildValidationURL, generateValidationHMAC, isLinkExpired } from '@/utils/token'
 import { headers } from 'next/headers'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 async function checkCompetenceLock(supabase: any, clinic_id: string, attendance_date: string) {
   const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', clinic_id).single()
@@ -357,25 +358,182 @@ export async function generateValidationLinkAction(attendanceId: string, session
     return { error: 'Esta sessão já está com status Realizada' }
   }
 
-  // Generate a nonce for this validation attempt
+  // 360. Generate a nonce for this validation attempt
   const timestamp = Date.now()
-  const nonce = generateValidationHMAC(session.id, timestamp)
+  const hmac = generateValidationHMAC(session.id, timestamp)
 
   // Store the nonce in the session record
   await supabase
     .from('attendance_sessions')
-    .update({ validation_nonce: nonce, validation_attempts: 0 })
+    .update({ 
+      validation_nonce: hmac, // Store the HMAC as nonce for extra security
+      validation_attempts: 0 
+    })
     .eq('id', session.id)
 
   // Get the base URL from headers
   const headersList = await headers()
   const host = headersList.get('host') || 'localhost:3000'
-  const protocol = headersList.get('x-forwarded-proto') || 'http'
+  const protocol = headersList.get('x-forwarded-proto') || 'https' // Default to https for Vercel
   const baseUrl = `${protocol}://${host}`
 
-  const url = buildValidationURL(baseUrl, session.id)
+  // Build the URL with the SAME timestamp and hmac we just generated
+  const url = `${baseUrl}/validar/${session.id}?h=${hmac}&t=${timestamp}`
 
   return { url }
+}
+
+/**
+ * Validates a session using the provided token, HMAC and timestamp.
+ * Replaces the API route for better reliability and integrated error handling.
+ */
+export async function validateSessionAction(data: {
+  sessionId: string
+  token: string
+  hmac: string
+  timestamp: number
+  geo?: { lat: number; lng: number; accuracy: number } | null
+}) {
+  const { sessionId, token, hmac, timestamp, geo } = data
+
+  if (!sessionId || !token || !hmac || !timestamp) {
+    return { error: 'Dados incompletos' }
+  }
+
+  // 1. Verify HMAC signature
+  if (!verifyValidationHMAC(sessionId, timestamp, hmac)) {
+    return { error: 'Link inválido ou adulterado' }
+  }
+
+  // 2. Check expiration (10 minutes for more tolerance)
+  if (isLinkExpired(timestamp, 10 * 60 * 1000)) {
+    return { error: 'Link expirado. Solicite um novo QR Code.' }
+  }
+
+  const supabase = createAdminClient()
+
+  // 3. Get the session
+  const { data: session, error: sessionError } = await supabase
+    .from('attendance_sessions')
+    .select('id, status, validated_at, validation_attempts, attendance_id, validation_nonce')
+    .eq('id', sessionId)
+    .single()
+
+  if (sessionError || !session) {
+    return { error: 'Sessão não encontrada' }
+  }
+
+  if (session.validated_at) {
+    return { error: 'Esta sessão já foi validada anteriormente.' }
+  }
+
+  // Verify that this is the latest generated link
+  if (session.validation_nonce && session.validation_nonce !== hmac) {
+    return { error: 'Este link foi invalidado por uma solicitação mais recente. Use o novo QR Code.' }
+  }
+
+  // 4. Check rate limit
+  const MAX_ATTEMPTS = 5
+  if (session.validation_attempts >= MAX_ATTEMPTS) {
+    return { 
+      error: 'Número máximo de tentativas excedido. Solicite um novo QR Code.',
+      blocked: true 
+    }
+  }
+
+  // 5. Get the attendance
+  const { data: attendance } = await supabase
+    .from('attendances')
+    .select('patient_id, clinic_id, procedure_id, attendance_date')
+    .eq('id', session.attendance_id)
+    .single()
+
+  if (!attendance) {
+    return { error: 'Atendimento não encontrado' }
+  }
+
+  // 6. Get the patient's auth_token
+  const { data: patient } = await supabase
+    .from('patients')
+    .select('auth_token')
+    .eq('id', attendance.patient_id)
+    .single()
+
+  if (!patient) {
+    return { error: 'Paciente não encontrado' }
+  }
+
+  // 7. Increment attempt counter
+  await supabase
+    .from('attendance_sessions')
+    .update({ validation_attempts: (session.validation_attempts || 0) + 1 })
+    .eq('id', sessionId)
+
+  // 8. Verify token
+  if (token !== patient.auth_token) {
+    const remaining = MAX_ATTEMPTS - (session.validation_attempts + 1)
+    return { 
+      error: `Token incorreto. ${remaining > 0 ? `Tentativas restantes: ${remaining}` : 'Sem tentativas restantes.'}`,
+      attemptsRemaining: remaining,
+      blocked: remaining <= 0
+    }
+  }
+
+  // 9. SUCCESS — Update session status
+  const headersList = await headers()
+  const ip = headersList.get('x-forwarded-for') || 'unknown'
+  const userAgent = headersList.get('user-agent') || 'unknown'
+
+  const { error: updateError } = await supabase
+    .from('attendance_sessions')
+    .update({
+      status: 'Realizada',
+      validated_at: new Date().toISOString(),
+      validation_ip: ip,
+      validation_ua: userAgent,
+      validation_geo: geo,
+      validation_nonce: null,
+    })
+    .eq('id', sessionId)
+
+  if (updateError) {
+    return { error: 'Erro ao atualizar sessão' }
+  }
+
+  // 10. RECALCULATE TOTAL VALUE
+  const { data: allSessions } = await supabase
+    .from('attendance_sessions')
+    .select('status')
+    .eq('attendance_id', session.attendance_id)
+
+  const realizedCount = (allSessions || []).filter((s: any) => s.status === 'Realizada').length
+
+  const { data: contractPrice } = await supabase
+    .from('clinic_procedure_prices')
+    .select('valor_total')
+    .eq('clinic_id', attendance.clinic_id)
+    .eq('procedure_id', attendance.procedure_id)
+    .eq('active', true)
+    .lte('valid_from', attendance.attendance_date)
+    .or(`valid_to.is.null,valid_to.gte.${attendance.attendance_date}`)
+    .order('valid_from', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let unitValue = 0
+  if (contractPrice) {
+    unitValue = Number(contractPrice.valor_total)
+  } else {
+    const { data: proc } = await supabase.from('procedures').select('valor_total').eq('id', attendance.procedure_id).single()
+    unitValue = Number(proc?.valor_total) || 0
+  }
+
+  await supabase
+    .from('attendances')
+    .update({ value_applied: realizedCount * unitValue })
+    .eq('id', session.attendance_id)
+
+  return { success: true }
 }
 
 /**
