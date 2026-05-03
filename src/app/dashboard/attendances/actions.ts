@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { attendanceSchema, type AttendanceFormData } from './schema'
-import { buildValidationURL, generateValidationHMAC, isLinkExpired } from '@/utils/token'
+import { buildValidationURL, generateValidationHMAC, isLinkExpired, verifyValidationHMAC } from '@/utils/token'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/utils/supabase/admin'
 
