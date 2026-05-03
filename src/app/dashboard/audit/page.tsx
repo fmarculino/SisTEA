@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: { q?: string; clinic?: string }
+  searchParams: { q?: string; clinic?: string; action?: string; table?: string }
 }) {
   const profile = await getUserProfile()
   if (profile?.role !== 'SMS_ADMIN') {
@@ -31,6 +31,29 @@ export default async function AuditPage({
 
   const extraFilters = [
     {
+      paramName: 'action',
+      placeholder: 'Todas Ações',
+      options: [
+        { value: 'CREATE', label: 'Criação (CREATE)' },
+        { value: 'UPDATE', label: 'Alteração (UPDATE)' },
+        { value: 'DELETE', label: 'Exclusão (DELETE)' },
+        { value: 'LOGIN', label: 'Acesso (LOGIN)' },
+        { value: 'LOGOUT', label: 'Saída (LOGOUT)' },
+      ],
+    },
+    {
+      paramName: 'table',
+      placeholder: 'Todos Recursos',
+      options: [
+        { value: 'patients', label: 'Pacientes' },
+        { value: 'professionals', label: 'Profissionais' },
+        { value: 'attendances', label: 'Atendimentos' },
+        { value: 'attendance_sessions', label: 'Sessões/Frequências' },
+        { value: 'users', label: 'Usuários' },
+        { value: 'clinics', label: 'Clínicas' },
+      ],
+    },
+    {
       paramName: 'clinic',
       placeholder: 'Todas Clínicas',
       options: clinics?.map((c: any) => ({ value: c.id, label: c.name })) || [],
@@ -43,20 +66,21 @@ export default async function AuditPage({
     .select('*')
     .order('created_at', { ascending: false })
 
-  if (queryParams.clinic && queryParams.clinic !== 'all') {
-    // Audit logs don't have clinic_id directly, we might need to join or just filter by description/table
-    // But for now let's focus on the general audit. 
-    // If the user is SMS_ADMIN they see everything.
+  if (queryParams.action && queryParams.action !== 'all') {
+    query = query.eq('action', queryParams.action)
   }
 
-  const { data: logs } = await query.limit(200)
+  if (queryParams.table && queryParams.table !== 'all') {
+    query = query.eq('table_name', queryParams.table)
+  }
 
-  // Client-side search
+  const { data: logs } = await query.limit(300)
+
+  // Client-side search for description and user
   const filteredLogs = queryParams.q 
     ? logs?.filter((log: any) => 
         log.description?.toLowerCase().includes(queryParams.q!.toLowerCase()) ||
-        log.user_email?.toLowerCase().includes(queryParams.q!.toLowerCase()) ||
-        log.action?.toLowerCase().includes(queryParams.q!.toLowerCase())
+        log.user_email?.toLowerCase().includes(queryParams.q!.toLowerCase())
       )
     : logs
 
@@ -170,7 +194,7 @@ export default async function AuditPage({
               <Search className="h-8 w-8 text-muted-foreground/40" />
             </div>
             <h3 className="text-lg font-bold text-foreground">Nenhum log encontrado</h3>
-            <p className="text-sm text-muted-foreground">Não há validações digitais registradas com os filtros selecionados.</p>
+            <p className="text-sm text-muted-foreground">Não foram encontrados registros de auditoria com os filtros selecionados.</p>
           </div>
         )}
       </div>
