@@ -6,6 +6,7 @@ import { professionalSchema, type ProfessionalFormData } from './schema'
 import { createProfessionalAction, updateProfessionalAction } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { StatusModal } from '@/components/ui/StatusModal'
 
 type ClinicOption = { id: string; name: string }
 type SpecialtyOption = { id: string; name: string; cbo: string }
@@ -69,12 +70,15 @@ export function ProfessionalForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl bg-card text-card-foreground p-6 rounded-lg shadow border">
-      {errorMsg && (
-        <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm mb-4">
-          {errorMsg}
-        </div>
-      )}
+    <>
+      <StatusModal
+        isOpen={!!errorMsg}
+        onClose={() => setErrorMsg('')}
+        title="Atenção"
+        message={errorMsg}
+        type="error"
+      />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl bg-card text-card-foreground p-6 rounded-lg shadow border">
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -212,5 +216,6 @@ export function ProfessionalForm({
         </button>
       </div>
     </form>
+    </>
   )
 }

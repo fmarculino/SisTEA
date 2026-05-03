@@ -23,11 +23,11 @@ export async function updateSystemSettingAction(formData: FormData) {
 
   const { error } = await supabase
     .from('system_settings')
-    .update({ 
+    .upsert({ 
+      key,
       value: finalValue,
       updated_at: new Date().toISOString()
     })
-    .eq('key', key)
 
   if (error) {
     console.error('Erro ao atualizar configuração:', error)

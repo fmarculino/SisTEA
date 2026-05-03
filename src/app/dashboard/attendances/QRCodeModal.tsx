@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { X, Clock, QrCode, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { generateValidationLinkAction, checkSessionStatusAction } from './actions'
 import { useRouter } from 'next/navigation'
+import { createPortal } from 'react-dom'
 
 interface QRCodeModalProps {
   sessionId: string
@@ -31,7 +32,12 @@ export function QRCodeModal({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [validated, setValidated] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const generateQR = useCallback(async () => {
     setLoading(true)
@@ -56,7 +62,7 @@ export function QRCodeModal({
     } finally {
       setLoading(false)
     }
-  }, [attendanceId, sessionIndex])
+  }, [attendanceId, sessionId])
 
   useEffect(() => {
     generateQR()
@@ -107,9 +113,10 @@ export function QRCodeModal({
     onClose()
   }, [validated, router, onClose])
 
+  if (!mounted) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-card border border-border/60 rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
         {/* Close button */}
         <button
@@ -226,4 +233,6 @@ export function QRCodeModal({
       </div>
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }

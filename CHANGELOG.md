@@ -2,7 +2,23 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
-## [0.7.0-beta] - 2026-05-03
+## [0.7.1-beta] - 2026-05-03
+
+Esta versão foca na padronização da experiência do usuário (UX) e no reforço das regras de governança para registros retroativos e futuros.
+
+### 🎨 Padronização de UI & UX (Portals)
+- **Centralização de Feedbacks:** Migração dos componentes `StatusModal` e `QRCodeModal` para a arquitetura de **React Portals**. Isso garante que avisos críticos e o QR Code de assinatura apareçam sempre centralizados no viewport, ignorando restrições de CSS (transforms) de formulários longos.
+- **Eliminação de Alertas Nativos:** Substituição de todos os `alert()` do navegador por modais profissionais e tematizados, garantindo uma identidade visual coesa em todo o sistema.
+- **Compatibilidade SSR:** Implementação de verificações de montagem (`mounted check`) para garantir hidratação segura em ambiente Next.js.
+
+### 🛡️ Reforço de Governança
+- **Trava de Atendimento Futuro:** Extensão da regra de bloqueio de datas futuras. Agora, além de bloquear frequências individuais, o sistema também impede a criação de guias de atendimento com data superior à atual quando a configuração `allow_future_attendances` está desativada.
+- **Validação de Data no Servidor:** Implementação de checagem rigorosa no backend (`Server Actions`) para evitar manipulações de data via ferramentas de desenvolvedor.
+
+### 🔧 Ajustes & Estabilidade
+- **Z-Index Overhaul:** Padronização dos níveis de empilhamento para garantir que modais de sistema sempre fiquem sobrepostos a qualquer outro elemento de interface.
+- **Limpeza de Código:** Remoção de containers de erro estáticos obsoletos que poluíam o topo dos formulários de cadastro.
+
 
 Esta versão introduz o **Módulo de Auditoria Digital** e o **Painel de Configurações Globais**, elevando o nível de segurança, fiscalização e customização do SisTEA.
 

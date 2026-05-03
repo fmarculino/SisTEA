@@ -10,7 +10,8 @@ import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { generateFrequencyPDF } from '@/utils/generateFrequencyPDF'
 import { QRCodeModal } from './QRCodeModal'
-import { ShieldCheck } from 'lucide-react'
+import { StatusModal } from '@/components/ui/StatusModal'
+import { Plus, Trash2, Printer, QrCode, Search, AlertCircle } from 'lucide-react'
 
 export function AttendanceForm({ 
   initialData, 
@@ -244,15 +245,14 @@ export function AttendanceForm({
 
   return (
     <>
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-8 rounded-2xl shadow-xl border border-border/40 mb-10">
-      {errorMsg && (
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-sm animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-            {errorMsg}
-          </div>
-        </div>
-      )}
+      <StatusModal
+        isOpen={!!errorMsg}
+        onClose={() => setErrorMsg('')}
+        title="Operação Negada"
+        message={errorMsg}
+        type="error"
+      />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-8 rounded-2xl shadow-xl border border-border/40 mb-10">
 
       {/* Validation Errors Debug List */}
       {Object.keys(errors).length > 0 && (

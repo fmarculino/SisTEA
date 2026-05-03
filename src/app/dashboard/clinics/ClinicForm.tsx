@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCNPJ } from '@/lib/validation-utils'
 import { MapPin, ExternalLink } from 'lucide-react'
+import { StatusModal } from '@/components/ui/StatusModal'
 
 export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFormData>; id?: string }) {
   const router = useRouter()
@@ -82,15 +83,15 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-10 rounded-2xl shadow-xl border border-border/40 mb-10">
-      {errorMsg && (
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-sm animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-            {errorMsg}
-          </div>
-        </div>
-      )}
+    <>
+      <StatusModal
+        isOpen={!!errorMsg}
+        onClose={() => setErrorMsg('')}
+        title="Atenção"
+        message={errorMsg}
+        type="error"
+      />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-10 rounded-2xl shadow-xl border border-border/40 mb-10">
 
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -300,5 +301,6 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
         </button>
       </div>
     </form>
+    </>
   )
 }

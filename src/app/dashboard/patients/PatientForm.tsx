@@ -7,6 +7,7 @@ import { createPatientAction, updatePatientAction, resetPatientTokenAction, chec
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw, Building } from 'lucide-react'
+import { StatusModal } from '@/components/ui/StatusModal'
 
 type ClinicOption = { id: string; name: string }
 
@@ -194,16 +195,16 @@ export function PatientForm({
     </div>
   )
 
-    return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-12 max-w-4xl bg-card text-card-foreground p-10 rounded-[2.5rem] shadow-2xl shadow-primary/5 border border-border/40 mb-12 translate-y-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {errorMsg && (
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 p-5 rounded-2xl text-sm font-medium animate-in zoom-in-95 duration-300">
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-            {errorMsg}
-          </div>
-        </div>
-      )}
+  return (
+    <>
+      <StatusModal
+        isOpen={!!errorMsg}
+        onClose={() => setErrorMsg('')}
+        title="Atenção"
+        message={errorMsg}
+        type="error"
+      />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-12 max-w-4xl bg-card text-card-foreground p-10 rounded-[2.5rem] shadow-2xl shadow-primary/5 border border-border/40 mb-12 translate-y-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* Seção 1: Identificação */}
       <section className="space-y-8">
@@ -645,5 +646,6 @@ export function PatientForm({
         </div>
       )}
     </form>
+    </>
   )
 }

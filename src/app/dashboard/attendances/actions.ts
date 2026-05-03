@@ -53,6 +53,26 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   if (profile?.role === 'CLINIC_USER' && sessions) {
     sessions.forEach(s => { s.status = 'Pendente' })
   }
+
+  // --- SECURITY: Future Date Check ---
+  const { data: futureSetting } = await supabase.from('system_settings').select('value').eq('key', 'allow_future_attendances').maybeSingle()
+  const allowFuture = futureSetting?.value === undefined ? true : (futureSetting?.value === true || futureSetting?.value === 'true')
+  
+  if (!allowFuture) {
+    const now = new Date()
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+    
+    // Check main attendance date
+    if (new Date(rawAttendanceData.attendance_date + 'T00:00:00') > todayEnd) {
+      return { error: 'O sistema está configurado para não permitir o registro de atendimentos com data futura.' }
+    }
+
+    // Check sessions
+    if (sessions) {
+      const hasFuture = sessions.some(s => new Date(s.session_date + 'T00:00:00') > todayEnd)
+      if (hasFuture) return { error: 'O sistema está configurado para não permitir o registro de frequências com data futura.' }
+    }
+  }
   
   if (sessions && sessions.length > rawAttendanceData.authorized_quantity) {
     return { error: `Limite de sessões excedido (${rawAttendanceData.authorized_quantity} autorizadas)` }
@@ -130,6 +150,26 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
 
   if (sessions && sessions.length > rawAttendanceData.authorized_quantity) {
     return { error: `Limite de sessões excedido (${rawAttendanceData.authorized_quantity} autorizadas)` }
+  }
+
+  // --- SECURITY: Future Date Check ---
+  const { data: futureSetting } = await supabase.from('system_settings').select('value').eq('key', 'allow_future_attendances').maybeSingle()
+  const allowFuture = futureSetting?.value === undefined ? true : (futureSetting?.value === true || futureSetting?.value === 'true')
+  
+  if (!allowFuture) {
+    const now = new Date()
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+    
+    // Check main attendance date
+    if (new Date(rawAttendanceData.attendance_date + 'T00:00:00') > todayEnd) {
+      return { error: 'O sistema está configurado para não permitir o registro de atendimentos com data futura.' }
+    }
+
+    // Check sessions
+    if (sessions) {
+      const hasFuture = sessions.some(s => new Date(s.session_date + 'T00:00:00') > todayEnd)
+      if (hasFuture) return { error: 'O sistema está configurado para não permitir o registro de frequências com data futura.' }
+    }
   }
 
   // --- SECURITY: Fetch current state to prevent tampering after validation ---
@@ -358,6 +398,45 @@ export async function generateValidationLinkAction(attendanceId: string, session
     return { error: 'Esta sessão já está com status Realizada' }
   }
 
+  // --- VALIDATION: Settings Check ---
+  const { data: settings } = await supabase
+    .from('system_settings')
+    .select('key, value')
+    .in('key', ['allow_future_attendances', 'signature_window_hours'])
+
+  const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
+  const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
+  const windowHours = Number(settingsMap.get('signature_window_hours')) || 2
+
+  // --- VALIDATION: Future Date Check ---
+  const now = new Date()
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+  const sessionDate = new Date(session.session_date + 'T00:00:00')
+  
+  if (!allowFuture && sessionDate > todayEnd) {
+    return { error: 'O registro de frequências futuras não é permitido pelas configurações do sistema.' }
+  }
+
+  // --- VALIDATION: SIGNATURE WINDOW CHECK ---
+  // Re-fetch with start_time if needed, or update the select above
+  const { data: sessionWithTime } = await supabase
+    .from('attendance_sessions')
+    .select('start_time')
+    .eq('id', sessionId)
+    .single()
+
+  if (sessionWithTime?.start_time) {
+    const scheduledDateTime = new Date(`${session.session_date}T${sessionWithTime.start_time}`)
+    const diffMs = now.getTime() - scheduledDateTime.getTime()
+    const diffHours = Math.abs(diffMs / (1000 * 60 * 60))
+    
+    if (diffHours > windowHours) {
+      return { 
+        error: `Assinatura negada. O horário atual está fora da janela permitida (${windowHours}h) para o atendimento marcado às ${sessionWithTime.start_time.substring(0, 5)}.` 
+      }
+    }
+  }
+
   // 360. Generate a nonce for this validation attempt
   const timestamp = Date.now()
   const hmac = generateValidationHMAC(session.id, timestamp)
@@ -415,7 +494,7 @@ export async function validateSessionAction(data: {
   // 3. Get the session
   const { data: session, error: sessionError } = await supabase
     .from('attendance_sessions')
-    .select('id, status, validated_at, validation_attempts, attendance_id, validation_nonce')
+    .select('id, status, validated_at, validation_attempts, attendance_id, validation_nonce, session_date, start_time')
     .eq('id', sessionId)
     .single()
 
@@ -492,11 +571,33 @@ export async function validateSessionAction(data: {
   const { data: settings } = await supabase
     .from('system_settings')
     .select('key, value')
-    .in('key', ['enable_token_rotation', 'geofencing_threshold_meters'])
+    .in('key', ['enable_token_rotation', 'geofencing_threshold_meters', 'allow_future_attendances', 'signature_window_hours'])
 
   const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
   const threshold = Number(settingsMap.get('geofencing_threshold_meters')) || 500
   const isRotationEnabled = settingsMap.get('enable_token_rotation') === true || settingsMap.get('enable_token_rotation') === 'true'
+  const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
+  const windowHours = Number(settingsMap.get('signature_window_hours')) || 2
+
+  // --- VALIDATION: FUTURE DATE CHECK ---
+  const now = new Date()
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+  const sessionDate = new Date(session.session_date + 'T00:00:00')
+  
+  if (!allowFuture && sessionDate > todayEnd) {
+    return { error: 'O registro de frequências futuras não é permitido pelas configurações do sistema.' }
+  }
+
+  // --- VALIDATION: SIGNATURE WINDOW CHECK ---
+  const scheduledDateTime = new Date(`${session.session_date}T${session.start_time}`)
+  const diffMs = now.getTime() - scheduledDateTime.getTime()
+  const diffHours = Math.abs(diffMs / (1000 * 60 * 60))
+  
+  if (diffHours > windowHours) {
+    return { 
+      error: `Assinatura negada. O horário atual está fora da janela permitida (${windowHours}h) para o atendimento marcado às ${session.start_time.substring(0, 5)}.` 
+    }
+  }
 
   let validation_distance = null
   let is_out_of_range = false
