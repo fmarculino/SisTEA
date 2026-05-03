@@ -110,13 +110,13 @@ export function AttendanceForm({
       ? await updateAttendanceAction(id, data)
       : await createAttendanceAction(data)
 
-    if (result && result.error) {
-      setErrorMsg(result.error)
+    if (result && 'error' in result) {
+      setErrorMsg(result.error as string)
       setIsPending(false)
     } else {
       // Success!
       router.refresh()
-      if (!id && result?.id) {
+      if (!id && result && 'id' in result) {
         router.push(`/dashboard/attendances/${result.id}/edit`)
       } else {
         setIsPending(false)
