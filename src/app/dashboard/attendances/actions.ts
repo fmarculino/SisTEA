@@ -200,7 +200,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
 
   if (!currentAttendance) return { error: 'Atendimento não encontrado' }
 
-  const dbSessions = (currentAttendance as any).sessions || []
+  const dbSessions = (currentAttendance as any).sessions as any[] || []
   const hasValidatedInDb = dbSessions.some((s: any) => s.status === 'Realizada' || s.status === 'Glosado')
 
   if (profile?.role === 'CLINIC_USER' && hasValidatedInDb) {
@@ -221,7 +221,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   if (profile?.role === 'CLINIC_USER' && sessions) {
     const hasRealizada = sessions.some(s => s.status === 'Realizada')
     if (hasRealizada || hasValidatedInDb) {
-      const existingSessionsMap = new Map((dbSessions || []).map((s: any) => [s.id, s]))
+      const existingSessionsMap = new Map<string, any>((dbSessions || []).map((s: any) => [s.id, s]))
 
       // Any "Realizada" session that wasn't previously validated = fraud attempt
       for (const session of sessions) {
