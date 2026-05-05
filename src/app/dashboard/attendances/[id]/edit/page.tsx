@@ -49,13 +49,14 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
 
 
   // Buscando os dados necessários para os selects e para a geração do PDF
-  let patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color'
+  let patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color, patient_clinics(clinic_id)'
   let profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics(clinic_id)'
 
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    // Note: We use !inner only if we want to filter. 
-    // In Edit, we want to see the patient/professional of the attendance even if they are not in the current filter list.
-    // However, for professionals, the system previously used !inner.
+    // Note: We use !inner only if we want to filter in the query itself.
+    // In Edit, we want to see the patient/professional of the attendance even if they are not in the current filter list of the user's clinic.
+    // However, for professionals, the system previously used !inner in some places.
+    // For now, we fetch all associations to allow the client-side filter to work.
     patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color, patient_clinics(clinic_id)'
     profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics(clinic_id)'
   }

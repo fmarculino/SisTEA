@@ -136,11 +136,16 @@ export function AttendanceForm({
   // Filter patients and professionals by selected clinic if SMS_ADMIN
   const selectedClinicId = watch('clinic_id')
   const filteredPatients = userRole === 'SMS_ADMIN' && selectedClinicId
-    ? patients.filter(p => p.clinic_id === selectedClinicId)
+    ? patients.filter(p => 
+        p.clinic_id === selectedClinicId || 
+        (p.patient_clinics && p.patient_clinics.some((pc: any) => pc.clinic_id === selectedClinicId))
+      )
     : patients
   
   const filteredProfessionals = userRole === 'SMS_ADMIN' && selectedClinicId
-    ? professionals.filter(p => p.professional_clinics?.some((pc: any) => pc.clinic_id === selectedClinicId))
+    ? professionals.filter(p => 
+        p.professional_clinics?.some((pc: any) => pc.clinic_id === selectedClinicId)
+      )
     : professionals
 
   const calculateEndTime = (startTime: string, minutesToAdd: number) => {

@@ -11,7 +11,7 @@ export default async function NewAttendancePage() {
   // O formulário fará o filtro final no client ou podemos enviar a lista já filtrada aqui.
   // Vamos enviar tudo que for relevante.
 
-  let patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color'
+  let patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color, patient_clinics(clinic_id)'
   let profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics(clinic_id)'
 
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {

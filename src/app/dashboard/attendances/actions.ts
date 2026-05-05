@@ -194,7 +194,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   // --- SECURITY: Fetch current state to prevent tampering after validation ---
   const { data: currentAttendance } = await supabase
     .from('attendances')
-    .select('patient_id, professional_id, procedure_id, attendance_date, sessions:attendance_sessions(status)')
+    .select('*, sessions:attendance_sessions(*)')
     .eq('id', id)
     .single()
 
@@ -221,13 +221,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   if (profile?.role === 'CLINIC_USER' && sessions) {
     const hasRealizada = sessions.some(s => s.status === 'Realizada')
     if (hasRealizada || hasValidatedInDb) {
-      // Re-fetch sessions with more details for consistency check
-      const { data: fullSessions } = await supabase
-        .from('attendance_sessions')
-        .select('id, status, validated_at, session_date, start_time, end_time')
-        .eq('attendance_id', id)
-      
-      const existingSessionsMap = new Map((fullSessions || []).map((s: any) => [s.id, s]))
+      const existingSessionsMap = new Map((dbSessions || []).map((s: any) => [s.id, s]))
 
       // Any "Realizada" session that wasn't previously validated = fraud attempt
       for (const session of sessions) {
@@ -300,12 +294,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   // --- SESSION MANAGEMENT ---
   // Identify sessions that should be preserved (already validated)
   // SMS_ADMIN can override this if they are resetting a session to "Pendente"
-  const { data: existingSessions } = await supabase
-    .from('attendance_sessions')
-    .select('id, validated_at')
-    .eq('attendance_id', id)
-
-  const sessionsToKeepIds = (existingSessions || [])
+  const sessionsToKeepIds = (dbSessions || [])
     .filter((s: any) => {
       if (profile?.role === 'SMS_ADMIN') {
         const incoming = sessions?.find(is => is.id === s.id)
@@ -353,6 +342,25 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   revalidatePath('/dashboard/attendances')
   revalidatePath(`/dashboard/attendances/${id}/edit`)
 
+  // --- AUDIT LOGGING ---
+  let auditDescription = `Atualizou atendimento/guia ID: ${id}.`
+  if (profile?.role === 'SMS_ADMIN') {
+    const changedStatuses = sessions?.filter(s => {
+      const old = dbSessions.find((os: any) => os.id === s.id)
+      return old && old.status !== s.status
+    })
+
+    const deletedSessions = dbSessions.filter((os: any) => !sessions?.some(s => s.id === os.id))
+    const addedSessions = sessions?.filter(s => !s.id)
+
+    if (changedStatuses?.length || deletedSessions.length || addedSessions?.length) {
+      auditDescription = `Administrador alterou frequências no atendimento ID: ${id}. `
+      if (changedStatuses?.length) auditDescription += `${changedStatuses.length} status alterados. `
+      if (deletedSessions.length) auditDescription += `${deletedSessions.length} sessões removidas. `
+      if (addedSessions?.length) auditDescription += `${addedSessions.length} sessões adicionadas.`
+    }
+  }
+
   // Log audit
   await logAudit({
     action: 'UPDATE',
@@ -360,7 +368,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     record_id: id,
     old_data: currentAttendance,
     new_data: { ...rawAttendanceData, sessions },
-    description: `Atualizou atendimento/guia ID: ${id}.`
+    description: auditDescription
   })
 
   return { success: true }
@@ -395,6 +403,16 @@ export async function deleteAttendanceAction(id: string) {
 
   const { error } = await supabase.from('attendances').delete().eq('id', id)
   if (error) return { error: error.message }
+
+  // Log audit
+  await logAudit({
+    action: 'DELETE',
+    table_name: 'attendances',
+    record_id: id,
+    old_data: attendance,
+    description: `Excluiu atendimento ID: ${id} do paciente em ${attendance.attendance_date}.`
+  })
+
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/attendances')
 }
@@ -486,11 +504,18 @@ export async function generateValidationLinkAction(attendanceId: string, session
   // Get the base URL from headers
   const headersList = await headers()
   const host = headersList.get('host') || 'localhost:3000'
-  const protocol = headersList.get('x-forwarded-proto') || 'https' // Default to https for Vercel
+  const protocol = headersList.get('x-forwarded-proto') || 'https'
   const baseUrl = `${protocol}://${host}`
 
-  // Build the URL with the SAME timestamp and hmac we just generated
   const url = `${baseUrl}/validar/${session.id}?h=${hmac}&t=${timestamp}`
+
+  // Log audit
+  await logAudit({
+    action: 'ACCESS',
+    table_name: 'attendance_sessions',
+    record_id: sessionId,
+    description: `Solicitou geração de assinatura (QR Code) para a sessão ID: ${sessionId} do atendimento ID: ${attendanceId}.`
+  })
 
   return { url }
 }
@@ -730,8 +755,14 @@ export async function validateSessionAction(data: {
     action: 'UPDATE',
     table_name: 'attendance_sessions',
     record_id: sessionId,
-    new_data: { status: 'Realizada', validation_method: 'Digital' },
-    description: `Validou assinatura digital para a sessão ID: ${sessionId} (Paciente: ${attendance.patient_id}).`
+    new_data: { 
+      status: 'Realizada', 
+      validation_method: 'Digital',
+      ip,
+      is_out_of_range,
+      distance: validation_distance
+    },
+    description: `Paciente assinou digitalmente a sessão ID: ${sessionId} (Atendimento: ${session.attendance_id}).`
   })
 
   return { success: true }
