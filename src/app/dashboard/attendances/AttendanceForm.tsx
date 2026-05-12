@@ -623,7 +623,7 @@ export function AttendanceForm({
               {/* Action buttons area */}
               {watch(`sessions.${index}.status` as any) === 'Realizada' ? (
                 <div className="sm:col-span-1 flex items-end justify-end">
-                  {(userRole === 'SMS_ADMIN' || !watch(`sessions.${index}.id`)) && (
+                  {(!watch(`sessions.${index}.id`) || (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`))) && (
                     <button
                       type="button"
                       onClick={() => remove(index)}
@@ -645,7 +645,7 @@ export function AttendanceForm({
                       📱 Assinar
                     </button>
                   )}
-                  {(userRole === 'SMS_ADMIN' || !watch(`sessions.${index}.id`)) && (
+                  {(!watch(`sessions.${index}.id`) || (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`))) && (
                     <button
                       type="button"
                       onClick={() => remove(index)}

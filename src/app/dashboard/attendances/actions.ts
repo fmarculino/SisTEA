@@ -218,14 +218,20 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     }
   }
 
-  // --- SECURITY: Session deletion check for CLINIC_USER ---
-  if (profile?.role === 'CLINIC_USER' && sessions) {
-    const existingIds = new Set(dbSessions.map((s: any) => s.id));
+  // --- SECURITY: Session deletion check ---
+  if (sessions) {
     const incomingIds = new Set(sessions.map(s => s.id).filter(Boolean));
     
-    for (const id of existingIds) {
-      if (!incomingIds.has(id)) {
-        return { error: 'Clínicas não têm permissão para remover frequências já salvas. Entre em contato com a administração.' };
+    for (const s of dbSessions) {
+      if (!incomingIds.has(s.id)) {
+        // Rule 1: Clinic User cannot delete any saved session
+        if (profile?.role === 'CLINIC_USER') {
+          return { error: 'Clínicas não têm permissão para remover frequências já salvas. Entre em contato com a administração.' };
+        }
+        // Rule 2: Even Admin cannot delete a session validated by patient (digital signature)
+        if (s.validated_at) {
+          return { error: 'Não é possível excluir uma frequência que já foi validada pelo paciente via QR Code. Você pode alterar seu status para "Glosado" ou "Pendente", mas a frequência deve ser mantida para fins de auditoria.' };
+        }
       }
     }
   }
