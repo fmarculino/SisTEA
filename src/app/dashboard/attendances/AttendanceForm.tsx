@@ -623,13 +623,15 @@ export function AttendanceForm({
               {/* Action buttons area */}
               {watch(`sessions.${index}.status` as any) === 'Realizada' ? (
                 <div className="sm:col-span-1 flex items-end justify-end">
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
-                  >
-                    Remover
-                  </button>
+                  {(userRole === 'SMS_ADMIN' || !watch(`sessions.${index}.id`)) && (
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
+                    >
+                      Remover
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="sm:col-span-1 flex flex-col items-end justify-center gap-2">
@@ -643,13 +645,15 @@ export function AttendanceForm({
                       📱 Assinar
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest w-full text-right"
-                  >
-                    Remover
-                  </button>
+                  {(userRole === 'SMS_ADMIN' || !watch(`sessions.${index}.id`)) && (
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest w-full text-right"
+                    >
+                      Remover
+                    </button>
+                  )}
                 </div>
               )}
               <div className="absolute -left-2 top-1/2 -translate-y-1/2 h-8 w-1 rounded-full bg-primary/20 group-hover:bg-primary transition-all" />

@@ -218,6 +218,18 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     }
   }
 
+  // --- SECURITY: Session deletion check for CLINIC_USER ---
+  if (profile?.role === 'CLINIC_USER' && sessions) {
+    const existingIds = new Set(dbSessions.map((s: any) => s.id));
+    const incomingIds = new Set(sessions.map(s => s.id).filter(Boolean));
+    
+    for (const id of existingIds) {
+      if (!incomingIds.has(id)) {
+        return { error: 'Clínicas não têm permissão para remover frequências já salvas. Entre em contato com a administração.' };
+      }
+    }
+  }
+
   // --- SECURITY: Check session status consistency ---
   if (profile?.role === 'CLINIC_USER' && sessions) {
     const hasRealizada = sessions.some(s => s.status === 'Realizada')
@@ -389,12 +401,15 @@ export async function deleteAttendanceAction(id: string) {
   
   if (!attendance) return { error: 'Atendimento não encontrado' }
 
-  // --- SECURITY: CLINIC_USER cannot delete if any session is Realizada or Glosada ---
+  // --- SECURITY: Deletion rules ---
   if (profile?.role === 'CLINIC_USER') {
+    return { error: 'Clínicas não têm permissão para excluir atendimentos. Caso necessário, entre em contato com a administração.' }
+  }
+
+  if (profile?.role === 'SMS_ADMIN') {
     const sessions = (attendance as any).sessions || []
-    const hasValidated = sessions.some((s: any) => s.status === 'Realizada' || s.status === 'Glosado')
-    if (hasValidated) {
-      return { error: 'Não é possível excluir um atendimento que possui sessões já realizadas ou glosadas.' }
+    if (sessions.length > 0) {
+      return { error: 'Não é possível excluir um atendimento que já possui frequências registradas. Remova as frequências individualmente se necessário ou glose o atendimento.' }
     }
   }
 
