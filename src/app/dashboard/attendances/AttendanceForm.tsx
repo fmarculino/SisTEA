@@ -601,56 +601,55 @@ export function AttendanceForm({
                 )}
               </div>
               
-              {watch(`sessions.${index}.status` as any) === 'Glosado' && (
-                <div className="sm:col-span-4 mt-2 sm:mt-0 transition-all animate-in fade-in slide-in-from-left-2">
-                  <label className="block text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1 ml-1 opacity-80">Motivo da Glosa</label>
+              {(watch(`sessions.${index}.status` as any) === 'Glosado' || watch(`sessions.${index}.status` as any) === 'Pendente') && (
+                <div className={`sm:col-span-4 mt-2 sm:mt-0 transition-all animate-in fade-in slide-in-from-left-2`}>
+                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ml-1 opacity-80 ${
+                    watch(`sessions.${index}.status` as any) === 'Glosado' ? 'text-rose-500' : 'text-amber-600'
+                  }`}>
+                    {watch(`sessions.${index}.status` as any) === 'Glosado' ? 'Motivo da Glosa' : 'Motivo da Pendência'}
+                  </label>
                   <input
                     {...register(`sessions.${index}.justification` as any)}
-                    className="block w-full rounded-lg border-rose-200 dark:border-rose-900/50 shadow-sm focus:border-rose-500 focus:ring-rose-500/20 sm:text-xs px-3 py-2 border bg-rose-500/5 transition-all"
-                    placeholder="Descreva o motivo da glosa..."
+                    className={`block w-full rounded-lg shadow-sm sm:text-xs px-3 py-2 border transition-all ${
+                      watch(`sessions.${index}.status` as any) === 'Glosado' 
+                        ? 'border-rose-200 dark:border-rose-900/50 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-500/5' 
+                        : 'border-amber-200 dark:border-amber-900/50 focus:border-amber-500 focus:ring-amber-500/20 bg-amber-500/5'
+                    }`}
+                    placeholder={watch(`sessions.${index}.status` as any) === 'Glosado' ? "Descreva o motivo da glosa..." : "Descreva o motivo da pendência..."}
                   />
                 </div>
               )}
 
               {/* Action buttons area */}
-              {watch(`sessions.${index}.status` as any) !== 'Glosado' && (
-                <div className="sm:col-span-1 flex items-end justify-end gap-2">
-                  {/* Solicitar Assinatura button — only for CLINIC_USER with Pendente status */}
-                  {userRole === 'CLINIC_USER' && watch(`sessions.${index}.status`) === 'Pendente' && id && watch(`sessions.${index}.id`) && (
+              {watch(`sessions.${index}.status` as any) === 'Realizada' ? (
+                <div className="sm:col-span-1 flex items-end justify-end">
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    Remover
+                  </button>
+                </div>
+              ) : (
+                <div className="sm:col-span-1 flex flex-col items-end justify-center gap-2">
+                   {userRole === 'CLINIC_USER' && watch(`sessions.${index}.status`) === 'Pendente' && id && watch(`sessions.${index}.id`) && (
                     <button
                       type="button"
                       onClick={() => setQrModalSession({ index, sessionId: watch(`sessions.${index}.id`)! })}
-                      className="text-primary hover:text-white hover:bg-primary p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
+                      className="text-primary hover:text-white hover:bg-primary p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest w-full text-right"
                       title="Solicitar assinatura via QR Code"
                     >
                       📱 Assinar
                     </button>
                   )}
-
-                  {/* Remove button — allowed for CLINIC_USER if status is Pendente */}
-                  {(userRole === 'SMS_ADMIN' || watch(`sessions.${index}.status`) === 'Pendente') && (
-                    <button
-                      type="button"
-                      onClick={() => remove(index)}
-                      className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
-                    >
-                      Remover
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {watch(`sessions.${index}.status`) === 'Glosado' && (
-                <div className="sm:col-span-1 flex justify-end">
-                  {(userRole === 'SMS_ADMIN' || watch(`sessions.${index}.status`) === 'Pendente') && (
-                    <button
-                      type="button"
-                      onClick={() => remove(index)}
-                      className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest"
-                    >
-                      Remover
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="text-rose-500 hover:text-white hover:bg-rose-500 p-2 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest w-full text-right"
+                  >
+                    Remover
+                  </button>
                 </div>
               )}
               <div className="absolute -left-2 top-1/2 -translate-y-1/2 h-8 w-1 rounded-full bg-primary/20 group-hover:bg-primary transition-all" />
