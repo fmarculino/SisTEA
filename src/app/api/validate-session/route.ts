@@ -1,6 +1,7 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyValidationHMAC, isLinkExpired } from '@/utils/token'
+import { logAudit } from '@/lib/audit'
 
 const MAX_ATTEMPTS = 5
 
@@ -159,6 +160,20 @@ export async function POST(request: NextRequest) {
       .from('attendances')
       .update({ value_applied: newValue })
       .eq('id', session.attendance_id)
+
+    // 11. AUDIT LOG - Record the patient signature
+    await logAudit({
+      action: 'UPDATE',
+      table_name: 'attendance_sessions',
+      record_id: sessionId,
+      new_data: { 
+        status: 'Realizada', 
+        validation_geo: geo,
+        validation_ip: ip,
+        validation_ua: userAgent
+      },
+      description: `Assinatura digital realizada pelo paciente para a sessão de ${attendance.attendance_date}.`
+    })
 
     return NextResponse.json({ 
       success: true, 

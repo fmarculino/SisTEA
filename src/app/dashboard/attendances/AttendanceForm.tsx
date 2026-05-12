@@ -560,7 +560,7 @@ export function AttendanceForm({
                           <ShieldCheck className="h-3 w-3" />
                           
                           {/* Tooltip Content */}
-                          <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-none border border-white/10 backdrop-blur-md">
+                          <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-auto border border-white/10 backdrop-blur-md z-[100]">
                             <p className="font-bold border-b border-white/10 pb-1 mb-1 text-emerald-400 uppercase tracking-widest">Auditoria de Assinatura</p>
                             <div className="space-y-1">
                               <p><span className="opacity-50">Data/Hora:</span> {new Date(watch(`sessions.${index}.validated_at` as any)!).toLocaleString('pt-BR')}</p>
@@ -568,15 +568,25 @@ export function AttendanceForm({
                               <p className="truncate"><span className="opacity-50">Dispositivo:</span> {watch(`sessions.${index}.validation_ua` as any)}</p>
                               {watch(`sessions.${index}.validation_geo` as any) && (
                                 <div className="space-y-0.5 border-t border-white/10 pt-1 mt-1">
-                                  <p className="text-sky-400 font-medium">
-                                    📍 Localização: {(watch(`sessions.${index}.validation_geo` as any) as any).lat.toFixed(4)}, {(watch(`sessions.${index}.validation_geo` as any) as any).lng.toFixed(4)}
-                                  </p>
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sky-400 font-medium">
+                                      📍 Localização: {(watch(`sessions.${index}.validation_geo` as any) as any).lat.toFixed(4)}, {(watch(`sessions.${index}.validation_geo` as any) as any).lng.toFixed(4)}
+                                    </p>
+                                  </div>
                                   {watch(`sessions.${index}.validation_distance` as any) !== undefined && watch(`sessions.${index}.validation_distance` as any) !== null && (
                                     <p className={`font-bold ${watch(`sessions.${index}.is_out_of_range` as any) ? 'text-amber-400' : 'text-emerald-400/80'}`}>
                                       📏 Distância: {Math.round(watch(`sessions.${index}.validation_distance` as any) as number)}m da clínica
                                       {watch(`sessions.${index}.is_out_of_range` as any) && ' ⚠️ ASSINATURA REMOTA'}
                                     </p>
                                   )}
+                                  <a 
+                                    href={`https://www.google.com/maps/search/?api=1&query=${(watch(`sessions.${index}.validation_geo` as any) as any).lat},${(watch(`sessions.${index}.validation_geo` as any) as any).lng}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-2 flex items-center justify-center gap-1.5 w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 py-1.5 rounded-lg border border-emerald-500/30 transition-all font-bold uppercase tracking-tighter"
+                                  >
+                                    🗺️ Ver no Google Maps
+                                  </a>
                                 </div>
                               )}
                             </div>

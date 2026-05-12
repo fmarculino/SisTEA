@@ -184,17 +184,44 @@ export function AuditLogList({ logs }: AuditLogListProps) {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
                       <span className="text-xs text-muted-foreground font-medium">E-mail</span>
-                      <span className="text-xs font-bold text-foreground">{selectedLog.user_email}</span>
+                      <span className="text-xs font-bold text-foreground">{selectedLog.user_email || 'Paciente (Assinatura Digital)'}</span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
                       <span className="text-xs text-muted-foreground font-medium">Nível de Acesso</span>
                       <span className="px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary uppercase">
-                        {selectedLog.user_role}
+                        {selectedLog.user_role || 'EXTERNO'}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {selectedLog.new_data?.validation_geo && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-widest">
+                    <Globe className="h-4 w-4 text-emerald-500" />
+                    Geolocalização da Assinatura
+                  </div>
+                  <div className="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="space-y-1">
+                       <p className="text-sm font-bold text-foreground">
+                         📍 Coordenadas: {selectedLog.new_data.validation_geo.lat.toFixed(6)}, {selectedLog.new_data.validation_geo.lng.toFixed(6)}
+                       </p>
+                       <p className="text-[10px] text-muted-foreground italic">
+                         Localização capturada via GPS no momento da assinatura digital do paciente.
+                       </p>
+                    </div>
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${selectedLog.new_data.validation_geo.lat},${selectedLog.new_data.validation_geo.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-8 py-3 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                    >
+                      🗺️ Ver no Google Maps
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {(selectedLog.old_data || selectedLog.new_data) && (
                 <div className="space-y-4">
