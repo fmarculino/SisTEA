@@ -214,6 +214,13 @@ export async function POST(request: NextRequest) {
 
     const totalRestored = Object.values(results).reduce((a, b) => a + b, 0)
 
+    // 5. Log the action
+    await supabase.rpc('log_app_event', {
+      p_action: 'DATABASE_RESTORE',
+      p_description: `Restauração de backup completa concluída: ${totalRestored} registros restaurados.`,
+      p_metadata: { results, backup_date: backup.meta.backup_date }
+    })
+
     return NextResponse.json({
       success: true,
       message: `Restauração concluída: ${totalRestored} registros restaurados`,

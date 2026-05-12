@@ -2,6 +2,29 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.9.0-beta] - 2026-05-12
+
+Esta versão marca o amadurecimento técnico do SisTEA para **Escalabilidade Municipal**, introduzindo melhorias críticas de segurança (Hashing), performance de banco de dados e governança de auditoria.
+
+### 🛡️ Hardening de Segurança & Proteção de Dados
+- **Hashing de PINs (pgcrypto):** Implementação de criptografia irreversível para os PINs de 6 dígitos dos pacientes. O sistema não armazena mais senhas em texto claro, garantindo conformidade com os mais altos padrões de segurança e LGPD.
+- **Validação Segura:** Motor de autenticação de sessões refatorado para operar exclusivamente via comparação de hash no nível do banco de dados.
+- **Middleware com Cache Inteligente:** Redução drástica da latência de navegação através de um sistema de cache de 5 minutos para verificações de status de conta e clínica, diminuindo a carga no banco de dados em até 90%.
+
+### ⚡ Performance & Escalabilidade (30+ Clínicas)
+- **Agregação via RPC (PostgreSQL):** Migração de toda a lógica de cálculo de KPIs do Dashboard e Relatórios do lado do cliente (JavaScript) para o servidor de banco de dados (SQL RPC). Isso permite processar milhares de registros instantaneamente.
+- **Índices Estratégicos:** Otimização de busca global através da criação de índices B-Tree em chaves estrangeiras críticas (`clinic_id`, `patient_id`, `attendance_id`).
+- **Refatoração de Relatórios:** O módulo de relatórios de conferência foi redesenhado para suportar consultas massivas sem degradação de performance.
+
+### 📜 Governança, Integridade & Auditoria
+- **Triggers de Auditoria Automática:** Implementação de vigilância contínua em nível de banco de dados. Qualquer alteração em tabelas sensíveis é capturada automaticamente, incluindo quem mudou, quando e o que foi alterado.
+- **Audit Logging de Infraestrutura:** Novos registros de auditoria para ações críticas de backup e restauração de dados, garantindo transparência total em operações de nível "SMS_ADMIN".
+- **RLS Anti-Tampering:** Bloqueio rigoroso da tabela de auditoria; logs são "append-only" e não podem ser editados ou excluídos, nem mesmo por administradores.
+
+### 🔧 Estabilidade & Consistência
+- **Unificação de Status:** Padronização final dos estados de atendimento (`Realizada`, `Pendente`, `Glosado`) em toda a base de código e banco de dados, eliminando erros de reporte e divergências visuais.
+
+
 ## [0.8.0-beta] - 2026-05-03
 
 Esta versão marca um salto significativo na **Governança e Transparência Administrativa** do SisTEA, introduzindo o sistema completo de **Auditoria Digital Imutável** com ferramentas forenses e relatórios avançados.

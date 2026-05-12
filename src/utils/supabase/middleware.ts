@@ -45,8 +45,10 @@ export async function updateSession(request: NextRequest) {
     const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname.startsWith(route))
     const isAuthRoute = authRoutes.some(route => request.nextUrl.pathname.startsWith(route))
 
-    // --- CHECK ACTIVE STATUS ---
-    if (user) {
+    // --- CHECK ACTIVE STATUS (with 5-min cache) ---
+    const statusCache = request.cookies.get('user-status-verified')
+    
+    if (user && !statusCache) {
       const { data: profile } = await supabase
         .from('users')
         .select('active, role, clinic:clinics(active)')
@@ -62,22 +64,19 @@ export async function updateSession(request: NextRequest) {
         }
 
         if (blockMessage) {
-          // Sign out to clear session in Supabase client
           await supabase.auth.signOut()
-          
-          // Create redirect response
           const url = request.nextUrl.clone()
           url.pathname = '/login'
           url.searchParams.set('error', blockMessage)
           const redirectResponse = NextResponse.redirect(url)
-
-          // IMPORTANT: Copy the cleared cookies from supabaseResponse (updated by signOut) to the redirectResponse
           supabaseResponse.cookies.getAll().forEach(cookie => {
             redirectResponse.cookies.set(cookie.name, cookie.value)
           })
-
           return redirectResponse
         }
+
+        // Cache the verification for 5 minutes
+        supabaseResponse.cookies.set('user-status-verified', 'true', { maxAge: 300 })
       }
     }
     

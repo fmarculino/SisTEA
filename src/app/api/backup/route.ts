@@ -91,7 +91,14 @@ export async function GET() {
     zip.file(`sistea-backup-${date}.json`, jsonStr)
     const zipData = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 9 } })
 
-    // 5. Return as downloadable ZIP file
+    // 5. Log the action
+    await supabase.rpc('log_app_event', {
+      p_action: 'BACKUP_DOWNLOAD',
+      p_description: `Download de backup completo contendo ${totalRecords} registros.`,
+      p_metadata: { tables: tableCounts }
+    })
+
+    // 6. Return as downloadable ZIP file
     return new NextResponse(zipData.buffer as ArrayBuffer, {
       status: 200,
       headers: {
