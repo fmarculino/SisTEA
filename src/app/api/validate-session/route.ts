@@ -60,7 +60,13 @@ export async function POST(request: NextRequest) {
     // 5. Get the attendance to find patient_id and calculation metadata
     const { data: attendance } = await supabase
       .from('attendances')
-      .select('patient_id, clinic_id, procedure_id, attendance_date')
+      .select(`
+        attendance_date,
+        patient_id,
+        clinic_id, 
+        procedure_id,
+        patient:patients(name)
+      `)
       .eq('id', session.attendance_id)
       .single()
 
@@ -162,6 +168,7 @@ export async function POST(request: NextRequest) {
       .eq('id', session.attendance_id)
 
     // 11. AUDIT LOG - Record the patient signature
+    const patientName = (attendance as any).patient?.name || 'Paciente'
     await logAudit({
       action: 'UPDATE',
       table_name: 'attendance_sessions',
@@ -172,7 +179,7 @@ export async function POST(request: NextRequest) {
         validation_ip: ip,
         validation_ua: userAgent
       },
-      description: `Assinatura digital realizada pelo paciente para a sessão de ${attendance.attendance_date}.`
+      description: `Assinatura digital realizada pelo paciente ${patientName} para a sessão de ${attendance.attendance_date}.`
     })
 
     return NextResponse.json({ 
