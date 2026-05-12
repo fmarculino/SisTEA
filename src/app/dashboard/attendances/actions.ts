@@ -120,6 +120,7 @@ export async function createAttendanceAction(data: AttendanceFormData) {
 
   const { data: attendance, error } = await supabase.from('attendances').insert({
     ...attendanceData,
+    status: 'Pendente'
   }).select().single()
 
   if (error) return { error: error.message }

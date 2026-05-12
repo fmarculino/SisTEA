@@ -86,7 +86,7 @@ CREATE TABLE public.attendances (
     cid TEXT NOT NULL,
     auth_number TEXT,
     month_year TEXT NOT NULL, -- Exemplo: '03/2026' ou '2026-03'
-    status TEXT NOT NULL CHECK (status IN ('REALIZADO', 'GLOSADO', 'PENDENTE')) DEFAULT 'PENDENTE',
+    status TEXT NOT NULL CHECK (status IN ('Realizada', 'Pendente', 'Glosado')) DEFAULT 'Pendente',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     CONSTRAINT valid_time CHECK (start_time < end_time)
 );
