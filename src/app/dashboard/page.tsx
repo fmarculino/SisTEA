@@ -37,102 +37,41 @@ export default async function DashboardPage({
   let totalPatients = 0
   let totalClinicsActive = 0
   let clinicStats: { name: string; count: number; value: number }[] = []
-  let sessions: any[] = []
+  let digitalValidatedCount = 0
 
+  const clinicId = profile?.role === 'SMS_ADMIN' ? null : profile?.clinic_id
+
+  // Execute optimized stats query via RPC
+  const { data: statsData, error: statsError } = await supabase.rpc('get_dashboard_stats', {
+    p_clinic_id: clinicId,
+    p_start_date: firstDay,
+    p_end_date: lastDay
+  })
+
+  if (!statsError && statsData) {
+    totalAttendances = statsData.total_attendances || 0
+    totalValue = statsData.total_value || 0
+    digitalValidatedCount = statsData.digital_validated || 0
+    clinicStats = statsData.clinic_stats || []
+  }
+
+  // Fetch counts for Clinics and Patients separately
   if (profile?.role === 'SMS_ADMIN') {
-    let sessionsQuery = supabase.from('attendance_sessions')
-      .select(`
-        status,
-        validated_at,
-        attendance:attendances!inner(
-          clinic:clinics!inner(name),
-          procedure:procedures!inner(valor_total)
-        )
-      `)
-      .eq('status', 'Realizada')
-
-    if (firstDay && lastDay) {
-      sessionsQuery = sessionsQuery.gte('session_date', firstDay).lte('session_date', lastDay)
-    }
-
-    const [sessionsRes, clinicsRes, patientsRes] = await Promise.all([
-      sessionsQuery,
+    const [clinicsRes, patientsRes] = await Promise.all([
       supabase.from('clinics').select('id', { count: 'exact' }).eq('active', true),
       supabase.from('patients').select('id', { count: 'exact' })
     ])
-
-    sessions = sessionsRes.data || []
-    totalAttendances = sessions.length
-    
-    // Grouping by clinic
-    const statsMap = new Map<string, { count: number; value: number }>()
-    
-    sessions.forEach((s: any) => {
-      const clinicName = s.attendance?.clinic?.name || 'Clínica não identificada'
-      const val = Number(s.attendance?.procedure?.valor_total) || 0
-      
-      totalValue += val
-      
-      const current = statsMap.get(clinicName) || { count: 0, value: 0 }
-      statsMap.set(clinicName, {
-        count: current.count + 1,
-        value: current.value + val
-      })
-    })
-
-    clinicStats = Array.from(statsMap.entries())
-      .map(([name, stats]) => ({ name, ...stats }))
-      .sort((a, b) => b.value - a.value)
-    
     totalClinicsActive = clinicsRes.count || 0
     totalPatients = patientsRes.count || 0
-  } else {
-    // CLINIC_USER
-    const clinicId = profile?.clinic_id
-    if (clinicId) {
-      let sessionsQuery = supabase.from('attendance_sessions')
-        .select(`
-          status,
-          validated_at,
-          attendance:attendances!inner(
-            clinic_id,
-            clinic:clinics!inner(name),
-            procedure:procedures!inner(valor_total)
-          )
-        `)
-        .eq('attendance.clinic_id', clinicId)
-        .eq('status', 'Realizada')
-
-      if (firstDay && lastDay) {
-        sessionsQuery = sessionsQuery.gte('session_date', firstDay).lte('session_date', lastDay)
-      }
-
-      const [sessionsRes, patientsRes] = await Promise.all([
-        sessionsQuery,
-        supabase.from('patient_clinics').select('id', { count: 'exact' }).eq('clinic_id', clinicId).eq('active', true)
-      ])
-
-      sessions = sessionsRes.data || []
-      totalAttendances = sessions.length
-      
-      const statsMap = new Map<string, { count: number; value: number }>()
-
-      sessions.forEach((s: any) => {
-        const clinicName = s.attendance?.clinic?.name || 'Minha Clínica'
-        const val = Number(s.attendance?.procedure?.valor_total) || 0
-        totalValue += val
-
-        const current = statsMap.get(clinicName) || { count: 0, value: 0 }
-        statsMap.set(clinicName, {
-          count: current.count + 1,
-          value: current.value + val
-        })
-      })
-
-      clinicStats = Array.from(statsMap.entries()).map(([name, stats]) => ({ name, ...stats }))
-      totalPatients = patientsRes.count || 0
-    }
+  } else if (clinicId) {
+    const { count } = await supabase
+      .from('patient_clinics')
+      .select('id', { count: 'exact' })
+      .eq('clinic_id', clinicId)
+      .eq('active', true)
+    totalPatients = count || 0
   }
+
 
   const monthLabels = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
   const periodLabel = selectedYear 
@@ -143,9 +82,6 @@ export default async function DashboardPage({
   const maxValue = clinicStats.reduce((max, c) => Math.max(max, c.value), 0) || 1
 
   // Digital Validation Stats
-  // We need to fetch all realized sessions for the rate calculation if not already done
-  const digitalValidatedCount = sessions.filter((s: any) => s.validated_at).length
-  
   const digitalValidationRate = totalAttendances > 0 
     ? (digitalValidatedCount / totalAttendances) * 100 
     : 0

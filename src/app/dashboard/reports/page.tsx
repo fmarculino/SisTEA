@@ -25,44 +25,28 @@ export default async function ReportsPage({
   const firstDay = new Date(y, m, 1).toISOString()
   const lastDay = new Date(y, m + 1, 0).toISOString()
 
-  let query = supabase.from('attendances').select(`
-    id,
-    attendance_date,
-    status,
-    value_applied,
-    clinic:clinics(name),
-    professional:professionals(name),
-    procedure:procedures(name)
-  `)
-  .gte('attendance_date', firstDay)
-  .lte('attendance_date', lastDay)
+  const clinicId = profile?.role === 'CLINIC_USER' ? profile.clinic_id : null
 
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    query = query.eq('clinic_id', profile.clinic_id)
-  }
-
-  const { data: attendances } = await query
+  const { data: rawStats } = await supabase.rpc('get_report_stats', {
+    p_start_date: firstDay,
+    p_end_date: lastDay,
+    p_clinic_id: clinicId
+  })
 
   // Agrupar por clínica -> profissional
   const reportData: Record<string, any> = {}
-
-  ;(attendances as any[])?.forEach(att => {
-    const cName = att.clinic?.name || 'Desconhecida'
-    const defaultVal = 0
-    const val = att.status === 'present' ? (att.value_applied || 0) : 0
-
+  
+  ;(rawStats as any[])?.forEach(row => {
+    const cName = row.clinic_name
     if (!reportData[cName]) {
       reportData[cName] = { totalValue: 0, professionals: {} }
     }
-
-    const pName = att.professional?.name || 'Desconhecido'
-    if (!reportData[cName].professionals[pName]) {
-      reportData[cName].professionals[pName] = { count: 0, value: 0 }
+    
+    reportData[cName].professionals[row.professional_name] = {
+      count: row.session_count,
+      value: row.total_value
     }
-
-    reportData[cName].professionals[pName].count += 1
-    reportData[cName].professionals[pName].value += val
-    reportData[cName].totalValue += val
+    reportData[cName].totalValue += row.total_value
   })
 
 

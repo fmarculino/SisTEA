@@ -84,8 +84,13 @@ export async function POST(request: NextRequest) {
       .update({ validation_attempts: (session.validation_attempts || 0) + 1 })
       .eq('id', sessionId)
 
-    // 8. Verify token
-    if (token !== patient.auth_token) {
+    // 8. Verify token (Secure Hash Verification)
+    const { data: isPinValid } = await supabase.rpc('verify_patient_pin', {
+      p_patient_id: attendance.patient_id,
+      p_pin: token
+    })
+
+    if (!isPinValid) {
       const remaining = MAX_ATTEMPTS - (session.validation_attempts + 1)
       return NextResponse.json({ 
         error: `Token incorreto. ${remaining > 0 ? `Tentativas restantes: ${remaining}` : 'Sem tentativas restantes.'}`,
