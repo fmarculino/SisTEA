@@ -18,14 +18,7 @@ export function ContractActions({ clinicId, contractNumber }: { clinicId: string
     }
   }
 
-  return (
-    <button 
-      onClick={handleDelete}
-      disabled={isPending}
-      className="p-2.5 rounded-xl text-red-500 bg-red-500/5 hover:bg-red-500/20 transition-all border border-red-500/10 shadow-sm disabled:opacity-50"
-      title="Excluir Contrato"
-    >
-      <Trash2 className="h-4 w-4 stroke-[2.5]" />
-    </button>
-  )
+  // Por regras de auditoria v0.9.0, a exclusão física foi desativada.
+  // Os contratos devem ser mantidos para histórico financeiro.
+  return null;
 }

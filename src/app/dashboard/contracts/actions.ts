@@ -64,12 +64,19 @@ export async function saveContractBulkAction(data: ContractFormData) {
 
 export async function deleteContractBulkAction(clinic_id: string, contract_number: string) {
   const supabase = await createClient()
-  const { error } = await supabase
-    .from('clinic_procedure_prices')
-    .delete()
+
+  // 1. Verificar se existem atendimentos vinculados a esta clínica
+  // (Como o contrato é temporal, qualquer atendimento na clínica pode depender dele)
+  const { count } = await supabase
+    .from('attendances')
+    .select('*', { count: 'exact', head: true })
     .eq('clinic_id', clinic_id)
-    .eq('contract_number', contract_number)
-    
-  if (error) return { error: error.message }
-  revalidatePath('/dashboard/contracts')
+
+  if (count && count > 0) {
+    return { error: 'Este contrato não pode ser excluído pois existem atendimentos vinculados a esta clínica que dependem destes valores históricos.' }
+  }
+
+  // Mesmo que não tenha atendimentos, a regra de governança agora impede a exclusão física.
+  // Sugerimos apenas desativar os itens se necessário, mas por ora bloqueamos a ação.
+  return { error: 'Por regras de segurança e auditoria (v0.9.0), contratos não podem ser excluídos fisicamente. Caso necessário, edite o contrato e desative os procedimentos individuais.' }
 }

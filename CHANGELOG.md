@@ -19,6 +19,7 @@ Esta versão marca o amadurecimento técnico do SisTEA para **Escalabilidade Mun
 ### 📜 Governança, Integridade & Auditoria
 - **Triggers de Auditoria Automática:** Implementação de vigilância contínua em nível de banco de dados. Qualquer alteração em tabelas sensíveis é capturada automaticamente, incluindo quem mudou, quando e o que foi alterado.
 - **Audit Logging de Infraestrutura:** Novos registros de auditoria para ações críticas de backup e restauração de dados, garantindo transparência total em operações de nível "SMS_ADMIN".
+- **Bloqueio de Exclusão de Contratos:** Desativação completa da funcionalidade de exclusão física de contratos e tabelas de preço. Isso garante que o histórico de faturamento do SUS permaneça íntegro e auditável perpetuamente.
 - **RLS Anti-Tampering:** Bloqueio rigoroso da tabela de auditoria; logs são "append-only" e não podem ser editados ou excluídos, nem mesmo por administradores.
 
 ### 🔧 Estabilidade & Consistência
