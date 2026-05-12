@@ -118,6 +118,18 @@ export async function createAttendanceAction(data: AttendanceFormData) {
     authorization_date: rawAttendanceData.authorization_date || null,
   }
 
+  // --- SECURITY: Conflict Check (BR-001, BR-002, BR-003) ---
+  if (sessions && sessions.length > 0) {
+    const conflictError = await validateSessionsAction(
+      supabase,
+      null,
+      rawAttendanceData.patient_id,
+      rawAttendanceData.professional_id,
+      sessions
+    )
+    if (conflictError) return conflictError
+  }
+
   const { data: attendance, error } = await supabase.from('attendances').insert({
     ...attendanceData,
     status: 'Pendente'
@@ -297,6 +309,18 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
 
   const realizedSessions = sessions?.filter(s => s.status === 'Realizada').length || 0
   const finalValue = realizedSessions * baseValue
+
+  // --- SECURITY: Conflict Check (BR-001, BR-002, BR-003) ---
+  if (sessions && sessions.length > 0) {
+    const conflictError = await validateSessionsAction(
+      supabase,
+      id,
+      rawAttendanceData.patient_id,
+      rawAttendanceData.professional_id,
+      sessions
+    )
+    if (conflictError) return conflictError
+  }
 
   const attendanceData = {
     ...rawAttendanceData,
@@ -804,4 +828,54 @@ export async function checkSessionStatusAction(sessionId: string) {
 
   if (error) return { error: error.message }
   return { status: data.status }
+}
+
+/**
+ * Helper to validate session conflicts (Overlap for patients and professionals)
+ */
+async function validateSessionsAction(
+  supabase: any,
+  attendanceId: string | null,
+  patientId: string,
+  professionalId: string,
+  sessions: any[]
+) {
+  // 1. Check for Internal Conflicts (BR-003) - Same guide, same time
+  for (let i = 0; i < sessions.length; i++) {
+    for (let j = i + 1; j < sessions.length; j++) {
+      const s1 = sessions[i];
+      const s2 = sessions[j];
+      if (s1.session_date === s2.session_date) {
+         // Basic overlap check
+         if (s1.start_time < s2.end_time && s2.start_time < s1.end_time) {
+           return { 
+             error: `Conflito Interno: Existem duas sessões marcadas para o mesmo horário (${s1.start_time} - ${s1.end_time}) na data ${new Date(s1.session_date + 'T00:00:00').toLocaleDateString('pt-BR')}.` 
+           }
+         }
+      }
+    }
+  }
+
+  // 2. Check for External Conflicts (BR-001, BR-002) - Using the Postgres function
+  for (const s of sessions) {
+    const { data: conflictMsg, error: conflictErr } = await supabase.rpc('check_attendance_session_conflicts', {
+      p_session_id: s.id || '00000000-0000-0000-0000-000000000000',
+      p_attendance_id: attendanceId,
+      p_patient_id: patientId,
+      p_professional_id: professionalId,
+      p_date: s.session_date,
+      p_start: s.start_time,
+      p_end: s.end_time
+    });
+
+    if (conflictErr) {
+      console.error('Error checking conflicts:', conflictErr);
+    } else if (conflictMsg) {
+      return { 
+        error: `CONFLITO DETECTADO: ${conflictMsg} na data ${new Date(s.session_date + 'T00:00:00').toLocaleDateString('pt-BR')} às ${s.start_time}.` 
+      };
+    }
+  }
+  
+  return null;
 }
