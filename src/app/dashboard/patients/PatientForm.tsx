@@ -58,6 +58,7 @@ export function PatientForm({
       name: initialData?.name || '',
       birth_date: initialData?.birth_date || '',
       cns_patient: initialData?.cns_patient || '',
+      cpf: initialData?.cpf || '',
       mother_name: initialData?.mother_name || '',
       gender: (initialData?.gender as any) || 'Não Informado',
       phone: initialData?.phone || '',
@@ -168,6 +169,10 @@ export function PatientForm({
     return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3').substring(0, 15)
   }
 
+  const maskCPF = (value: string) => {
+    return value.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4').substring(0, 14)
+  }
+
   const onSubmit = async (data: PatientFormData) => {
     setIsPending(true)
     setErrorMsg('')
@@ -231,6 +236,18 @@ export function PatientForm({
               placeholder="000.0000.0000.0000"
             />
             {errors.cns_patient && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.cns_patient.message}</p>}
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">CPF (Opcional)</label>
+            <input
+              type="text"
+              {...register('cpf')}
+              onChange={(e) => setValue('cpf', maskCPF(e.target.value))}
+              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-mono transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+              placeholder="000.000.000-00"
+            />
+            {errors.cpf && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.cpf.message}</p>}
           </div>
 
           <div className="sm:col-span-4">

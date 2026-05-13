@@ -43,4 +43,20 @@ Este documento descreve as regras de integridade e validação implementadas no 
 
 ---
 
-*Última atualização: 12/05/2026*
+## 4. Fluxo de Trabalho e Configurações de Tempo
+
+### BR-007: Prioridade de Validação
+*   **Regra**: Validações de integridade de dados (conflitos de horário e sobreposição) devem ser processadas e exibidas ANTES de validações de regras de negócio (como bloqueio de datas futuras).
+*   **Objetivo**: Evitar mensagens de erro confusas quando o usuário comete um erro operacional de preenchimento.
+
+### BR-008: Governança de Fuso Horário (Timezone)
+*   **Regra**: Todas as datas "padrão" geradas pelo sistema (data de hoje, nova sessão) e todas as comparações de data futura devem obrigatoriamente respeitar a configuração `system_timezone` da tabela `system_settings`.
+*   **Aplicação**: Uso de `Intl.DateTimeFormat` no frontend e cálculos baseados no offset configurado no backend.
+
+### BR-009: Vínculo Profissional x Procedimento
+*   **Regra**: O campo "Procedimento/Serviço" só é habilitado após a seleção do "Profissional", exibindo apenas procedimentos cujas especialidades vinculadas coincidam com as especialidades do profissional escolhido.
+*   **Objetivo**: Garantir que o faturamento esteja tecnicamente correto de acordo com a especialidade do executor.
+
+---
+
+*Última atualização: 13/05/2026*

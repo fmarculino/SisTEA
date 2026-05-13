@@ -34,11 +34,13 @@ export function ProfessionalForm({
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<ProfessionalFormData>({
     resolver: zodResolver(professionalSchema),
     defaultValues: {
       name: initialData?.name || '',
+      cpf: (initialData as any)?.cpf || '',
       document_type: initialData?.document_type || '',
       document_number: initialData?.document_number || '',
       cns: initialData?.cns || '',
@@ -48,6 +50,14 @@ export function ProfessionalForm({
       clinic_ids: initialData?.clinic_ids || (userClinicId ? [userClinicId] : []),
     },
   })
+
+  const maskCPF = (value: string) => {
+    return value.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4').substring(0, 14)
+  }
+
+  const maskCNS = (value: string) => {
+    return value.replace(/\D/g, '').replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1.$2.$3.$4').substring(0, 18)
+  }
 
   const onSubmit = async (data: ProfessionalFormData) => {
     setIsPending(true)
@@ -97,6 +107,7 @@ export function ProfessionalForm({
           <input
             type="text"
             {...register('cpf')}
+            onChange={(e) => setValue('cpf', maskCPF(e.target.value))}
             className="mt-1 block w-full rounded-lg border-input shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-2.5 border bg-background transition-all font-mono"
             placeholder="000.000.000-00 (Opcional)"
           />
@@ -108,8 +119,9 @@ export function ProfessionalForm({
           <input
             type="text"
             {...register('cns')}
+            onChange={(e) => setValue('cns', maskCNS(e.target.value))}
             className="mt-1 block w-full rounded-lg border-input shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-2.5 border bg-background transition-all font-mono"
-            placeholder="000 0000 0000 0000"
+            placeholder="000.0000.0000.0000"
           />
           {errors.cns && <p className="mt-1 text-xs text-destructive font-bold">{errors.cns.message}</p>}
         </div>

@@ -55,26 +55,36 @@ export async function createAttendanceAction(data: AttendanceFormData) {
     sessions.forEach(s => { s.status = 'Pendente' })
   }
 
-  // --- SECURITY: Future Date Check ---
-  const { data: settings } = await supabase.from('system_settings').select('key, value').in('key', ['allow_future_attendances', 'system_timezone', 'system_timezone_offset'])
+  // --- SECURITY: Conflict Check (BR-001, BR-002, BR-003) ---
+  if (sessions && sessions.length > 0) {
+    const conflictError = await validateSessionsAction(
+      supabase,
+      null,
+      rawAttendanceData.patient_id,
+      rawAttendanceData.professional_id,
+      sessions
+    )
+    if (conflictError) return conflictError
+  }
+
+  // --- SECURITY: Future Date Check (Date-only comparison) ---
+  const { data: settings } = await supabase.from('system_settings').select('key, value').in('key', ['allow_future_attendances', 'system_timezone'])
   const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
   const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
   const systemTimezone = settingsMap.get('system_timezone') || 'America/Sao_Paulo'
-  const timezoneOffset = settingsMap.get('system_timezone_offset') || '-03:00'
   
   if (!allowFuture) {
     const now = new Date()
-    const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now)
-    const todayEnd = new Date(`${todayLocal}T23:59:59.999${timezoneOffset}`)
+    const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now) // YYYY-MM-DD
     
     // Check main attendance date
-    if (new Date(rawAttendanceData.attendance_date + `T00:00:00${timezoneOffset}`) > todayEnd) {
+    if (rawAttendanceData.attendance_date > todayLocal) {
       return { error: 'O sistema está configurado para não permitir o registro de atendimentos com data futura.' }
     }
 
     // Check sessions
     if (sessions) {
-      const hasFuture = sessions.some(s => new Date(s.session_date + `T00:00:00${timezoneOffset}`) > todayEnd)
+      const hasFuture = sessions.some(s => s.session_date > todayLocal)
       if (hasFuture) return { error: 'O sistema está configurado para não permitir o registro de frequências com data futura.' }
     }
   }
@@ -118,17 +128,7 @@ export async function createAttendanceAction(data: AttendanceFormData) {
     authorization_date: rawAttendanceData.authorization_date || null,
   }
 
-  // --- SECURITY: Conflict Check (BR-001, BR-002, BR-003) ---
-  if (sessions && sessions.length > 0) {
-    const conflictError = await validateSessionsAction(
-      supabase,
-      null,
-      rawAttendanceData.patient_id,
-      rawAttendanceData.professional_id,
-      sessions
-    )
-    if (conflictError) return conflictError
-  }
+
 
   const { data: attendance, error } = await supabase.from('attendances').insert({
     ...attendanceData,
@@ -180,26 +180,36 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     return { error: `Limite de sessões excedido (${rawAttendanceData.authorized_quantity} autorizadas)` }
   }
 
-  // --- SECURITY: Future Date Check ---
-  const { data: settings } = await supabase.from('system_settings').select('key, value').in('key', ['allow_future_attendances', 'system_timezone', 'system_timezone_offset'])
+  // --- SECURITY: Conflict Check (BR-001, BR-002, BR-003) ---
+  if (sessions && sessions.length > 0) {
+    const conflictError = await validateSessionsAction(
+      supabase,
+      id,
+      rawAttendanceData.patient_id,
+      rawAttendanceData.professional_id,
+      sessions
+    )
+    if (conflictError) return conflictError
+  }
+
+  // --- SECURITY: Future Date Check (Date-only comparison) ---
+  const { data: settings } = await supabase.from('system_settings').select('key, value').in('key', ['allow_future_attendances', 'system_timezone'])
   const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
   const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
   const systemTimezone = settingsMap.get('system_timezone') || 'America/Sao_Paulo'
-  const timezoneOffset = settingsMap.get('system_timezone_offset') || '-03:00'
   
   if (!allowFuture) {
     const now = new Date()
-    const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now)
-    const todayEnd = new Date(`${todayLocal}T23:59:59.999${timezoneOffset}`)
+    const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now) // YYYY-MM-DD
     
     // Check main attendance date
-    if (new Date(rawAttendanceData.attendance_date + `T00:00:00${timezoneOffset}`) > todayEnd) {
+    if (rawAttendanceData.attendance_date > todayLocal) {
       return { error: 'O sistema está configurado para não permitir o registro de atendimentos com data futura.' }
     }
 
     // Check sessions
     if (sessions) {
-      const hasFuture = sessions.some(s => new Date(s.session_date + `T00:00:00${timezoneOffset}`) > todayEnd)
+      const hasFuture = sessions.some(s => s.session_date > todayLocal)
       if (hasFuture) return { error: 'O sistema está configurado para não permitir o registro de frequências com data futura.' }
     }
   }
@@ -310,17 +320,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   const realizedSessions = sessions?.filter(s => s.status === 'Realizada').length || 0
   const finalValue = realizedSessions * baseValue
 
-  // --- SECURITY: Conflict Check (BR-001, BR-002, BR-003) ---
-  if (sessions && sessions.length > 0) {
-    const conflictError = await validateSessionsAction(
-      supabase,
-      id,
-      rawAttendanceData.patient_id,
-      rawAttendanceData.professional_id,
-      sessions
-    )
-    if (conflictError) return conflictError
-  }
+
 
   const attendanceData = {
     ...rawAttendanceData,

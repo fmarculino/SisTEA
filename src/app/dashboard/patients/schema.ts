@@ -1,9 +1,11 @@
 import { z } from 'zod'
+import { validateCPF, validateCNS } from '@/utils/validation'
 
 export const patientSchema = z.object({
   name: z.string().min(1, 'Nome do paciente é obrigatório'),
   birth_date: z.string().min(1, 'Data de nascimento é obrigatória'),
-  cns_patient: z.string().min(15, 'CNS deve ter 15 dígitos').max(18), // 000.0000.0000.0000 ou 15 dígitos
+  cns_patient: z.string().min(1, 'CNS é obrigatório'),
+  cpf: z.string().optional().nullable().or(z.literal('')),
   mother_name: z.string().optional().nullable(),
   gender: z.enum(['Masculino', 'Feminino', 'Outro', 'Não Informado']).default('Não Informado'),
   phone: z.string().optional().nullable(),
@@ -15,6 +17,22 @@ export const patientSchema = z.object({
   medical_record_number: z.string().optional().nullable(),
   active: z.boolean().default(true),
   clinic_id: z.string().uuid('Vínculo com Clínica é obrigatório'),
+}).refine((data) => {
+  if (data.cpf && data.cpf.length > 0) {
+    return validateCPF(data.cpf)
+  }
+  return true
+}, {
+  message: 'CPF inválido',
+  path: ['cpf'],
+}).refine((data) => {
+  if (data.cns_patient && data.cns_patient.length > 0) {
+    return validateCNS(data.cns_patient)
+  }
+  return true
+}, {
+  message: 'CNS inválido',
+  path: ['cns_patient'],
 })
 
 export type PatientFormData = z.infer<typeof patientSchema>

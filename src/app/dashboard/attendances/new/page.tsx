@@ -12,11 +12,11 @@ export default async function NewAttendancePage() {
   // Vamos enviar tudo que for relevante.
 
   let patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color, patient_clinics(clinic_id)'
-  let profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics(clinic_id)'
+  let profSelect = 'id, name, cns, professional_specialties(specialty_id, specialties(name, cbo)), professional_clinics(clinic_id)'
 
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
     patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color, patient_clinics!inner(clinic_id)'
-    profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics!inner(clinic_id)'
+    profSelect = 'id, name, cns, professional_specialties(specialty_id, specialties(name, cbo)), professional_clinics!inner(clinic_id)'
   }
 
   let patientsQuery = supabase
@@ -41,12 +41,16 @@ export default async function NewAttendancePage() {
     { data: professionalsRaw },
     { data: procedures },
     { data: clinics },
+    { data: settings }
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
-    supabase.from('procedures').select('id, name, code, valor_total, active').eq('active', true).order('name'),
-    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : Promise.resolve({ data: [] })
+    supabase.from('procedures').select('id, name, code, valor_total, active, procedure_specialties(specialty_id)').eq('active', true).order('name'),
+    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : Promise.resolve({ data: [] }),
+    supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single()
   ])
+
+  const systemTimezone = settings?.value || 'America/Sao_Paulo'
 
   // Mapeando dados dos profissionais para incluir o nome da especialidade
   const professionals = (professionalsRaw as any[])?.map(p => {
@@ -58,12 +62,17 @@ export default async function NewAttendancePage() {
       (ps: any) => ps.specialties?.cbo
     ).filter(Boolean)
 
+    const specialtyIds = (p.professional_specialties as any[])?.map(
+      (ps: any) => ps.specialty_id
+    ).filter(Boolean)
+    
     return {
       id: p.id,
       name: p.name,
       cns: p.cns,
       cbo: cbos?.length > 0 ? cbos[0] : '',
       professional_clinics: p.professional_clinics,
+      specialty_ids: specialtyIds,
       specialty: specialtyNames?.length > 0 ? specialtyNames.join(', ') : 'Sem especialidade'
     }
   })
@@ -71,6 +80,7 @@ export default async function NewAttendancePage() {
   // Mapeando dados dos procedimentos para as expectativas do formulário
   const mappedProcedures = procedures?.map(p => ({
     ...p,
+    specialty_ids: (p.procedure_specialties as any[])?.map((ps: any) => ps.specialty_id),
     default_value: p.valor_total // Mapeia valor_total para default_value esperado pelo form
   }))
 
@@ -88,6 +98,7 @@ export default async function NewAttendancePage() {
         clinics={clinics || []}
         userClinicId={profile?.clinic_id}
         userRole={profile?.role || ''}
+        systemTimezone={systemTimezone}
       />
     </div>
   )

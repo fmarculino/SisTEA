@@ -33,10 +33,11 @@ export default async function DashboardPage({
   }
 
   let totalAttendances = 0
+  let totalSessions = 0
   let totalValue = 0
   let totalPatients = 0
   let totalClinicsActive = 0
-  let clinicStats: { name: string; count: number; value: number }[] = []
+  let clinicStats: { name: string; count: number; attendance_count: number; value: number }[] = []
   let digitalValidatedCount = 0
 
   const clinicId = profile?.role === 'SMS_ADMIN' ? null : profile?.clinic_id
@@ -50,6 +51,7 @@ export default async function DashboardPage({
 
   if (!statsError && statsData) {
     totalAttendances = statsData.total_attendances || 0
+    totalSessions = statsData.total_sessions || 0
     totalValue = statsData.total_value || 0
     digitalValidatedCount = statsData.digital_validated || 0
     clinicStats = statsData.clinic_stats || []
@@ -82,8 +84,8 @@ export default async function DashboardPage({
   const maxValue = clinicStats.reduce((max, c) => Math.max(max, c.value), 0) || 1
 
   // Digital Validation Stats
-  const digitalValidationRate = totalAttendances > 0 
-    ? (digitalValidatedCount / totalAttendances) * 100 
+  const digitalValidationRate = totalSessions > 0 
+    ? (digitalValidatedCount / totalSessions) * 100 
     : 0
 
   return (
@@ -113,11 +115,19 @@ export default async function DashboardPage({
               <span className="text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/5 px-2 py-0.5 rounded-full">Atividade</span>
             </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">Total de Atendimentos</p>
-            <h3 className="text-3xl font-heading font-bold text-foreground">
-              {totalAttendances}
-            </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight mb-1">Atendimentos</p>
+              <h3 className="text-3xl font-heading font-bold text-foreground">
+                {totalAttendances}
+              </h3>
+            </div>
+            <div className="border-l border-border/40 pl-4">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight mb-1">Frequências</p>
+              <h3 className="text-3xl font-heading font-bold text-foreground">
+                {totalSessions}
+              </h3>
+            </div>
           </div>
           <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
             <Activity className="h-24 w-24 text-primary" />
@@ -252,8 +262,11 @@ export default async function DashboardPage({
                     </div>
                     <div>
                       <span className="text-sm font-black text-foreground block group-hover:text-primary transition-colors cursor-default">{clinic.name}</span>
-                      <span className="text-[10px] font-bold text-primary uppercase tracking-tighter bg-primary/5 px-1.5 py-0.5 rounded">
-                        {clinic.count} {clinic.count === 1 ? 'Atendimento' : 'Atendimentos'}
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-tighter bg-primary/5 px-1.5 py-0.5 rounded mr-1">
+                        {clinic.attendance_count || 0} Atend.
+                      </span>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter bg-muted/10 px-1.5 py-0.5 rounded">
+                        {clinic.count} Freq.
                       </span>
                     </div>
                   </div>

@@ -21,7 +21,8 @@ export function AttendanceForm({
   procedures,
   userClinicId,
   userRole,
-  clinics
+  clinics,
+  systemTimezone
 }: { 
   initialData?: Partial<AttendanceFormData>; 
   id?: string;
@@ -31,6 +32,7 @@ export function AttendanceForm({
   userClinicId?: string | null;
   userRole: string;
   clinics?: any[];
+  systemTimezone: string;
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
@@ -57,7 +59,7 @@ export function AttendanceForm({
       professional_id: initialData?.professional_id || '',
       procedure_id: initialData?.procedure_id || '',
       clinic_id: defaultClinicId,
-      attendance_date: initialData?.attendance_date || new Date().toISOString().split('T')[0],
+      attendance_date: initialData?.attendance_date || new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(new Date()),
       auth_number: initialData?.auth_number || '',
       authorization_date: initialData?.authorization_date || '',
       authorized_quantity: initialData?.authorized_quantity || 20,
@@ -75,7 +77,7 @@ export function AttendanceForm({
       reset({
         ...initialData,
         clinic_id: defaultClinicId,
-        attendance_date: initialData.attendance_date || new Date().toISOString().split('T')[0],
+        attendance_date: initialData.attendance_date || new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(new Date()),
       });
     }
   }, [initialData, reset, defaultClinicId]);
@@ -85,12 +87,38 @@ export function AttendanceForm({
     name: 'sessions',
   })
 
-  // Watch for procedure_id change to auto-fill the value
+  // Watch for procedure_id and professional_id
   const selectedProcedureId = watch('procedure_id')
+  const selectedProfessionalId = watch('professional_id')
   const authorizedQuantity = watch('authorized_quantity')
   const sessions = watch('sessions') || []
   const hasValidatedSession = sessions.some(s => s.status === 'Realizada' || s.status === 'Glosado');
   const isLocked = userRole === 'CLINIC_USER' && hasValidatedSession;
+
+  // Filter procedures based on professional specialties
+  const filteredProcedures = selectedProfessionalId 
+    ? procedures.filter(proc => {
+        const professional = professionals.find(p => p.id === selectedProfessionalId)
+        if (!professional || !professional.specialty_ids) return false
+        
+        // Se o procedimento não tem especialidades vinculadas, mostramos para todos (regra de segurança)
+        if (!proc.specialty_ids || proc.specialty_ids.length === 0) return true
+
+        // Verifica se há interseção entre as especialidades do profissional e as do procedimento
+        return proc.specialty_ids.some((id: string) => professional.specialty_ids.includes(id))
+      })
+    : []
+
+  // Reset procedure if professional changes and current procedure is not in filtered list
+  useEffect(() => {
+    if (selectedProcedureId && selectedProfessionalId) {
+      const isValid = filteredProcedures.some(p => p.id === selectedProcedureId)
+      if (!isValid) {
+        setValue('procedure_id', '')
+        setValue('value_applied', 0)
+      }
+    }
+  }, [selectedProfessionalId, filteredProcedures, selectedProcedureId, setValue])
 
   // Calculate value based on realized sessions
   useEffect(() => {
@@ -364,15 +392,15 @@ export function AttendanceForm({
             name="procedure_id"
             render={({ field }) => (
               <SearchableSelect
-                options={procedures.map(p => ({
+                options={filteredProcedures.map(p => ({
                   id: p.id,
                   code: p.code,
                   name: `${p.code ? p.code + ' — ' : ''}${p.name} (Valor: ${formatCurrency(p.valor_total)} / sessão)`
                 }))}
                 value={field.value}
                 onChange={field.onChange}
-                disabled={isLocked}
-                placeholder="Escolha o procedimento realizado..."
+                disabled={isLocked || !selectedProfessionalId}
+                placeholder={!selectedProfessionalId ? "Selecione primeiro o profissional de saúde..." : "Escolha o procedimento realizado..."}
                 className="mt-1"
               />
             )}
@@ -480,7 +508,7 @@ export function AttendanceForm({
           <button
             type="button"
             disabled={sessionFields.length >= authorizedQuantity}
-            onClick={() => append({ session_date: new Date().toISOString().split('T')[0], start_time: '08:00', end_time: '08:50', status: userRole === 'CLINIC_USER' ? 'Pendente' : 'Realizada' })}
+            onClick={() => append({ session_date: new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(new Date()), start_time: '08:00', end_time: '08:50', status: userRole === 'CLINIC_USER' ? 'Pendente' : 'Realizada' })}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
           >
             {sessionFields.length >= authorizedQuantity ? 'Limite Atingido' : '+ Adicionar Sessão'}
