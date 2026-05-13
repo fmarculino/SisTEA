@@ -11,6 +11,8 @@ interface AuditParams {
   old_data?: any
   new_data?: any
   description: string
+  ip?: string
+  userAgent?: string
 }
 
 /**
@@ -23,18 +25,21 @@ export async function logAudit({
   record_id,
   old_data,
   new_data,
-  description
+  description,
+  ip: manualIp,
+  userAgent: manualUA
 }: AuditParams) {
   try {
     const supabase = await createClient()
     const profile = await getUserProfile()
     const headerList = await headers()
     
-    // Capture IP and User Agent
-    const ip = headerList.get('x-forwarded-for')?.split(',')[0] || 
+    // Capture IP and User Agent (fallback to manual if provided)
+    const ip = manualIp || 
+               headerList.get('x-forwarded-for')?.split(',')[0] || 
                headerList.get('x-real-ip') || 
                'unknown'
-    const userAgent = headerList.get('user-agent') || 'unknown'
+    const userAgent = manualUA || headerList.get('user-agent') || 'unknown'
 
     const { error } = await supabase.from('audit_logs').insert({
       user_id: profile?.id,

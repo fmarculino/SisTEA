@@ -173,6 +173,8 @@ export async function POST(request: NextRequest) {
       action: 'UPDATE',
       table_name: 'attendance_sessions',
       record_id: sessionId,
+      ip: ip,
+      userAgent: userAgent,
       new_data: { 
         status: 'Realizada', 
         validation_geo: geo,
