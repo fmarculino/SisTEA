@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { headers } from 'next/headers'
 import { getUserProfile } from '@/lib/dal'
 
@@ -31,6 +31,7 @@ export async function logAudit({
 }: AuditParams) {
   try {
     const supabase = await createClient()
+    const adminSupabase = await createAdminClient()
     const profile = await getUserProfile()
     const headerList = await headers()
     
@@ -41,7 +42,7 @@ export async function logAudit({
                'unknown'
     const userAgent = manualUA || headerList.get('user-agent') || 'unknown'
 
-    const { error } = await supabase.from('audit_logs').insert({
+    const { error } = await adminSupabase.from('audit_logs').insert({
       user_id: profile?.id,
       user_email: profile?.email,
       user_role: profile?.role,
