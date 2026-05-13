@@ -872,8 +872,9 @@ async function validateSessionsAction(
     if (conflictErr) {
       console.error('Error checking conflicts:', conflictErr);
     } else if (conflictMsg) {
+      // Use the specific message from RPC or a generic one
       return { 
-        error: `CONFLITO DETECTADO: ${conflictMsg} na data ${new Date(s.session_date + 'T00:00:00').toLocaleDateString('pt-BR')} às ${s.start_time}.` 
+        error: `${conflictMsg} (Data: ${new Date(s.session_date + 'T00:00:00').toLocaleDateString('pt-BR')}, Início: ${s.start_time.substring(0, 5)})` 
       };
     }
   }

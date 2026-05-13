@@ -2,6 +2,25 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.9.3-beta] - 2026-05-13
+
+Esta versão foca na **Governança de Horários e Prevenção de Fraude**, introduzindo validações globais de disponibilidade profissional e unificação da interface de configurações.
+
+### 🛡️ Prevenção de Fraude & Integridade (BR-010)
+- **Impedimento de Atendimento Simultâneo:** Implementação da regra **BR-010**. O sistema agora impede globalmente que um profissional realize atendimentos em horários sobrepostos, independente da clínica ou paciente.
+- **Detecção de "Onipresença":** Validação rigorosa que cruza dados de todas as guias. Se um médico está ocupado na Clínica A, ele não pode ser alocado para o mesmo horário na Clínica B.
+- **Feedback Transparente:** Avisos de conflito agora detalham exatamente onde o profissional está ocupado (Nome da Clínica) e com quem (Nome do Paciente), facilitando a resolução de conflitos operacionais.
+- **Otimização de Performance (Indice Profissional):** Criação de índice estratégico em `public.attendances(professional_id)` para garantir validações instantâneas mesmo com bases de dados massivas.
+
+### ⚙️ Unificação de Configurações & UX
+- **Formulário Único de Configurações:** Consolidação de todas as chaves de sistema em um único fluxo de salvamento. Substituição de múltiplos botões por uma ação de "Salvar Tudo" centralizada.
+- **Interface Premium:** Cabeçalho de configurações fixo (sticky) com botão de salvamento sempre visível, melhorando drasticamente a usabilidade administrativa.
+- **Governança de Fuso Horário:** Finalização da integração do `system_timezone` em todas as telas de atendimento para garantir datas de hoje e cálculos de expiração consistentes.
+
+### 🔧 Ajustes de Interface & Estabilidade
+- **Cleanup de Auditoria:** Remoção de blocos redundantes de geolocalização no modal de detalhes do log, purificando a visualização de dados forenses.
+- **Estabilidade de Build:** Correção de erros de tipagem e propriedades ausentes na página de edição de atendimentos.
+
 ## [0.9.0-beta] - 2026-05-12
 
 Esta versão marca o amadurecimento técnico do SisTEA para **Escalabilidade Municipal**, introduzindo melhorias críticas de segurança (Hashing), performance de banco de dados e governança de auditoria.

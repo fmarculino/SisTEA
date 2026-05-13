@@ -59,4 +59,14 @@ Este documento descreve as regras de integridade e validação implementadas no 
 
 ---
 
+## 5. Integridade de Atendimento e Fraude
+
+### BR-010: Impedimento de Atendimento Simultâneo (Profissional)
+*   **Regra**: Um profissional de saúde não pode possuir mais de uma sessão de atendimento no mesmo horário (data e intervalo início/fim), independente do paciente ou clínica.
+*   **Objetivo**: Evitar "atendimentos fantasmas" ou faturamentos de atendimentos em grupo quando a regra exige atendimento individual.
+*   **Aplicação**: Verificação global via RPC no banco de dados. Considera-se ocupado o tempo de qualquer sessão com status `Realizada`, `Pendente` ou `Glosado`.
+*   **Nota**: Apenas a exclusão física da sessão (quando permitida pela BR-003) libera o horário do profissional.
+
+---
+
 *Última atualização: 13/05/2026*

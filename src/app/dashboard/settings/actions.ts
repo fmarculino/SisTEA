@@ -37,3 +37,38 @@ export async function updateSystemSettingAction(formData: FormData) {
   revalidatePath('/dashboard/settings')
   return { success: true }
 }
+
+export async function updateAllSettingsAction(settings: Record<string, any>) {
+  const profile = await getUserProfile()
+  if (profile?.role !== 'SMS_ADMIN') {
+    throw new Error('Não autorizado')
+  }
+
+  const supabase = await createClient()
+
+  const entries = Object.entries(settings).map(([key, value]) => {
+    // Basic type inference
+    let finalValue: any = value
+    if (value === 'true' || value === true) finalValue = true
+    else if (value === 'false' || value === false) finalValue = false
+    else if (!isNaN(Number(value)) && typeof value === 'string' && value.trim() !== '') finalValue = Number(value)
+
+    return {
+      key,
+      value: finalValue,
+      updated_at: new Date().toISOString()
+    }
+  })
+
+  const { error } = await supabase
+    .from('system_settings')
+    .upsert(entries)
+
+  if (error) {
+    console.error('Erro ao atualizar configurações:', error)
+    return { error: 'Falha ao salvar configurações' }
+  }
+
+  revalidatePath('/dashboard/settings')
+  return { success: true }
+}
