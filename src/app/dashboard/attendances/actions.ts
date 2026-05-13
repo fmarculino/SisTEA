@@ -806,7 +806,8 @@ export async function validateSessionAction(data: {
       validation_method: 'Digital',
       ip,
       is_out_of_range,
-      distance: validation_distance
+      distance: validation_distance,
+      validation_geo: geo
     },
     description: `Paciente assinou digitalmente a sessão ID: ${sessionId} (Atendimento: ${session.attendance_id}).`
   })

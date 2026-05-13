@@ -173,6 +173,23 @@ export function AuditLogList({ logs }: AuditLogListProps) {
                         {selectedLog.user_agent}
                       </p>
                     </div>
+
+                    {selectedLog.new_data?.validation_geo && (
+                      <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-3 w-3 text-emerald-500" />
+                          <span className="text-xs text-emerald-500 font-bold">Localização GPS</span>
+                        </div>
+                        <a 
+                          href={`https://www.google.com/maps/search/?api=1&query=${selectedLog.new_data.validation_geo.lat},${selectedLog.new_data.validation_geo.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] bg-emerald-500 text-white px-3 py-1 rounded-md font-bold hover:bg-emerald-600 transition-colors"
+                        >
+                          VER MAPA
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
 
