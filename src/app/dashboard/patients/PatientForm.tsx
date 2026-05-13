@@ -57,14 +57,14 @@ export function PatientForm({
     defaultValues: {
       name: initialData?.name || '',
       birth_date: initialData?.birth_date || '',
-      cns_patient: initialData?.cns_patient || '',
-      cpf: initialData?.cpf || '',
+      cns_patient: initialData?.cns_patient ? maskCNS(initialData.cns_patient) : '',
+      cpf: initialData?.cpf ? maskCPF(initialData.cpf) : '',
       mother_name: initialData?.mother_name || '',
       gender: (initialData?.gender as any) || 'Não Informado',
-      phone: initialData?.phone || '',
+      phone: initialData?.phone ? maskPhone(initialData.phone) : '',
       address: initialData?.address || '',
       race_color: (initialData?.race_color as any) || 'Não Informado',
-      cep: initialData?.cep || '',
+      cep: initialData?.cep ? maskCEP(initialData.cep) : '',
       city: initialData?.city || '',
       state: initialData?.state || '',
       medical_record_number: initialData?.medical_record_number || '',
@@ -154,23 +154,35 @@ export function PatientForm({
     }
   }
 
-  // Funções simples de máscara
+  // Funções de máscara aprimoradas (Live Masking)
   const maskCNS = (value: string) => {
-    return value.replace(/\D/g, '').replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1.$2.$3.$4').substring(0, 18)
+    const v = value.replace(/\D/g, '').substring(0, 15)
+    if (v.length <= 3) return v
+    if (v.length <= 7) return v.replace(/(\d{3})(\d{0,4})/, '$1.$2')
+    if (v.length <= 11) return v.replace(/(\d{3})(\d{4})(\d{0,4})/, '$1.$2.$3')
+    return v.replace(/(\d{3})(\d{4})(\d{4})(\d{0,4})/, '$1.$2.$3.$4')
   }
 
   const maskCEP = (value: string) => {
-    return value.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2').substring(0, 9)
+    const v = value.replace(/\D/g, '').substring(0, 8)
+    if (v.length <= 5) return v
+    return v.replace(/(\d{5})(\d{0,3})/, '$1-$2')
   }
 
   const maskPhone = (value: string) => {
-    const v = value.replace(/\D/g, '')
-    if (v.length <= 10) return v.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3').substring(0, 14)
-    return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3').substring(0, 15)
+    const v = value.replace(/\D/g, '').substring(0, 11)
+    if (v.length <= 2) return v
+    if (v.length <= 6) return v.replace(/(\d{2})(\d{0,4})/, '($1) $2')
+    if (v.length <= 10) return v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+    return v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3')
   }
 
   const maskCPF = (value: string) => {
-    return value.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4').substring(0, 14)
+    const v = value.replace(/\D/g, '').substring(0, 11)
+    if (v.length <= 3) return v
+    if (v.length <= 6) return v.replace(/(\d{3})(\d{0,3})/, '$1.$2')
+    if (v.length <= 9) return v.replace(/(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3')
+    return v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4')
   }
 
   const onSubmit = async (data: PatientFormData) => {
