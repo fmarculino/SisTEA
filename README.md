@@ -1,46 +1,80 @@
 # SisTEA - Sistema Inteligente de Gestão Integrada
-[![Version](https://img.shields.io/badge/version-0.2.0--beta-blue.svg)](./CHANGELOG.md)
+![Version](https://img.shields.io/badge/version-0.9.3--beta-blue.svg?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-active-success.svg?style=for-the-badge)
 
-Sistema inteligente de Gestão Integrada para acompanhamento Multiprofissional de Autismo e TDAH.
-
-## 🚀 Versão Atual: 0.2.0 - Beta
-Esta versão traz melhorias significativas na precisão dos dados analíticos do dashboard e aprimoramentos na experiência do usuário (UX) com a implementação de busca incremental de procedimentos e fluxos de atendimento otimizados.
+> **SisTEA** é uma plataforma enterprise de alta densidade projetada para a gestão especializada de acompanhamento multiprofissional em casos de **Autismo (TEA)** e **TDAH**. O sistema foca em três pilares fundamentais: **Transparência Forense**, **Eficiência Operacional** e **Segurança Jurídica**.
 
 ---
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## 🚀 Diferenciais Estratégicos
 
-## Getting Started
+### 📱 Assinatura Digital & Geofencing
+Validação de presença via QR Code dinâmico com rastreamento de geolocalização. O sistema garante que a sessão ocorreu de fato na unidade de saúde através do cálculo de distância entre o paciente e a clínica em tempo real.
 
-First, run the development server:
+### 🛡️ Auditoria Digital Forense
+Motor de auditoria imutável (append-only) que registra cada interação no sistema. Inclui histórico de modificações (Value Diff), captura de IP, User-Agent e carimbo de tempo rigoroso para compliance administrativo total.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### 🏥 Gestão Multi-Clínica & Rede Integrada
+Arquitetura que permite o vínculo de pacientes a múltiplas unidades simultaneamente, ideal para redes municipais de saúde. Gestão centralizada de profissionais e procedimentos com políticas de Row-Level Security (RLS) granulares.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 📑 Conformidade SUS & Exportação
+Geração automatizada de fichas de frequência e documentos oficiais do SUS em PDF com calibração milimétrica, garantindo agilidade no faturamento e redução de glosas.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 🚫 Anti-Fraude e Governança (BR-010)
+Motor de validação global que impede que um profissional realize atendimentos em horários sobrepostos em clínicas diferentes, garantindo a integridade dos repasses e o cumprimento das agendas individuais.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🛠️ Stack Tecnológica
 
-To learn more about Next.js, take a look at the following resources:
+O SisTEA utiliza as tecnologias mais modernas do ecossistema de desenvolvimento web para garantir performance e escalabilidade municipal:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Frontend:** [Next.js 15](https://nextjs.org/) (App Router), [React 19](https://react.dev/)
+- **Linguagem:** [TypeScript](https://www.typescriptlang.org/)
+- **Estilização:** [Tailwind CSS v4](https://tailwindcss.com/)
+- **Backend-as-a-Service:** [Supabase](https://supabase.com/) (PostgreSQL)
+- **Segurança:** Row-Level Security (RLS), Hashing PGCrypto, JWT Auth
+- **Geração de Documentos:** PDF-Lib, JSZip
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## ⚙️ Instalação e Desenvolvimento
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Pré-requisitos
+- Node.js 20+
+- NPM ou Bun
+- Instância do Supabase configurada
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Passo a Passo
+
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/fmarculino/SisTEA.git
+   cd SisTEA
+   ```
+
+2. **Instale as dependências:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure as Variáveis de Ambiente:**
+   Crie um arquivo `.env.local` com as chaves do seu projeto:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=seu_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anon
+   ```
+
+4. **Inicie o servidor de desenvolvimento:**
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 📊 Governança de Versões
+O projeto segue o padrão de **Semantic Versioning** adaptado para betas administrativos.
+Para detalhes das últimas atualizações, consulte o [CHANGELOG.md](./CHANGELOG.md) e o guia de [Regras de Negócio](./docs/business_rules.md).
+
+---
+*Desenvolvido com foco em transparência e saúde pública.*
