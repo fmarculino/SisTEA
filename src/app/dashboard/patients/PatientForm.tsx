@@ -45,6 +45,37 @@ export function PatientForm({
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [lastCheckedCNS, setLastCheckedCNS] = useState('')
+
+  // Funções de máscara aprimoradas (Live Masking)
+  const maskCNS = (value: string) => {
+    const v = value.replace(/\D/g, '').substring(0, 15)
+    if (v.length <= 3) return v
+    if (v.length <= 7) return v.replace(/(\d{3})(\d{0,4})/, '$1.$2')
+    if (v.length <= 11) return v.replace(/(\d{3})(\d{4})(\d{0,4})/, '$1.$2.$3')
+    return v.replace(/(\d{3})(\d{4})(\d{4})(\d{0,4})/, '$1.$2.$3.$4')
+  }
+
+  const maskCEP = (value: string) => {
+    const v = value.replace(/\D/g, '').substring(0, 8)
+    if (v.length <= 5) return v
+    return v.replace(/(\d{5})(\d{0,3})/, '$1-$2')
+  }
+
+  const maskPhone = (value: string) => {
+    const v = value.replace(/\D/g, '').substring(0, 11)
+    if (v.length <= 2) return v
+    if (v.length <= 6) return v.replace(/(\d{2})(\d{0,4})/, '($1) $2')
+    if (v.length <= 10) return v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+    return v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3')
+  }
+
+  const maskCPF = (value: string) => {
+    const v = value.replace(/\D/g, '').substring(0, 11)
+    if (v.length <= 3) return v
+    if (v.length <= 6) return v.replace(/(\d{3})(\d{0,3})/, '$1.$2')
+    if (v.length <= 9) return v.replace(/(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3')
+    return v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4')
+  }
   
   const {
     register,
@@ -154,36 +185,6 @@ export function PatientForm({
     }
   }
 
-  // Funções de máscara aprimoradas (Live Masking)
-  const maskCNS = (value: string) => {
-    const v = value.replace(/\D/g, '').substring(0, 15)
-    if (v.length <= 3) return v
-    if (v.length <= 7) return v.replace(/(\d{3})(\d{0,4})/, '$1.$2')
-    if (v.length <= 11) return v.replace(/(\d{3})(\d{4})(\d{0,4})/, '$1.$2.$3')
-    return v.replace(/(\d{3})(\d{4})(\d{4})(\d{0,4})/, '$1.$2.$3.$4')
-  }
-
-  const maskCEP = (value: string) => {
-    const v = value.replace(/\D/g, '').substring(0, 8)
-    if (v.length <= 5) return v
-    return v.replace(/(\d{5})(\d{0,3})/, '$1-$2')
-  }
-
-  const maskPhone = (value: string) => {
-    const v = value.replace(/\D/g, '').substring(0, 11)
-    if (v.length <= 2) return v
-    if (v.length <= 6) return v.replace(/(\d{2})(\d{0,4})/, '($1) $2')
-    if (v.length <= 10) return v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
-    return v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3')
-  }
-
-  const maskCPF = (value: string) => {
-    const v = value.replace(/\D/g, '').substring(0, 11)
-    if (v.length <= 3) return v
-    if (v.length <= 6) return v.replace(/(\d{3})(\d{0,3})/, '$1.$2')
-    if (v.length <= 9) return v.replace(/(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3')
-    return v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4')
-  }
 
   const onSubmit = async (data: PatientFormData) => {
     setIsPending(true)
