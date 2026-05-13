@@ -64,12 +64,16 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
     { data: professionalsRaw },
     { data: procedures },
     { data: clinics },
+    { data: settings }
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
-    supabase.from('procedures').select('id, name, code, active, valor_total').order('name'),
-    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : supabase.from('clinics').select('id, name, cnes').eq('id', profile?.clinic_id || '').order('name')
+    supabase.from('procedures').select('id, name, code, active, valor_total, procedure_specialties(specialty_id)').order('name'),
+    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : supabase.from('clinics').select('id, name, cnes').eq('id', profile?.clinic_id || '').order('name'),
+    supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single()
   ])
+
+  const systemTimezone = settings?.value || 'America/Sao_Paulo'
 
   // Mapeando dados dos profissionais para incluir o nome da especialidade e CBO
   const professionals = (professionalsRaw as any[])?.map(p => {
@@ -113,6 +117,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
         clinics={clinics || []}
         userClinicId={profile?.clinic_id}
         userRole={profile?.role || ''}
+        systemTimezone={systemTimezone}
       />
     </div>
   )
