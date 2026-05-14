@@ -236,12 +236,11 @@ export class BpaExportService {
           padLeft(att.patients.ibge_code, 6) +    // 160-165 (Município Residência)
           padRight('', 26) +                      // 166-191 (RESERVA / BRANCOS)
           padLeft(sanitize(att.patients.cep), 8) + // 192-199 (CEP)
-          '000' +                                 // 200-202 (Cód. Logradouro - Padrão 000)
-          padRight(normalizeText(att.patients.address_street), 30) + // 203-232 (Endereço)
-          padRight(normalizeText(att.patients.address_complement), 10) + // 233-242 (Complemento)
-          padRight(normalizeText(att.patients.address_number), 5) + // 243-247 (Número)
-          padRight(normalizeText(att.patients.address_neighborhood), 30) + // 248-277 (Bairro)
-          padRight(sanitizePhone(att.patients.phone), 11); // 278-288 (Telefone)
+          padRight(normalizeText(att.patients.address_number), 5) + // 200-204 (Número)
+          padRight(normalizeText(att.patients.address_complement), 10) + // 205-214 (Complemento)
+          padRight(normalizeText(att.patients.address_street), 30) + // 215-244 (Logradouro/Rua)
+          padRight(normalizeText(att.patients.address_neighborhood), 30) + // 245-274 (Bairro)
+          padRight(sanitizePhone(att.patients.phone), 11); // 275-285 (Telefone)
 
         lines.push(padRight(line, 350)); 
       }
