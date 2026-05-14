@@ -6,6 +6,7 @@ import { notFound, redirect } from 'next/navigation'
 export default async function EditProfessionalPage({ params }: { params: Promise<{ id: string }> }) {
   const profile = await getUserProfile()
   if (!profile) redirect('/login')
+  if (profile.role !== 'SMS_ADMIN') redirect('/dashboard')
 
   const supabase = await createClient()
   const { id } = await params

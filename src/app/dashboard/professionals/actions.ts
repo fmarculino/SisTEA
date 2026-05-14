@@ -5,8 +5,13 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { professionalSchema, type ProfessionalFormData } from './schema'
 import { logAudit } from '@/lib/audit'
+import { getUserProfile } from '@/lib/dal'
 
 export async function createProfessionalAction(data: ProfessionalFormData) {
+  const profile = await getUserProfile()
+  if (profile?.role !== 'SMS_ADMIN') {
+    return { error: 'Acesso negado. Apenas administradores podem cadastrar profissionais.' }
+  }
   const supabase = await createClient()
   
   const validatedFields = professionalSchema.safeParse(data)
@@ -77,6 +82,10 @@ export async function createProfessionalAction(data: ProfessionalFormData) {
 }
 
 export async function updateProfessionalAction(id: string, data: ProfessionalFormData) {
+  const profile = await getUserProfile()
+  if (profile?.role !== 'SMS_ADMIN') {
+    return { error: 'Acesso negado. Apenas administradores podem editar profissionais.' }
+  }
   const supabase = await createClient()
   
   const validatedFields = professionalSchema.safeParse(data)
@@ -146,6 +155,10 @@ export async function updateProfessionalAction(id: string, data: ProfessionalFor
 }
 
 export async function deleteProfessionalAction(id: string) {
+  const profile = await getUserProfile()
+  if (profile?.role !== 'SMS_ADMIN') {
+    return { error: 'Acesso negado. Apenas administradores podem excluir profissionais.' }
+  }
   const supabase = await createClient()
   const { error } = await supabase.from('professionals').delete().eq('id', id)
   if (error) return { error: error.message }

@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 export default async function NewProfessionalPage() {
   const profile = await getUserProfile()
   if (!profile) redirect('/login')
+  if (profile.role !== 'SMS_ADMIN') redirect('/dashboard')
 
   const supabase = await createClient()
   

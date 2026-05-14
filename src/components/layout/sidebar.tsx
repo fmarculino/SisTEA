@@ -33,7 +33,7 @@ const navigation = [
     roles: ['SMS_ADMIN', 'CLINIC_USER'],
     children: [
       { name: 'Pacientes', href: '/dashboard/patients', icon: Users, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
-      { name: 'Profissionais', href: '/dashboard/professionals', icon: UserSquare2, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
+      { name: 'Profissionais', href: '/dashboard/professionals', icon: UserSquare2, roles: ['SMS_ADMIN'] },
       { name: 'Clínicas', href: '/dashboard/clinics', icon: Building2, roles: ['SMS_ADMIN'] },
       { name: 'Contratos', href: '/dashboard/contracts', icon: ScrollText, roles: ['SMS_ADMIN'] },
       { name: 'Procedimentos', href: '/dashboard/procedures', icon: Stethoscope, roles: ['SMS_ADMIN'] },

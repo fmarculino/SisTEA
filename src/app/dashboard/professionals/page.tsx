@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Edit2, Plus } from 'lucide-react'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
@@ -12,6 +13,9 @@ export default async function ProfessionalsPage({
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
+  if (profile?.role !== 'SMS_ADMIN') {
+    redirect('/dashboard')
+  }
   const supabase = await createClient()
 
   // Fetch filter options
