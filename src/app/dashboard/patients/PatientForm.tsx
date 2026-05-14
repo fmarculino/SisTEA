@@ -597,11 +597,18 @@ export function PatientForm({
           <SectionTitle icon={KeyRound} title="Token de Validação Digital" />
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
             <div className="sm:col-span-6 bg-emerald-500/5 p-6 rounded-[1.25rem] border border-emerald-500/20">
-              <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-widest mb-4">
-                Este token deve ser informado ao paciente/responsável para validar as sessões via QR Code.
-              </p>
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-[220px]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-widest">
+                  Este token deve ser informado ao paciente/responsável para validar as sessões via QR Code.
+                </p>
+                <div className="flex items-center gap-2 bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full border border-amber-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="text-[9px] font-black uppercase tracking-tighter">Não compartilhar com a clínica</span>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="relative flex-1 min-w-[220px] max-w-[280px]">
                   <input
                     type={showToken ? 'text' : 'password'}
                     value={currentToken}
@@ -617,30 +624,53 @@ export function PatientForm({
                     {showToken ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                <button
-                  type="button"
-                  disabled={isResettingToken}
-                  onClick={async () => {
-                    if (!confirm('Tem certeza? O token atual será invalidado e um novo será gerado. O paciente/responsável precisará ser informado do novo token.')) return
-                    setIsResettingToken(true)
-                    try {
-                      const result = await resetPatientTokenAction(id!)
-                      if (result?.error) {
-                        setErrorMsg(result.error)
-                      } else if (result?.token) {
-                        setCurrentToken(result.token)
-                        setShowToken(true)
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={isResettingToken}
+                    onClick={async () => {
+                      if (!confirm('Tem certeza? O token atual será invalidado e um novo será gerado. O paciente/responsável precisará ser informado do novo token.')) return
+                      setIsResettingToken(true)
+                      try {
+                        const result = await resetPatientTokenAction(id!)
+                        if (result?.error) {
+                          setErrorMsg(result.error)
+                        } else if (result?.token) {
+                          setCurrentToken(result.token)
+                          setShowToken(true)
+                        }
+                      } finally {
+                        setIsResettingToken(false)
                       }
-                    } finally {
-                      setIsResettingToken(false)
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <RotateCw className={`w-4 h-4 ${isResettingToken ? 'animate-spin' : ''}`} />
-                  {isResettingToken ? 'Gerando...' : 'Reset Token'}
-                </button>
+                    }}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <RotateCw className={`w-4 h-4 ${isResettingToken ? 'animate-spin' : ''}`} />
+                    {isResettingToken ? 'Gerando...' : 'Reset Token'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const phone = watch('phone')?.replace(/\D/g, '')
+                      if (!phone || phone.length < 10) {
+                        setErrorMsg('O paciente não possui um telefone válido cadastrado para envio.')
+                        return
+                      }
+                      const message = `Olá! Esta é uma mensagem da *Regulação da SMS (SisTEA)*. \n\nO seu token de validação digital para confirmar seus atendimentos via QR Code é: *${currentToken}* \n\nEste código é pessoal e deve ser utilizado *APENAS por você* no momento da assinatura digital. \n\n⚠️ *ATENÇÃO:* Não forneça este código para funcionários da clínica. Guarde-o com segurança para garantir o registro correto das suas sessões.`
+                      window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                    }}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 text-white px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                  >
+                    <Phone className="w-4 h-4" />
+                    Enviar WhatsApp
+                  </button>
+                </div>
               </div>
+              <p className="mt-4 text-[9px] text-muted-foreground font-medium italic">
+                * O token é exigido para que o paciente assine o atendimento no celular do profissional.
+              </p>
             </div>
           </div>
         </section>
