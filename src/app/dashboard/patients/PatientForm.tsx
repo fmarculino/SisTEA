@@ -17,16 +17,16 @@ const UF_OPTIONS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
 ]
 
-export function PatientForm({ 
-  initialData, 
-  id, 
-  clinics, 
-  userRole, 
+export function PatientForm({
+  initialData,
+  id,
+  clinics,
+  userRole,
   userClinicId,
   authToken,
   linkedClinics = []
-}: { 
-  initialData?: Partial<PatientFormData>; 
+}: {
+  initialData?: Partial<PatientFormData>;
   id?: string;
   clinics: ClinicOption[];
   userRole: string;
@@ -76,7 +76,7 @@ export function PatientForm({
     if (v.length <= 9) return v.replace(/(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3')
     return v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4')
   }
-  
+
   const {
     register,
     handleSubmit,
@@ -134,7 +134,7 @@ export function PatientForm({
         setIsPending(true)
         const result = await checkPatientByCNSAction(cnsValue)
         setIsPending(false)
-        
+
         if (result?.patient) {
           setExistingPatient(result.patient)
           setShowLinkModal(true)
@@ -146,10 +146,10 @@ export function PatientForm({
 
   const handleLinkPatient = async () => {
     if (!existingPatient || !userClinicId) return
-    
+
     setIsLinking(true)
     setErrorMsg('')
-    
+
     try {
       const result = await linkPatientToClinicAction(existingPatient.id, userClinicId)
       if (result.error) {
@@ -167,11 +167,11 @@ export function PatientForm({
 
   const handleToggleClinic = async (clinicId: string, currentStatus: boolean) => {
     if (!id) return;
-    
+
     const newStatus = !currentStatus;
-    
+
     // Optimistic update
-    setLocalLinkedClinics(prev => prev.map(lc => 
+    setLocalLinkedClinics(prev => prev.map(lc =>
       lc.clinic_id === clinicId ? { ...lc, active: newStatus } : lc
     ));
 
@@ -185,7 +185,7 @@ export function PatientForm({
     if (res.error) {
       setErrorMsg(res.error);
       // Revert on error
-      setLocalLinkedClinics(prev => prev.map(lc => 
+      setLocalLinkedClinics(prev => prev.map(lc =>
         lc.clinic_id === clinicId ? { ...lc, active: currentStatus } : lc
       ));
     }
@@ -230,347 +230,345 @@ export function PatientForm({
       />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-12 max-w-4xl bg-card text-card-foreground p-10 rounded-[2.5rem] shadow-2xl shadow-primary/5 border border-border/40 mb-12 translate-y-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-      {/* Seção 1: Identificação */}
-      <section className="space-y-8">
-        <SectionTitle icon={User} title="Identificação do Paciente" />
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
-          <div className="sm:col-span-4">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nome Completo *</label>
-            <input
-              type="text"
-              {...register('name')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="Digite o nome completo"
-            />
-            {errors.name && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.name.message}</p>}
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">CNS (Cartão SUS) *</label>
-            <input
-              type="text"
-              {...register('cns_patient')}
-              onChange={(e) => setValue('cns_patient', maskCNS(e.target.value))}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-mono transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="000.0000.0000.0000"
-            />
-            {errors.cns_patient && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.cns_patient.message}</p>}
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">CPF (Opcional)</label>
-            <input
-              type="text"
-              {...register('cpf')}
-              onChange={(e) => setValue('cpf', maskCPF(e.target.value))}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-mono transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="000.000.000-00"
-            />
-            {errors.cpf && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.cpf.message}</p>}
-          </div>
-
-          <div className="sm:col-span-4">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nome da Mãe</label>
-            <input
-              type="text"
-              {...register('mother_name')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="Nome completo da mãe"
-            />
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nº Prontuário</label>
-            <input
-              type="text"
-              {...register('medical_record_number')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="Ex: 12345"
-            />
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nascimento *</label>
-            <input
-              type="date"
-              {...register('birth_date')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-            />
-            {errors.birth_date && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.birth_date.message}</p>}
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Sexo</label>
-            <div className="relative group/select">
-              <select
-                {...register('gender')}
-                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border appearance-none hover:border-primary/40 focus:bg-background pr-10 shadow-sm"
-              >
-                {GENDER_OPTIONS.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
+        {/* Seção 1: Identificação */}
+        <section className="space-y-8">
+          <SectionTitle icon={User} title="Identificação do Paciente" />
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
+            <div className="sm:col-span-4">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nome Completo *</label>
+              <input
+                type="text"
+                {...register('name')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="Digite o nome completo"
+              />
+              {errors.name && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.name.message}</p>}
             </div>
-          </div>
 
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Raça/Cor</label>
-            <div className="relative group/select">
-              <select
-                {...register('race_color')}
-                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border appearance-none hover:border-primary/40 focus:bg-background pr-10 shadow-sm"
-              >
-                {RACE_OPTIONS.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">CNS (Cartão SUS) *</label>
+              <input
+                type="text"
+                {...register('cns_patient')}
+                onChange={(e) => setValue('cns_patient', maskCNS(e.target.value))}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-mono transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="000.0000.0000.0000"
+              />
+              {errors.cns_patient && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.cns_patient.message}</p>}
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Seção 2: Contato e Endereço */}
-      <section className="space-y-8 pt-4">
-        <SectionTitle icon={MapPin} title="Contato e Endereço" />
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
-          <div className="sm:col-span-3">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Telefone</label>
-            <input
-              type="text"
-              {...register('phone')}
-              onChange={(e) => setValue('phone', maskPhone(e.target.value))}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="(00) 00000-0000"
-            />
-          </div>
-
-          <div className="sm:col-span-3">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">CEP</label>
-            <input
-              type="text"
-              {...register('cep')}
-              onChange={(e) => setValue('cep', maskCEP(e.target.value))}
-              onBlur={async (e) => {
-                const rawCep = e.target.value.replace(/\D/g, '');
-                if (rawCep.length === 8) {
-                  try {
-                    const response = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`);
-                    const data = await response.json();
-                    if (!data.erro) {
-                      setValue('address_street', data.logradouro, { shouldValidate: true });
-                      setValue('address_neighborhood', data.bairro, { shouldValidate: true });
-                      setValue('city', data.localidade, { shouldValidate: true });
-                      setValue('state', data.uf, { shouldValidate: true });
-                      setValue('ibge_code', data.ibge, { shouldValidate: true });
-                    }
-                  } catch (err) {
-                    console.error('Erro ao buscar CEP', err);
-                  }
-                }
-              }}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-mono transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="00000-000"
-            />
-          </div>
-
-          <div className="sm:col-span-4">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Logradouro (Rua/Av)</label>
-            <input
-              type="text"
-              {...register('address_street')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="Rua, Avenida..."
-            />
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Número</label>
-            <input
-              type="text"
-              {...register('address_number')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="123 ou SN"
-            />
-          </div>
-
-          <div className="sm:col-span-3">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Complemento</label>
-            <input
-              type="text"
-              {...register('address_complement')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="Apto, Bloco..."
-            />
-          </div>
-
-          <div className="sm:col-span-3">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Bairro</label>
-            <input
-              type="text"
-              {...register('address_neighborhood')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="Bairro"
-            />
-          </div>
-
-          <div className="sm:col-span-3">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Cidade</label>
-            <input
-              type="text"
-              {...register('city')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm cursor-not-allowed opacity-80"
-              placeholder="Cidade"
-              readOnly
-            />
-            <input type="hidden" {...register('ibge_code')} />
-            <p className="mt-1 text-[10px] text-muted-foreground">O código IBGE é preenchido via CEP.</p>
-          </div>
-
-          <div className="sm:col-span-1">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">UF</label>
-            <input
-              type="text"
-              {...register('state')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all border shadow-sm cursor-not-allowed opacity-80"
-              readOnly
-            />
-            {errors.state && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.state.message}</p>}
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nacionalidade</label>
-            <div className="relative group/select">
-              <select
-                {...register('nationality')}
-                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border appearance-none hover:border-primary/40 focus:bg-background pr-10 shadow-sm"
-              >
-                <option value="010">Brasileiro (Nato)</option>
-                <option value="031">Brasileiro (Naturalizado)</option>
-                <option value="021">Estrangeiro</option>
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">CPF (Opcional)</label>
+              <input
+                type="text"
+                {...register('cpf')}
+                onChange={(e) => setValue('cpf', maskCPF(e.target.value))}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-mono transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="000.000.000-00"
+              />
+              {errors.cpf && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.cpf.message}</p>}
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Seção 3: Configurações do Sistema */}
-      <section className="space-y-8 pt-4">
-        <SectionTitle icon={CreditCard} title="Configurações e Vínculo" />
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
-          {userRole === 'SMS_ADMIN' ? (
-            <div className="sm:col-span-6">
-              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Unidade/Clínica de Atendimento *</label>
+            <div className="sm:col-span-4">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nome da Mãe</label>
+              <input
+                type="text"
+                {...register('mother_name')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="Nome completo da mãe"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nº Prontuário</label>
+              <input
+                type="text"
+                {...register('medical_record_number')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="Ex: 12345"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nascimento *</label>
+              <input
+                type="date"
+                {...register('birth_date')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+              />
+              {errors.birth_date && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.birth_date.message}</p>}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Sexo</label>
               <div className="relative group/select">
                 <select
-                  {...register('clinic_id')}
+                  {...register('gender')}
                   className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border appearance-none hover:border-primary/40 focus:bg-background pr-10 shadow-sm"
                 >
-                  <option value="">Selecione a clínica...</option>
-                  {clinics.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                  {GENDER_OPTIONS.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
               </div>
-              {errors.clinic_id && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.clinic_id.message}</p>}
-
-              {/* Exibição de clínicas vinculadas com toggle individual */}
-              {id && (
-                <div className="mt-6 space-y-4">
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block border-b border-border/40 pb-2">Status por Unidade:</span>
-                  <div className="grid grid-cols-1 gap-3">
-                    {localLinkedClinics.length > 0 ? (
-                      localLinkedClinics.map((lc) => (
-                        <div 
-                          key={lc.clinic_id} 
-                          className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                            lc.active 
-                              ? 'bg-primary/[0.03] border-primary/20 shadow-sm' 
-                              : 'bg-muted/30 border-border/40 opacity-80'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${lc.active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                              <Building className="w-4 h-4" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className={`text-[11px] font-black uppercase tracking-tight ${lc.active ? 'text-primary' : 'text-muted-foreground'}`}>
-                                {lc.name}
-                              </span>
-                              <span className="text-[10px] font-medium text-muted-foreground">
-                                {lc.active ? 'Atendimento Habilitado' : 'Atendimento Suspenso nesta unidade'}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <button
-                            type="button"
-                            onClick={() => handleToggleClinic(lc.clinic_id, lc.active)}
-                            className="relative inline-flex items-center cursor-pointer group"
-                          >
-                            <div className={`w-10 h-5 rounded-full transition-colors duration-200 ease-in-out ${lc.active ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
-                              <div className={`absolute top-[2px] left-[2px] bg-white w-4 h-4 rounded-full shadow-sm transition-transform duration-200 ease-in-out ${lc.active ? 'translate-x-5' : 'translate-x-0'}`} />
-                            </div>
-                          </button>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center p-6 border-2 border-dashed border-border/40 rounded-2xl">
-                        <p className="text-xs text-muted-foreground font-medium italic">Nenhuma unidade vinculada encontrada.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
-          ) : (
-            <div className="sm:col-span-6 space-y-4">
-               {/* Para Clinic User: Mostra apenas o seu status de forma elegante */}
-               {id && localLinkedClinics.map((lc) => (
-                 lc.clinic_id === userClinicId && (
-                   <div 
-                    key={lc.clinic_id}
-                    className={`flex items-center justify-between p-6 rounded-3xl border transition-all ${
-                      lc.active 
-                        ? 'bg-primary/[0.03] border-primary/20 shadow-lg shadow-primary/5' 
-                        : 'bg-muted/30 border-border/40'
-                    }`}
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Raça/Cor</label>
+              <div className="relative group/select">
+                <select
+                  {...register('race_color')}
+                  className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border appearance-none hover:border-primary/40 focus:bg-background pr-10 shadow-sm"
+                >
+                  {RACE_OPTIONS.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Seção 2: Contato e Endereço */}
+        <section className="space-y-8 pt-4">
+          <SectionTitle icon={MapPin} title="Contato e Endereço" />
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
+            <div className="sm:col-span-3">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Telefone</label>
+              <input
+                type="text"
+                {...register('phone')}
+                onChange={(e) => setValue('phone', maskPhone(e.target.value))}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+
+            <div className="sm:col-span-3">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">CEP</label>
+              <input
+                type="text"
+                {...register('cep')}
+                onChange={(e) => setValue('cep', maskCEP(e.target.value))}
+                onBlur={async (e) => {
+                  const rawCep = e.target.value.replace(/\D/g, '');
+                  if (rawCep.length === 8) {
+                    try {
+                      const response = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`);
+                      const data = await response.json();
+                      if (!data.erro) {
+                        setValue('address_street', data.logradouro, { shouldValidate: true });
+                        setValue('address_neighborhood', data.bairro, { shouldValidate: true });
+                        setValue('city', data.localidade, { shouldValidate: true });
+                        setValue('state', data.uf, { shouldValidate: true });
+                        setValue('ibge_code', data.ibge, { shouldValidate: true });
+                      }
+                    } catch (err) {
+                      console.error('Erro ao buscar CEP', err);
+                    }
+                  }
+                }}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-mono transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="00000-000"
+              />
+            </div>
+
+            <div className="sm:col-span-4">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Logradouro (Rua/Av)</label>
+              <input
+                type="text"
+                {...register('address_street')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="Rua, Avenida..."
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Número</label>
+              <input
+                type="text"
+                {...register('address_number')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="123 ou SN"
+              />
+            </div>
+
+            <div className="sm:col-span-3">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Complemento</label>
+              <input
+                type="text"
+                {...register('address_complement')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="Apto, Bloco..."
+              />
+            </div>
+
+            <div className="sm:col-span-3">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Bairro</label>
+              <input
+                type="text"
+                {...register('address_neighborhood')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+                placeholder="Bairro"
+              />
+            </div>
+
+            <div className="sm:col-span-3">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Cidade</label>
+              <input
+                type="text"
+                {...register('city')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm cursor-not-allowed opacity-80"
+                placeholder="Cidade"
+                readOnly
+              />
+              <input type="hidden" {...register('ibge_code')} />
+              <p className="mt-1 text-[10px] text-muted-foreground">O código IBGE é preenchido via CEP.</p>
+            </div>
+
+            <div className="sm:col-span-1">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">UF</label>
+              <input
+                type="text"
+                {...register('state')}
+                className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all border shadow-sm cursor-not-allowed opacity-80"
+                readOnly
+              />
+              {errors.state && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.state.message}</p>}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nacionalidade</label>
+              <div className="relative group/select">
+                <select
+                  {...register('nationality')}
+                  className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border appearance-none hover:border-primary/40 focus:bg-background pr-10 shadow-sm"
+                >
+                  <option value="010">Brasileiro (Nato)</option>
+                  <option value="031">Brasileiro (Naturalizado)</option>
+                  <option value="021">Estrangeiro</option>
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Seção 3: Configurações do Sistema */}
+        <section className="space-y-8 pt-4">
+          <SectionTitle icon={CreditCard} title="Configurações e Vínculo" />
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
+            {userRole === 'SMS_ADMIN' ? (
+              <div className="sm:col-span-6">
+                <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Unidade/Clínica de Atendimento *</label>
+                <div className="relative group/select">
+                  <select
+                    {...register('clinic_id')}
+                    className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border appearance-none hover:border-primary/40 focus:bg-background pr-10 shadow-sm"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-2xl ${lc.active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                        <CheckCircle className="w-6 h-6" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-black uppercase tracking-widest text-foreground">Status do Paciente</span>
-                        <p className="text-xs text-muted-foreground font-medium">
-                          {lc.active 
-                            ? 'Este paciente está ATIVO e pode realizar agendamentos nesta unidade.' 
-                            : 'Este paciente está INATIVO nesta unidade.'}
-                        </p>
-                      </div>
+                    <option value="">Selecione a clínica...</option>
+                    {clinics.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
+                </div>
+                {errors.clinic_id && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.clinic_id.message}</p>}
+
+                {/* Exibição de clínicas vinculadas com toggle individual */}
+                {id && (
+                  <div className="mt-6 space-y-4">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block border-b border-border/40 pb-2">Status por Unidade:</span>
+                    <div className="grid grid-cols-1 gap-3">
+                      {localLinkedClinics.length > 0 ? (
+                        localLinkedClinics.map((lc) => (
+                          <div
+                            key={lc.clinic_id}
+                            className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${lc.active
+                                ? 'bg-primary/[0.03] border-primary/20 shadow-sm'
+                                : 'bg-muted/30 border-border/40 opacity-80'
+                              }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-xl ${lc.active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                                <Building className="w-4 h-4" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className={`text-[11px] font-black uppercase tracking-tight ${lc.active ? 'text-primary' : 'text-muted-foreground'}`}>
+                                  {lc.name}
+                                </span>
+                                <span className="text-[10px] font-medium text-muted-foreground">
+                                  {lc.active ? 'Atendimento Habilitado' : 'Atendimento Suspenso nesta unidade'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleClinic(lc.clinic_id, lc.active)}
+                              className="relative inline-flex items-center cursor-pointer group"
+                            >
+                              <div className={`w-10 h-5 rounded-full transition-colors duration-200 ease-in-out ${lc.active ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+                                <div className={`absolute top-[2px] left-[2px] bg-white w-4 h-4 rounded-full shadow-sm transition-transform duration-200 ease-in-out ${lc.active ? 'translate-x-5' : 'translate-x-0'}`} />
+                              </div>
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center p-6 border-2 border-dashed border-border/40 rounded-2xl">
+                          <p className="text-xs text-muted-foreground font-medium italic">Nenhuma unidade vinculada encontrada.</p>
+                        </div>
+                      )}
                     </div>
-                    
-                    <button
-                      type="button"
-                      onClick={() => handleToggleClinic(lc.clinic_id, lc.active)}
-                      className="relative inline-flex items-center cursor-pointer scale-125"
-                    >
-                      <div className={`w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${lc.active ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
-                        <div className={`absolute top-[2px] left-[2px] bg-white w-5 h-5 rounded-full shadow-md transition-transform duration-200 ease-in-out ${lc.active ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </div>
-                    </button>
-                    <input type="hidden" {...register('active')} />
-                    <input type="hidden" {...register('clinic_id')} />
                   </div>
-                 )
-               ))}
-               {!id && (
-                 <>
-                   <input type="hidden" {...register('clinic_id')} />
-                   <label className="flex items-center space-x-4 bg-muted/30 p-4 rounded-[1.25rem] border border-border/40 w-full cursor-pointer hover:bg-muted/50 transition-all border-dashed hover:border-primary/30 group">
+                )}
+              </div>
+            ) : (
+              <div className="sm:col-span-6 space-y-4">
+                {/* Para Clinic User: Mostra apenas o seu status de forma elegante */}
+                {id && localLinkedClinics.map((lc) => (
+                  lc.clinic_id === userClinicId && (
+                    <div
+                      key={lc.clinic_id}
+                      className={`flex items-center justify-between p-6 rounded-3xl border transition-all ${lc.active
+                          ? 'bg-primary/[0.03] border-primary/20 shadow-lg shadow-primary/5'
+                          : 'bg-muted/30 border-border/40'
+                        }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${lc.active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                          <CheckCircle className="w-6 h-6" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-black uppercase tracking-widest text-foreground">Status do Paciente</span>
+                          <p className="text-xs text-muted-foreground font-medium">
+                            {lc.active
+                              ? 'Este paciente está ATIVO e pode realizar agendamentos nesta unidade.'
+                              : 'Este paciente está INATIVO nesta unidade.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleClinic(lc.clinic_id, lc.active)}
+                        className="relative inline-flex items-center cursor-pointer scale-125"
+                      >
+                        <div className={`w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${lc.active ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
+                          <div className={`absolute top-[2px] left-[2px] bg-white w-5 h-5 rounded-full shadow-md transition-transform duration-200 ease-in-out ${lc.active ? 'translate-x-6' : 'translate-x-0'}`} />
+                        </div>
+                      </button>
+                      <input type="hidden" {...register('active')} />
+                      <input type="hidden" {...register('clinic_id')} />
+                    </div>
+                  )
+                ))}
+                {!id && (
+                  <>
+                    <input type="hidden" {...register('clinic_id')} />
+                    <label className="flex items-center space-x-4 bg-muted/30 p-4 rounded-[1.25rem] border border-border/40 w-full cursor-pointer hover:bg-muted/50 transition-all border-dashed hover:border-primary/30 group">
                       <div className="relative inline-flex items-center cursor-pointer">
                         <input
                           type="checkbox"
@@ -584,195 +582,195 @@ export function PatientForm({
                         <p className="text-[10px] text-muted-foreground leading-tight font-medium">Define se o paciente iniciará como ativo nesta unidade.</p>
                       </div>
                     </label>
-                 </>
-               )}
-            </div>
-          )}
-          </div>
-      </section>
-
-      {/* Seção 4: Token de Validação (Somente Admin) */}
-      {userRole === 'SMS_ADMIN' && id && (
-        <section className="space-y-8 pt-4">
-          <SectionTitle icon={KeyRound} title="Token de Validação Digital" />
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
-            <div className="sm:col-span-6 bg-emerald-500/5 p-6 rounded-[1.25rem] border border-emerald-500/20">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-widest">
-                  Este token deve ser informado ao paciente/responsável para validar as sessões via QR Code.
-                </p>
-                <div className="flex items-center gap-2 bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full border border-amber-500/20">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  <span className="text-[9px] font-black uppercase tracking-tighter">Não compartilhar com a clínica</span>
-                </div>
+                  </>
+                )}
               </div>
-              
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="relative flex-1 min-w-[220px] max-w-[280px]">
-                  <input
-                    type={showToken ? 'text' : 'password'}
-                    value={currentToken}
-                    readOnly
-                    className="block w-full rounded-2xl border-border/60 bg-background px-5 py-3.5 text-2xl font-mono font-black tracking-[0.5em] text-center border shadow-sm select-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowToken(!showToken)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
-                    title={showToken ? 'Ocultar Token' : 'Revelar Token'}
-                  >
-                    {showToken ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={isResettingToken}
-                    onClick={async () => {
-                      if (!confirm('Tem certeza? O token atual será invalidado e um novo será gerado. O paciente/responsável precisará ser informado do novo token.')) return
-                      setIsResettingToken(true)
-                      try {
-                        const result = await resetPatientTokenAction(id!)
-                        if (result?.error) {
-                          setErrorMsg(result.error)
-                        } else if (result?.token) {
-                          setCurrentToken(result.token)
-                          setShowToken(true)
-                        }
-                      } finally {
-                        setIsResettingToken(false)
-                      }
-                    }}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <RotateCw className={`w-4 h-4 ${isResettingToken ? 'animate-spin' : ''}`} />
-                    {isResettingToken ? 'Gerando...' : 'Reset Token'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const phone = watch('phone')?.replace(/\D/g, '')
-                      const name = watch('name')
-                      if (!phone || phone.length < 10) {
-                        setErrorMsg('O paciente não possui um telefone válido cadastrado para envio.')
-                        return
-                      }
-                      const message = `Olá, *${name}*! Esta é uma mensagem da *Regulação da SMS (SisTEA)*. \n\nO seu token de validação digital para confirmar seus atendimentos via QR Code é: *${currentToken}* \n\nEste código é pessoal e deve ser utilizado *APENAS por você* no momento da assinatura digital. \n\n⚠️ *ATENÇÃO:* Não forneça este código para funcionários da clínica. Guarde-o com segurança para garantir o registro correto das suas sessões.`
-                      window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank')
-                    }}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 text-white px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
-                  >
-                    <Phone className="w-4 h-4" />
-                    Enviar WhatsApp
-                  </button>
-                </div>
-              </div>
-              <p className="mt-4 text-[9px] text-muted-foreground font-medium italic">
-                * O token é exigido para que o paciente assine o atendimento no celular do profissional.
-              </p>
-            </div>
+            )}
           </div>
         </section>
-      )}
 
-      <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-4 border-t border-border/30 pt-10 mt-12">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="w-full sm:w-auto rounded-2xl border border-border bg-background px-8 py-3.5 text-sm font-black text-muted-foreground/70 shadow-sm hover:bg-muted hover:text-foreground transition-all active:scale-95 uppercase tracking-widest border-dashed hover:border-solid"
-        >
-          Descartar
-        </button>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="w-full sm:w-auto inline-flex justify-center items-center rounded-2xl bg-primary px-12 py-3.5 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:opacity-50 transition-all active:scale-95 uppercase tracking-widest group"
-        >
-          {isPending ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              PROCESSANDO...
-            </span>
-          ) : (
-            <>
-              {id ? 'Atualizar Cadastro' : 'Salvar Cadastro'}
-              <CheckCircle className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Modal de Vínculo de Paciente Existente */}
-      {showLinkModal && existingPatient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-card w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-border p-8 animate-in zoom-in-95 duration-300">
-            <div className="flex items-center gap-4 text-amber-500 mb-6">
-              <div className="p-3 rounded-2xl bg-amber-500/10">
-                <CreditCard className="w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-tight">Paciente já Cadastrado</h3>
-                <p className="text-sm text-muted-foreground font-medium">O CNS informado já existe no sistema.</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 bg-muted/30 p-6 rounded-3xl border border-border/40 mb-8">
-              <div>
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome do Paciente</span>
-                <p className="font-bold text-foreground">{existingPatient.name}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nascimento</span>
-                  <p className="font-bold text-foreground">
-                    {new Date(existingPatient.birth_date).toLocaleDateString('pt-BR')}
+        {/* Seção 4: Token de Validação (Somente Admin) */}
+        {userRole === 'SMS_ADMIN' && id && (
+          <section className="space-y-8 pt-4">
+            <SectionTitle icon={KeyRound} title="Token de Validação Digital" />
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
+              <div className="sm:col-span-6 bg-emerald-500/5 p-6 rounded-[1.25rem] border border-emerald-500/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-widest">
+                    Este token deve ser informado ao paciente/responsável para validar as sessões via QR Code.
                   </p>
+                  <div className="flex items-center gap-2 bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full border border-amber-500/20">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="text-[9px] font-black uppercase tracking-tighter">Não compartilhar com a clínica</span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mãe</span>
-                  <p className="font-bold text-foreground truncate">{existingPatient.mother_name || 'Não informado'}</p>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="relative flex-1 min-w-[220px] max-w-[280px]">
+                    <input
+                      type={showToken ? 'text' : 'password'}
+                      value={currentToken}
+                      readOnly
+                      className="block w-full rounded-2xl border-border/60 bg-background px-5 py-3.5 text-2xl font-mono font-black tracking-[0.5em] text-center border shadow-sm select-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowToken(!showToken)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                      title={showToken ? 'Ocultar Token' : 'Revelar Token'}
+                    >
+                      {showToken ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={isResettingToken}
+                      onClick={async () => {
+                        if (!confirm('Tem certeza? O token atual será invalidado e um novo será gerado. O paciente/responsável precisará ser informado do novo token.')) return
+                        setIsResettingToken(true)
+                        try {
+                          const result = await resetPatientTokenAction(id!)
+                          if (result?.error) {
+                            setErrorMsg(result.error)
+                          } else if (result?.token) {
+                            setCurrentToken(result.token)
+                            setShowToken(true)
+                          }
+                        } finally {
+                          setIsResettingToken(false)
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      <RotateCw className={`w-4 h-4 ${isResettingToken ? 'animate-spin' : ''}`} />
+                      {isResettingToken ? 'Gerando...' : 'Reset Token'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const phone = watch('phone')?.replace(/\D/g, '')
+                        const name = watch('name')
+                        if (!phone || phone.length < 10) {
+                          setErrorMsg('O paciente não possui um telefone válido cadastrado para envio.')
+                          return
+                        }
+                        const message = `Olá, *${name}*! Esta é uma mensagem da *Central de Regulação da SMS (SisTEA)*. \n\nO seu token de validação digital para confirmar seus atendimentos via QR Code é: *${currentToken}* \n\nEste código é pessoal e deve ser utilizado *APENAS por você* no momento da assinatura digital. \n\n⚠️ *ATENÇÃO:* Não forneça este código para funcionários da clínica. Guarde-o com segurança para garantir o registro correto das suas sessões.`
+                        window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                      }}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 text-white px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                    >
+                      <Phone className="w-4 h-4" />
+                      Enviar WhatsApp
+                    </button>
+                  </div>
                 </div>
+                <p className="mt-4 text-[9px] text-muted-foreground font-medium italic">
+                  * O token é exigido para que o paciente assine o atendimento no celular do profissional.
+                </p>
               </div>
             </div>
+          </section>
+        )}
 
-            <p className="text-sm text-muted-foreground mb-8 text-center px-4">
-              Este paciente está cadastrado em outra unidade. Deseja <strong>vincular</strong> ele também à sua clínica?
-            </p>
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-4 border-t border-border/30 pt-10 mt-12">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="w-full sm:w-auto rounded-2xl border border-border bg-background px-8 py-3.5 text-sm font-black text-muted-foreground/70 shadow-sm hover:bg-muted hover:text-foreground transition-all active:scale-95 uppercase tracking-widest border-dashed hover:border-solid"
+          >
+            Descartar
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="w-full sm:w-auto inline-flex justify-center items-center rounded-2xl bg-primary px-12 py-3.5 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:opacity-50 transition-all active:scale-95 uppercase tracking-widest group"
+          >
+            {isPending ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                PROCESSANDO...
+              </span>
+            ) : (
+              <>
+                {id ? 'Atualizar Cadastro' : 'Salvar Cadastro'}
+                <CheckCircle className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
+              </>
+            )}
+          </button>
+        </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowLinkModal(false)
-                  setValue('cns_patient', '')
-                }}
-                className="flex-1 rounded-2xl border border-border bg-background px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={isLinking}
-                onClick={handleLinkPatient}
-                className="flex-1 rounded-2xl bg-primary px-6 py-4 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isLinking ? (
-                  <RotateCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="w-4 h-4" />
-                )}
-                Sim, Vincular
-              </button>
+        {/* Modal de Vínculo de Paciente Existente */}
+        {showLinkModal && existingPatient && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-card w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-border p-8 animate-in zoom-in-95 duration-300">
+              <div className="flex items-center gap-4 text-amber-500 mb-6">
+                <div className="p-3 rounded-2xl bg-amber-500/10">
+                  <CreditCard className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-tight">Paciente já Cadastrado</h3>
+                  <p className="text-sm text-muted-foreground font-medium">O CNS informado já existe no sistema.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4 bg-muted/30 p-6 rounded-3xl border border-border/40 mb-8">
+                <div>
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome do Paciente</span>
+                  <p className="font-bold text-foreground">{existingPatient.name}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nascimento</span>
+                    <p className="font-bold text-foreground">
+                      {new Date(existingPatient.birth_date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mãe</span>
+                    <p className="font-bold text-foreground truncate">{existingPatient.mother_name || 'Não informado'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-8 text-center px-4">
+                Este paciente está cadastrado em outra unidade. Deseja <strong>vincular</strong> ele também à sua clínica?
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLinkModal(false)
+                    setValue('cns_patient', '')
+                  }}
+                  className="flex-1 rounded-2xl border border-border bg-background px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={isLinking}
+                  onClick={handleLinkPatient}
+                  className="flex-1 rounded-2xl bg-primary px-6 py-4 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLinking ? (
+                    <RotateCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                  Sim, Vincular
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </form>
+        )}
+      </form>
     </>
   )
 }
