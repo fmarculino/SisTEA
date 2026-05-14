@@ -14,6 +14,23 @@ const sanitize = (str: string | null | undefined) => {
   return (str || '').replace(/\D/g, '');
 };
 
+const sanitizePhone = (str: string | null | undefined) => {
+  return (str || '').replace(/\D/g, '').substring(0, 11);
+};
+
+const sanitizeCid = (str: string | null | undefined) => {
+  return (str || '').replace(/[\s.-]/g, '').toUpperCase().substring(0, 4);
+};
+
+const normalizeText = (str: string | null | undefined) => {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .toUpperCase()
+    .trim();
+};
+
 const mapRaceColor = (race: string | null | undefined): string => {
   const r = (race || '').toLowerCase();
   if (r.includes('branc')) return '01';
@@ -173,26 +190,21 @@ export class BpaExportService {
       const sequencial = (index % 20) + 1;
 
       if (att.procedures.bpa_type === 'BPA_C') {
-        // BPA-C (Consolidado) - Geralmente o sistema BPA aceita linhas de tamanho variável mas o padrão é fixo
+        // BPA-C (Consolidado)
         const line = 
           '02' +                                  // 1-2
           padLeft(clinic.cnes, 7) +               // 3-9
           compYYYYMM +                            // 10-15
-          padRight(att.professional_cbo, 6) +     // 16-21
-          padLeft(procCode, 10) +                 // 22-31
-          padLeft(0, 3) +                         // 32-34 (Idade - não aplicável no C)
-          padLeft(att.quantity, 6);               // 35-40
-
-        lines.push(padRight(line, 126)); 
-
+          padLeft(procCode, 10) +                 // 16-25
+          padLeft(att.quantity, 6);               // 26-31
+        
+        lines.push(padRight(line, 350));
       } else {
-        // BPA-I (Individualizado) - 350 caracteres
+        // BPA-I (Individualizado) - 350 caracteres fixos
         const attDate = sanitize(att.attendance_date); // YYYYMMDD
         const birthDate = sanitize(att.patients.birth_date); // YYYYMMDD
         
-        let genderCode = 'I';
-        if (att.patients.gender === 'Masculino') genderCode = 'M';
-        if (att.patients.gender === 'Feminino') genderCode = 'F';
+        const genderCode = att.patients.gender === 'Feminino' ? 'F' : 'M';
 
         // Cálculo simples de idade
         const age = birthDate ? Math.floor((new Date().getTime() - new Date(att.patients.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
@@ -210,24 +222,26 @@ export class BpaExportService {
           padLeft(att.patients.cns_patient, 15) + // 60-74
           genderCode +                            // 75
           padLeft(att.patients.ibge_code, 6) +    // 76-81
-          padRight(sanitize(att.cid || 'F840'), 4) + // 82-85
+          padRight(sanitizeCid(att.cid || 'F840'), 4) + // 82-85
           padLeft(age, 3) +                       // 86-88
           padLeft(att.quantity, 6) +              // 89-94
           padLeft(att.attendance_character || '01', 2) + // 95-96
           padRight('', 13) +                      // 97-109 (Autorização)
-          padRight('BPA', 3) +                    // 110-112 (Fixo/Origem)
-          padRight(att.patients.name, 30) +       // 113-142 (Nome)
+          'BPA' +                                 // 110-112 (Origem)
+          padRight(normalizeText(att.patients.name), 30) + // 113-142 (Nome)
           birthDate +                             // 143-150 (Data Nasc)
           mapRaceColor(att.patients.race_color) + // 151-152 (Raça)
           padLeft(att.patients.ethnicity || '', 4) + // 153-156 (Etnia)
           padLeft(att.patients.nationality || '010', 3) + // 157-159 (Nacionalidade)
-          padLeft(sanitize(att.patients.cep), 8) + // 160-167 (CEP)
-          padLeft(att.patients.ibge_code, 6) +    // 168-173 (Município)
-          padRight(att.patients.address_street, 30) + // 174-203 (Logradouro)
-          padRight(att.patients.address_number, 5) +  // 204-208 (Número)
-          padRight(att.patients.address_complement, 10) + // 209-218 (Complemento)
-          padRight(att.patients.address_neighborhood, 15) + // 219-233 (Bairro)
-          padRight(att.patients.phone, 11);       // 234-244 (Telefone)
+          padLeft(att.patients.ibge_code, 6) +    // 160-165 (Município Residência)
+          padRight('', 26) +                      // 166-191 (RESERVA / BRANCOS)
+          padLeft(sanitize(att.patients.cep), 8) + // 192-199 (CEP)
+          '000' +                                 // 200-202 (Cód. Logradouro - Padrão 000)
+          padRight(normalizeText(att.patients.address_street), 30) + // 203-232 (Endereço)
+          padRight(normalizeText(att.patients.address_complement), 10) + // 233-242 (Complemento)
+          padRight(normalizeText(att.patients.address_number), 5) + // 243-247 (Número)
+          padRight(normalizeText(att.patients.address_neighborhood), 30) + // 248-277 (Bairro)
+          padRight(sanitizePhone(att.patients.phone), 11); // 278-288 (Telefone)
 
         lines.push(padRight(line, 350)); 
       }
