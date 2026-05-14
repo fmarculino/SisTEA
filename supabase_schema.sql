@@ -12,6 +12,7 @@ CREATE TABLE public.clinics (
     phone TEXT,
     email TEXT,
     active BOOLEAN DEFAULT true,
+    orgao_emissor TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -51,6 +52,13 @@ CREATE TABLE public.patients (
     gender TEXT NOT NULL DEFAULT 'Não Informado',
     phone TEXT,
     address TEXT,
+    address_street TEXT,
+    address_number TEXT,
+    address_complement TEXT,
+    address_neighborhood TEXT,
+    ibge_code TEXT,
+    nationality TEXT DEFAULT '010',
+    ethnicity TEXT,
     city TEXT,
     state TEXT,
     cep TEXT,
@@ -69,6 +77,7 @@ CREATE TABLE public.procedures (
     valor_sus NUMERIC(10, 2) NOT NULL DEFAULT 0,
     valor_rp NUMERIC(10, 2) NOT NULL DEFAULT 0,
     valor_total NUMERIC(10, 2) GENERATED ALWAYS AS (valor_sus + valor_rp) STORED,
+    bpa_type TEXT DEFAULT 'NAO_APLICA' CHECK (bpa_type IN ('BPA_I', 'BPA_C', 'AMBOS', 'NAO_APLICA')),
     active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -87,9 +96,13 @@ CREATE TABLE public.attendances (
     auth_number TEXT,
     month_year TEXT NOT NULL, -- Exemplo: '03/2026' ou '2026-03'
     status TEXT NOT NULL CHECK (status IN ('Realizada', 'Pendente', 'Glosado')) DEFAULT 'Pendente',
+    quantity INTEGER DEFAULT 1,
+    attendance_character TEXT DEFAULT '01',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     CONSTRAINT valid_time CHECK (start_time < end_time)
 );
+
+CREATE INDEX IF NOT EXISTS idx_attendances_export ON public.attendances (clinic_id, month_year, status);
 
 --=========================================
 -- ROW LEVEL SECURITY (RLS) POLICIES

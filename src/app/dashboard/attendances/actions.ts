@@ -34,6 +34,9 @@ async function checkCompetenceLock(supabase: any, clinic_id: string, attendance_
     .eq('year', year)
     .maybeSingle()
 
+  if (competence?.status === 'ENVIADA_MS') {
+    return { error: 'HARD LOCK: A competência desta data foi enviada ao Ministério da Saúde. Nenhuma alteração é permitida sob nenhuma circunstância.' }
+  }
   if (competence?.status === 'FECHADA') {
     return { error: 'A competência para a data informada está encerrada e não permite alterações. Solicite a reabertura ao administrador.' }
   }
@@ -122,17 +125,19 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   const realizedSessions = sessions?.filter(s => s.status === 'Realizada').length || 0
   const finalValue = realizedSessions * baseValue
 
+  const [year, month] = rawAttendanceData.attendance_date.split('-')
+  const month_year = `${month}/${year}`
+
   const attendanceData = {
     ...rawAttendanceData,
     value_applied: finalValue,
     authorization_date: rawAttendanceData.authorization_date || null,
+    month_year,
   }
-
-
 
   const { data: attendance, error } = await supabase.from('attendances').insert({
     ...attendanceData,
-    status: 'Pendente'
+    status: realizedSessions > 0 ? 'Realizada' : 'Pendente'
   }).select().single()
 
   if (error) return { error: error.message }
@@ -246,12 +251,12 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     
     for (const s of dbSessions) {
       if (!incomingIds.has(s.id)) {
-        // Rule 1: Clinic User cannot delete any saved session
-        if (profile?.role === 'CLINIC_USER') {
-          return { error: 'Clínicas não têm permissão para remover frequências já salvas. Entre em contato com a administração.' };
+        // Rule 1: Clinic User can only delete sessions that are "Pendente" and NOT validated
+        if (profile?.role === 'CLINIC_USER' && (s.status !== 'Pendente' || s.validated_at)) {
+          return { error: 'Clínicas não têm permissão para remover frequências que já foram realizadas ou validadas.' };
         }
-        // Rule 2: Even Admin cannot delete a session validated by patient (digital signature)
-        if (s.validated_at) {
+        // Rule 2: Admin cannot delete a session validated by patient (digital signature)
+        if (profile?.role === 'SMS_ADMIN' && s.validated_at) {
           return { error: 'Não é possível excluir uma frequência que já foi validada pelo paciente via QR Code. Você pode alterar seu status para "Glosado" ou "Pendente", mas a frequência deve ser mantida para fins de auditoria.' };
         }
       }
@@ -322,10 +327,15 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
 
 
 
+  const [year, month] = rawAttendanceData.attendance_date.split('-')
+  const month_year = `${month}/${year}`
+
   const attendanceData = {
     ...rawAttendanceData,
     value_applied: finalValue,
     authorization_date: rawAttendanceData.authorization_date || null,
+    status: realizedSessions > 0 ? 'Realizada' : 'Pendente',
+    month_year,
   }
 
   const { error } = await supabase.from('attendances').update({
@@ -793,7 +803,11 @@ export async function validateSessionAction(data: {
 
   await supabase
     .from('attendances')
-    .update({ value_applied: realizedCount * unitValue })
+    .update({ 
+      value_applied: realizedCount * unitValue,
+      quantity: realizedCount,
+      status: realizedCount > 0 ? 'Realizada' : 'Pendente'
+    })
     .eq('id', session.attendance_id)
 
   // Log audit

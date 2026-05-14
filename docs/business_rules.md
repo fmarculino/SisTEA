@@ -69,4 +69,13 @@ Este documento descreve as regras de integridade e validação implementadas no 
 
 ---
 
-*Última atualização: 13/05/2026*
+## 6. Governança Regulatória e Faturamento
+
+### BR-011: Automação de CBO e Persistência de Dados
+*   **Regra**: No ato do preenchimento da guia de atendimento, o sistema deve derivar automaticamente o CBO (Classificação Brasileira de Ocupações) através da interseção entre a especialidade do procedimento e as especialidades do profissional executor.
+*   **Aplicação**: Auto-injeção via frontend e persistência obrigatória no campo `attendances.professional_cbo`.
+*   **Objetivo**: Garantir que o faturamento BPA siga rigorosamente as regras do DATASUS e que o registro histórico do CBO seja imutável para auditorias futuras, independente de mudanças no cadastro do profissional.
+
+---
+
+*Última atualização: 14/05/2026*

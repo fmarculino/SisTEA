@@ -70,6 +70,7 @@ export default async function AuditPage({
         { value: 'attendance_sessions', label: 'Sessões/Frequências' },
         { value: 'users', label: 'Usuários' },
         { value: 'clinics', label: 'Clínicas' },
+        { value: 'competences', label: 'Competências' },
       ],
     },
     {

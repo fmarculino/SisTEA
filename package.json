@@ -1,6 +1,6 @@
 {
   "name": "sistea",
-  "version": "0.9.3-beta",
+  "version": "0.9.5-beta",
   "private": true,
   "scripts": {
     "dev": "next dev",

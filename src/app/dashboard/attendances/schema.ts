@@ -27,8 +27,10 @@ export const attendanceSchema = z.object({
   authorized_quantity: z.coerce.number().min(1, 'Quantidade deve ser maior que zero').default(20),
   cid: z.string().optional().nullable(),
   attendance_character: z.string().optional().nullable(),
+  quantity: z.coerce.number().default(1).optional().nullable(),
   
   value_applied: z.coerce.number().min(0, 'Valor não pode ser negativo'),
+  professional_cbo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   
   sessions: z.array(attendanceSessionSchema).default([]),

@@ -65,6 +65,11 @@ export default async function NewAttendancePage() {
     const specialtyIds = (p.professional_specialties as any[])?.map(
       (ps: any) => ps.specialty_id
     ).filter(Boolean)
+
+    const specialtiesFull = (p.professional_specialties as any[])?.map((ps: any) => ({
+      id: ps.specialty_id,
+      cbo: ps.specialties?.cbo
+    })).filter((s: any) => s.id)
     
     return {
       id: p.id,
@@ -73,6 +78,7 @@ export default async function NewAttendancePage() {
       cbo: cbos?.length > 0 ? cbos[0] : '',
       professional_clinics: p.professional_clinics,
       specialty_ids: specialtyIds,
+      specialties_full: specialtiesFull,
       specialty: specialtyNames?.length > 0 ? specialtyNames.join(', ') : 'Sem especialidade'
     }
   })

@@ -38,6 +38,7 @@ export function ProcedureForm({
       description: initialData?.description || '',
       valor_sus: initialData?.valor_sus || 0,
       valor_rp: initialData?.valor_rp || 0,
+      bpa_type: initialData?.bpa_type || 'NAO_APLICA',
       active: initialData?.active ?? true,
       specialty_ids: initialData?.specialty_ids || [],
     },
@@ -58,6 +59,7 @@ export function ProcedureForm({
   useEffect(() => {
     if (hasNoCode) {
       setValue('code', '', { shouldValidate: true })
+      setValue('bpa_type', 'NAO_APLICA', { shouldValidate: true })
     }
   }, [hasNoCode, setValue])
 
@@ -188,6 +190,22 @@ export function ProcedureForm({
             )}
           />
           {errors.valor_rp && <p className="mt-1 text-sm text-destructive">{errors.valor_rp.message}</p>}
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium text-foreground mb-1">Instrumento de Registro (BPA)</label>
+          <select
+            {...register('bpa_type')}
+            disabled={hasNoCode}
+            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background disabled:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="NAO_APLICA">Não se Aplica (Não exportar)</option>
+            <option value="BPA_I">BPA-I (Individualizado)</option>
+            <option value="BPA_C">BPA-C (Consolidado)</option>
+            <option value="AMBOS">Ambos</option>
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">Define se este procedimento será incluído no arquivo de exportação do DATASUS.</p>
+          {errors.bpa_type && <p className="mt-1 text-sm text-destructive">{errors.bpa_type.message}</p>}
         </div>
 
         <div className="sm:col-span-2 bg-accent/10 p-4 rounded-lg border border-dashed border-accent">

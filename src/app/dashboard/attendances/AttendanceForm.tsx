@@ -22,7 +22,8 @@ export function AttendanceForm({
   userClinicId,
   userRole,
   clinics,
-  systemTimezone
+  systemTimezone,
+  competenceStatus
 }: { 
   initialData?: Partial<AttendanceFormData>; 
   id?: string;
@@ -33,6 +34,7 @@ export function AttendanceForm({
   userRole: string;
   clinics?: any[];
   systemTimezone: string;
+  competenceStatus?: string;
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
@@ -64,8 +66,10 @@ export function AttendanceForm({
       authorization_date: initialData?.authorization_date || '',
       authorized_quantity: initialData?.authorized_quantity || 20,
       cid: initialData?.cid || '',
-      attendance_character: initialData?.attendance_character || 'Eletivo',
+      attendance_character: initialData?.attendance_character || '01',
+      quantity: initialData?.quantity ?? 1,
       value_applied: initialData?.value_applied || 0,
+      professional_cbo: initialData?.professional_cbo || '',
       notes: initialData?.notes || '',
       sessions: initialData?.sessions || [],
     },
@@ -93,7 +97,8 @@ export function AttendanceForm({
   const authorizedQuantity = watch('authorized_quantity')
   const sessions = watch('sessions') || []
   const hasValidatedSession = sessions.some(s => s.status === 'Realizada' || s.status === 'Glosado');
-  const isLocked = userRole === 'CLINIC_USER' && hasValidatedSession;
+  const isCompetenceLocked = competenceStatus === 'FECHADA' || competenceStatus === 'ENVIADA_MS';
+  const isHeaderLocked = isCompetenceLocked || (userRole === 'CLINIC_USER' && hasValidatedSession);
 
   // Filter procedures based on professional specialties
   const filteredProcedures = selectedProfessionalId 
@@ -120,17 +125,45 @@ export function AttendanceForm({
     }
   }, [selectedProfessionalId, filteredProcedures, selectedProcedureId, setValue])
 
-  // Calculate value based on realized sessions
+  // Calculate value and quantity based on realized sessions
   useEffect(() => {
-    if (selectedProcedureId && sessions) {
-      const proc = procedures.find((p) => p.id === selectedProcedureId)
-      if (proc) {
-        const realizedCount = sessions.filter(s => s.status === 'Realizada').length
-        const totalValue = realizedCount * Number(proc.valor_total || 0)
-        setValue('value_applied', totalValue)
+    if (sessions) {
+      const realizedCount = sessions.filter(s => s.status === 'Realizada').length
+      setValue('quantity', realizedCount, { shouldValidate: true })
+
+      if (selectedProcedureId) {
+        const proc = procedures.find((p) => p.id === selectedProcedureId)
+        if (proc) {
+          const totalValue = realizedCount * Number(proc.valor_total || 0)
+          setValue('value_applied', totalValue)
+        }
       }
     }
   }, [selectedProcedureId, sessions, procedures, setValue])
+
+  // AUTO-POPULATE CBO based on Procedure Specialty Intersection
+  useEffect(() => {
+    if (selectedProcedureId && selectedProfessionalId) {
+      const professional = professionals.find(p => p.id === selectedProfessionalId)
+      const procedure = procedures.find(p => p.id === selectedProcedureId)
+      
+      if (professional && procedure) {
+        // Find the specialty that both share
+        // A procedure can belong to multiple specialties, but usually one matches the professional
+        const commonSpecialtyId = procedure.specialty_ids?.find((id: string) => 
+          professional.specialty_ids?.includes(id)
+        )
+        
+        if (commonSpecialtyId) {
+          // Find the CBO for this specialty from the professional's data
+          const specialtyInfo = professional.specialties_full?.find((s: any) => s.id === commonSpecialtyId)
+          if (specialtyInfo?.cbo) {
+            setValue('professional_cbo', specialtyInfo.cbo, { shouldDirty: true })
+          }
+        }
+      }
+    }
+  }, [selectedProcedureId, selectedProfessionalId, professionals, procedures, setValue])
 
   const onSubmit = async (data: AttendanceFormData) => {
     setIsPending(true)
@@ -287,6 +320,24 @@ export function AttendanceForm({
       />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-8 rounded-2xl shadow-xl border border-border/40 mb-10">
 
+      {(competenceStatus === 'FECHADA' || competenceStatus === 'ENVIADA_MS') && (
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-start gap-3">
+          <div className="shrink-0 mt-0.5 text-rose-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-rose-600 uppercase tracking-widest mb-1">
+              {competenceStatus === 'ENVIADA_MS' ? 'Competência com Hard Lock' : 'Competência Encerrada'}
+            </h4>
+            <p className="text-xs text-rose-500/80 font-medium leading-relaxed">
+              {competenceStatus === 'ENVIADA_MS' 
+                ? 'Este atendimento pertence a uma competência que já foi processada e enviada ao Ministério da Saúde. Nenhuma alteração é possível sob qualquer circunstância.' 
+                : 'Este atendimento pertence a uma competência que já foi fechada. Para modificá-lo, a competência deve ser reaberta pelo administrador do sistema.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Validation Errors Debug List */}
       {Object.keys(errors).length > 0 && (
         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-sm mb-4">
@@ -322,8 +373,8 @@ export function AttendanceForm({
             <label className="block text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2">Unidade de Saúde (Clínica)</label>
             <select
               {...register('clinic_id')}
-              disabled={isLocked}
-              className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background/50 transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+              disabled={isHeaderLocked}
+              className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background/50 transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
             >
               <option value="">Selecione a clínica responsável...</option>
               {clinics?.map((c) => (
@@ -350,7 +401,7 @@ export function AttendanceForm({
                 options={filteredPatients}
                 value={field.value}
                 onChange={field.onChange}
-                disabled={isLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
+                disabled={isHeaderLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
                 placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
                   ? 'Selecione a clínica primeiro' 
                   : 'Selecione um paciente...'}
@@ -374,7 +425,7 @@ export function AttendanceForm({
                 }))}
                 value={field.value}
                 onChange={field.onChange}
-                disabled={isLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
+                disabled={isHeaderLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
                 placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
                   ? 'Selecione a clínica primeiro' 
                   : 'Selecione um profissional...'}
@@ -384,8 +435,7 @@ export function AttendanceForm({
           />
           {errors.professional_id && <p className="mt-1 text-sm text-rose-500">{errors.professional_id.message}</p>}
         </div>
-
-        <div className="sm:col-span-2 pb-2 border-b border-border/30">
+        <div className="sm:col-span-1">
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Procedimento / Serviço *</label>
           <Controller
             control={control}
@@ -399,8 +449,8 @@ export function AttendanceForm({
                 }))}
                 value={field.value}
                 onChange={field.onChange}
-                disabled={isLocked || !selectedProfessionalId}
-                placeholder={!selectedProfessionalId ? "Selecione primeiro o profissional de saúde..." : "Escolha o procedimento realizado..."}
+                disabled={isHeaderLocked || !selectedProfessionalId}
+                placeholder={!selectedProfessionalId ? "Selecione primeiro o profissional..." : "Escolha o procedimento..."}
                 className="mt-1"
               />
             )}
@@ -409,12 +459,26 @@ export function AttendanceForm({
         </div>
 
         <div className="sm:col-span-1">
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">CBO de Atuação (Automático)</label>
+          <div className="relative group">
+            <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
+            <input
+              {...register('professional_cbo')}
+              readOnly
+              className="mt-1 block w-full rounded-xl border-border/60 shadow-sm sm:text-sm pl-10 pr-4 py-2 border bg-muted/30 font-bold text-foreground cursor-not-allowed transition-all"
+              placeholder="CBO Automático..."
+            />
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">O CBO é identificado automaticamente com base no procedimento e profissional.</p>
+        </div>
+
+        <div className="sm:col-span-1">
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data da Guia/Atendimento *</label>
           <input
             type="date"
             {...register('attendance_date')}
-            readOnly={isLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+            readOnly={isHeaderLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
           {errors.attendance_date && <p className="mt-1 text-sm text-rose-500">{errors.attendance_date.message}</p>}
         </div>
@@ -425,8 +489,8 @@ export function AttendanceForm({
             type="text"
             placeholder="Ex: 12345678"
             {...register('auth_number')}
-            readOnly={isLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+            readOnly={isHeaderLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
         </div>
 
@@ -435,8 +499,8 @@ export function AttendanceForm({
           <input
             type="date"
             {...register('authorization_date')}
-            readOnly={isLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+            readOnly={isHeaderLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
         </div>
 
@@ -445,8 +509,8 @@ export function AttendanceForm({
           <input
             type="number"
             {...register('authorized_quantity', { valueAsNumber: true })}
-            readOnly={isLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+            readOnly={isHeaderLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
         </div>
 
@@ -456,8 +520,8 @@ export function AttendanceForm({
             type="text"
             placeholder="Ex: F84.0"
             {...register('cid')}
-            readOnly={isLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+            readOnly={isHeaderLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
         </div>
 
@@ -465,12 +529,27 @@ export function AttendanceForm({
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Caráter de Atendimento</label>
           <select
              {...register('attendance_character')}
-             disabled={isLocked}
-             className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all ${isLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+             disabled={isHeaderLocked}
+             className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           >
-            <option value="Eletivo">Eletivo</option>
-            <option value="Urgência">Urgência</option>
+            <option value="01">01 - Eletivo</option>
+            <option value="02">02 - Urgência</option>
+            <option value="03">03 - Acidente no local de trabalho</option>
+            <option value="04">04 - Acidente no trajeto do trabalho</option>
+            <option value="05">05 - Outros tipos de acidente de trânsito</option>
+            <option value="06">06 - Outros tipos de lesões/envenenamentos</option>
           </select>
+        </div>
+
+        <div className="sm:col-span-1">
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Qtd. Produzida (BPA)</label>
+          <input
+            type="number"
+            {...register('quantity', { valueAsNumber: true })}
+            readOnly={true}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-muted cursor-not-allowed opacity-70 transition-all`}
+            title="Calculado automaticamente com base nas sessões realizadas"
+          />
         </div>
 
         <div className="sm:col-span-2 bg-primary/5 dark:bg-primary/10 p-6 rounded-2xl border border-primary/10 dark:border-primary/20">
@@ -507,7 +586,7 @@ export function AttendanceForm({
           </div>
           <button
             type="button"
-            disabled={sessionFields.length >= authorizedQuantity}
+            disabled={sessionFields.length >= authorizedQuantity || isCompetenceLocked}
             onClick={() => append({ session_date: new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(new Date()), start_time: '08:00', end_time: '08:50', status: userRole === 'CLINIC_USER' ? 'Pendente' : 'Realizada' })}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
           >
@@ -529,9 +608,9 @@ export function AttendanceForm({
                 <input
                   type="date"
                   {...register(`sessions.${index}.session_date` as const)}
-                  readOnly={userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado')}
+                  readOnly={isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))}
                   className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
-                    userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado') ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                    (isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
                   }`}
                 />
               </div>
@@ -547,9 +626,9 @@ export function AttendanceForm({
                       }
                     }
                   })}
-                  readOnly={userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado')}
+                  readOnly={isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))}
                   className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
-                    userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado') ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                    (isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
                   }`}
                 />
               </div>
@@ -558,9 +637,9 @@ export function AttendanceForm({
                 <input
                   type="time"
                   {...register(`sessions.${index}.end_time` as const)}
-                  readOnly={userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado')}
+                  readOnly={isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))}
                   className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
-                    userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado') ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                    (isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
                   }`}
                 />
               </div>
@@ -570,6 +649,7 @@ export function AttendanceForm({
                   <div className="relative group/audit">
                     <select
                       {...register(`sessions.${index}.status` as const)}
+                      disabled={isCompetenceLocked}
                       className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
                         watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 
                         watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 font-bold border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
@@ -648,6 +728,7 @@ export function AttendanceForm({
                   </label>
                   <input
                     {...register(`sessions.${index}.justification` as any)}
+                    readOnly={isCompetenceLocked}
                     className={`block w-full rounded-lg shadow-sm sm:text-xs px-3 py-2 border transition-all ${
                       watch(`sessions.${index}.status` as any) === 'Glosado' 
                         ? 'border-rose-200 dark:border-rose-900/50 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-500/5' 
@@ -661,7 +742,7 @@ export function AttendanceForm({
               {/* Action buttons area */}
               {watch(`sessions.${index}.status` as any) === 'Realizada' ? (
                 <div className="sm:col-span-1 flex items-end justify-end">
-                  {(!watch(`sessions.${index}.id`) || (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`))) && (
+                  {!isCompetenceLocked && (!watch(`sessions.${index}.id`) || (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`))) && (
                     <button
                       type="button"
                       onClick={() => remove(index)}
@@ -673,7 +754,7 @@ export function AttendanceForm({
                 </div>
               ) : (
                 <div className="sm:col-span-1 flex flex-col items-end justify-center gap-2">
-                   {userRole === 'CLINIC_USER' && watch(`sessions.${index}.status`) === 'Pendente' && id && watch(`sessions.${index}.id`) && (
+                   {userRole === 'CLINIC_USER' && watch(`sessions.${index}.status`) === 'Pendente' && id && watch(`sessions.${index}.id`) && !isCompetenceLocked && (
                     <button
                       type="button"
                       onClick={() => setQrModalSession({ index, sessionId: watch(`sessions.${index}.id`)! })}
@@ -683,7 +764,11 @@ export function AttendanceForm({
                       📱 Assinar
                     </button>
                   )}
-                  {(!watch(`sessions.${index}.id`) || (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`))) && (
+                  {!isCompetenceLocked && (
+                    !watch(`sessions.${index}.id`) || 
+                    (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`)) ||
+                    (userRole === 'CLINIC_USER' && watch(`sessions.${index}.status` as any) === 'Pendente' && !watch(`sessions.${index}.validated_at`))
+                  ) && (
                     <button
                       type="button"
                       onClick={() => remove(index)}
@@ -732,7 +817,7 @@ export function AttendanceForm({
         )}
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || isCompetenceLocked}
           className="inline-flex justify-center rounded-xl bg-primary px-10 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:opacity-50 transition-all active:scale-95"
         >
           {isPending ? (

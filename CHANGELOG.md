@@ -2,6 +2,38 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.9.5-beta] - 2026-05-14
+
+Esta versão foca na **Governança do BPA e Integridade do CBO**, automatizando processos administrativos para eliminar erros de faturamento e aumentando a transparência na auditoria de competências.
+
+### 🏥 Automação de CBO (Auto-Injeção)
+- **Resolução Dinâmica de CBO:** Implementação de lógica inteligente no `AttendanceForm` que cruza as especialidades do procedimento com as especialidades do profissional em tempo real.
+- **Lock de Segurança:** O campo CBO agora é preenchido automaticamente e travado para edição manual, garantindo que o código registrado siga rigorosamente o mapeamento do SUS.
+- **Persistência Auditável:** O CBO utilizado no momento do atendimento é agora persistido diretamente na tabela `attendances.professional_cbo`. Isso garante que auditorias futuras reflitam o estado exato do faturamento na data do serviço, mesmo que o profissional mude de especialidade posteriormente.
+
+### 🔍 Auditoria de Competências & Transparência
+- **Integração com Auditoria Digital:** Todas as ações de fechar, reabrir e enviar competências ao MS agora são registradas na tabela central de auditoria (`audit_logs`).
+- **Rastreabilidade Administrativa:** Gestores e Administradores podem agora visualizar quem realizou o fechamento ou reabertura de uma competência diretamente no painel de Auditoria Digital.
+- **Filtro de Recursos:** Adição do recurso "Competências" ao filtro da página de auditoria para facilitar a localização de eventos de ciclo de vida da competência.
+
+### 🛡️ Ajustes de Integridade & UX
+- **Correção de Duplicidade de CPF:** Ajuste na validação de pacientes para permitir que múltiplos registros com CPF vazio (opcional) coexistam sem erros de duplicidade, mantendo a trava apenas para CPFs preenchidos.
+- **Preparação de Dados:** Refatoração do carregamento de profissionais para incluir o mapeamento completo de `specialties_full`, otimizando a performance do formulário de atendimento.
+
+## [0.9.4-beta] - 2026-05-13
+
+Esta versão introduz o módulo crítico de **Exportação BPA (DATASUS)**, dotando o sistema da capacidade de empacotar a produção clínica mensal e gerar o arquivo magnético (`.txt`) nos formatos BPA-I e BPA-C, pronto para importação pelos órgãos federais.
+
+### 🏥 Exportação BPA & Validação Inteligente
+- **Motor Stateless (BPA-I/BPA-C):** Criação de um gerador de arquivos de posição fixa (`BpaExportService`) que opera na memória, economizando armazenamento do banco de dados e garantindo download instantâneo.
+- **Pre-flight "Anjo da Guarda":** O sistema agora escaneia todos os atendimentos da competência *antes* de tentar gerar o arquivo. Se encontrar dados demográficos ou clínicos faltando (ex: sem IBGE, CNS, ou CBO), ele exibe um painel de erros amigável agrupado por paciente, impedindo o envio de arquivos quebrados ao SUS.
+- **Campos Aditivos:** Adição de campos demográficos extras exigidos pelo layout do DATASUS (nacionalidade, logradouro, quantidade, caráter, tipo BPA) de forma totalmente aditiva, sem quebrar ou parar as operações diárias da clínica.
+
+### 🛡️ Governança & Segurança (Exportação)
+- **Painel de Exportação Integrado:** O botão de "Baixar Arquivo BPA" só é disponibilizado para clínicas em **Competências Fechadas**, garantindo que nenhum dado seja alterado após a geração do arquivo oficial.
+- **Proteção RBAC & Multi-Tenant:** A exportação é blindada pela política de isolamento do sistema; um usuário de clínica só pode baixar o BPA da sua própria unidade, enquanto o `SMS_ADMIN` tem visão e poder de exportação sobre toda a rede.
+- **Otimização de Performance:** Inclusão de um novo índice composto no PostgreSQL (`idx_attendances_export`) que garante extrações massivas super rápidas mesmo em ambientes de alta carga.
+
 ## [0.9.3-beta] - 2026-05-13
 
 Esta versão foca na **Governança de Horários e Prevenção de Fraude**, introduzindo validações globais de disponibilidade profissional e unificação da interface de configurações.

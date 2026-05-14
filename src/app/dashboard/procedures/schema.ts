@@ -7,6 +7,7 @@ export const procedureSchema = z.object({
   description: z.string().optional().nullable(),
   valor_sus: z.coerce.number().min(0, 'Valor SUS deve ser positivo'),
   valor_rp: z.coerce.number().min(0, 'Valor Repasse deve ser positivo'),
+  bpa_type: z.enum(['BPA_I', 'BPA_C', 'AMBOS', 'NAO_APLICA']).default('NAO_APLICA'),
   active: z.boolean().default(true),
   specialty_ids: z.array(z.string()).min(1, 'Selecione ao menos uma especialidade'),
 }).refine((data) => {

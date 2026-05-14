@@ -27,6 +27,7 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
       name: initialData?.name || '',
       cnpj: initialData?.cnpj || '',
       cnes: initialData?.cnes || '',
+      orgao_emissor: initialData?.orgao_emissor || '',
       corporate_name: initialData?.corporate_name || '',
       address: initialData?.address || '',
       phone: initialData?.phone || '',
@@ -137,6 +138,17 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
             placeholder="Ex: 1234567"
           />
           {errors.cnes && <p className="mt-1 text-sm text-rose-500">{errors.cnes.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Órgão Emissor (BPA)</label>
+          <input
+            type="text"
+            {...register('orgao_emissor')}
+            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-3 border bg-background transition-all font-mono"
+            placeholder="Ex: Secretaria de Saúde"
+          />
+          <p className="mt-1.5 text-[10px] text-muted-foreground">Opcional. Se vazio, o CNES/CNPJ será usado no cabeçalho do BPA.</p>
         </div>
 
         <div className="sm:col-span-2">

@@ -94,6 +94,12 @@ export function PatientForm({
       gender: (initialData?.gender as any) || 'Não Informado',
       phone: initialData?.phone ? maskPhone(initialData.phone) : '',
       address: initialData?.address || '',
+      address_street: initialData?.address_street || '',
+      address_number: initialData?.address_number || '',
+      address_complement: initialData?.address_complement || '',
+      address_neighborhood: initialData?.address_neighborhood || '',
+      ibge_code: initialData?.ibge_code || '',
+      nationality: initialData?.nationality || '010',
       race_color: (initialData?.race_color as any) || 'Não Informado',
       cep: initialData?.cep ? maskCEP(initialData.cep) : '',
       city: initialData?.city || '',
@@ -346,46 +352,106 @@ export function PatientForm({
               type="text"
               {...register('cep')}
               onChange={(e) => setValue('cep', maskCEP(e.target.value))}
+              onBlur={async (e) => {
+                const rawCep = e.target.value.replace(/\D/g, '');
+                if (rawCep.length === 8) {
+                  try {
+                    const response = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`);
+                    const data = await response.json();
+                    if (!data.erro) {
+                      setValue('address_street', data.logradouro, { shouldValidate: true });
+                      setValue('address_neighborhood', data.bairro, { shouldValidate: true });
+                      setValue('city', data.localidade, { shouldValidate: true });
+                      setValue('state', data.uf, { shouldValidate: true });
+                      setValue('ibge_code', data.ibge, { shouldValidate: true });
+                    }
+                  } catch (err) {
+                    console.error('Erro ao buscar CEP', err);
+                  }
+                }
+              }}
               className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-mono transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
               placeholder="00000-000"
             />
           </div>
 
-          <div className="sm:col-span-6">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Logradouro / Endereço</label>
-            <input
-              type="text"
-              {...register('address')}
-              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="Rua, número, bairro..."
-            />
-          </div>
-
           <div className="sm:col-span-4">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Cidade</label>
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Logradouro (Rua/Av)</label>
             <input
               type="text"
-              {...register('city')}
+              {...register('address_street')}
               className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
-              placeholder="Cidade"
+              placeholder="Rua, Avenida..."
             />
           </div>
 
           <div className="sm:col-span-2">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Número</label>
+            <input
+              type="text"
+              {...register('address_number')}
+              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+              placeholder="123 ou SN"
+            />
+          </div>
+
+          <div className="sm:col-span-3">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Complemento</label>
+            <input
+              type="text"
+              {...register('address_complement')}
+              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+              placeholder="Apto, Bloco..."
+            />
+          </div>
+
+          <div className="sm:col-span-3">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Bairro</label>
+            <input
+              type="text"
+              {...register('address_neighborhood')}
+              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm"
+              placeholder="Bairro"
+            />
+          </div>
+
+          <div className="sm:col-span-3">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Cidade</label>
+            <input
+              type="text"
+              {...register('city')}
+              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-medium transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border hover:border-primary/40 focus:bg-background shadow-sm cursor-not-allowed opacity-80"
+              placeholder="Cidade"
+              readOnly
+            />
+            <input type="hidden" {...register('ibge_code')} />
+            <p className="mt-1 text-[10px] text-muted-foreground">O código IBGE é preenchido via CEP.</p>
+          </div>
+
+          <div className="sm:col-span-1">
             <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">UF</label>
+            <input
+              type="text"
+              {...register('state')}
+              className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all border shadow-sm cursor-not-allowed opacity-80"
+              readOnly
+            />
+            {errors.state && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.state.message}</p>}
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nacionalidade</label>
             <div className="relative group/select">
               <select
-                {...register('state')}
+                {...register('nationality')}
                 className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border appearance-none hover:border-primary/40 focus:bg-background pr-10 shadow-sm"
               >
-                <option value="">UF</option>
-                {UF_OPTIONS.map(uf => (
-                  <option key={uf} value={uf}>{uf}</option>
-                ))}
+                <option value="010">Brasileiro (Nato)</option>
+                <option value="031">Brasileiro (Naturalizado)</option>
+                <option value="021">Estrangeiro</option>
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
             </div>
-            {errors.state && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.state.message}</p>}
           </div>
         </div>
       </section>

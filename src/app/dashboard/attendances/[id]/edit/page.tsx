@@ -84,16 +84,33 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
     { data: professionalsRaw },
     { data: procedures },
     { data: clinics },
-    { data: settings }
+    { data: settings },
+    { data: clinicConfig }
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
     supabase.from('procedures').select('id, name, code, active, valor_total, procedure_specialties(specialty_id)').order('name'),
     profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : supabase.from('clinics').select('id, name, cnes').eq('id', profile?.clinic_id || '').order('name'),
-    supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single()
+    supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single(),
+    supabase.from('clinics').select('competence_end_day').eq('id', attendance.clinic_id).single()
   ])
 
   const systemTimezone = settings?.value || 'America/Sao_Paulo'
+  const endDay = clinicConfig?.competence_end_day || 31
+
+  const dateParts = attendance.attendance_date.split('-')
+  const day = parseInt(dateParts[2], 10)
+  let month = parseInt(dateParts[1], 10)
+  let year = parseInt(dateParts[0], 10)
+  if (day > endDay && endDay < 31) {
+    month += 1
+    if (month > 12) {
+      month = 1; year += 1;
+    }
+  }
+
+  const { data: competence } = await supabase.from('competences').select('status').eq('clinic_id', attendance.clinic_id).eq('month', month).eq('year', year).maybeSingle()
+  const competenceStatus = competence?.status || 'ABERTA'
 
   // Mapeando dados dos profissionais para incluir o nome da especialidade e CBO
   const professionals = (professionalsRaw as any[])?.map(p => {
@@ -109,6 +126,11 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
       (ps: any) => ps.specialties?.cbo
     ).filter(Boolean)
 
+    const specialtiesFull = (p.professional_specialties as any[])?.map((ps: any) => ({
+      id: ps.specialty_id,
+      cbo: ps.specialties?.cbo
+    })).filter((s: any) => s.id)
+
     return {
       id: p.id,
       name: p.name,
@@ -116,6 +138,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
       cbo: cbos?.length > 0 ? cbos[0] : '',
       professional_clinics: p.professional_clinics,
       specialty_ids: specialtyIds,
+      specialties_full: specialtiesFull,
       specialty: specialtyNames?.length > 0 ? specialtyNames.join(', ') : 'Sem especialidade'
     }
   })
@@ -147,6 +170,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
         userClinicId={profile?.clinic_id}
         userRole={profile?.role || ''}
         systemTimezone={systemTimezone}
+        competenceStatus={competenceStatus}
       />
     </div>
   )

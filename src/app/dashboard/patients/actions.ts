@@ -100,6 +100,7 @@ export async function createPatientAction(data: PatientFormData) {
     .from('patients')
     .insert({
       ...patientData,
+      cpf: patientData.cpf || null, // Ensure empty string becomes null
       auth_token: authToken,
       token_updated_at: new Date().toISOString(),
     })
@@ -152,6 +153,7 @@ export async function updatePatientAction(id: string, data: PatientFormData) {
     .from('patients')
     .update({
       ...patientData,
+      cpf: patientData.cpf || null, // Ensure empty string becomes null
       clinic_id: clinic_id, // Sync legacy clinic_id
     })
     .eq('id', patientId)
