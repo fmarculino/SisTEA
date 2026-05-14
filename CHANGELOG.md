@@ -2,6 +2,30 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.9.6-beta] - 2026-05-14
+
+Esta versão foca na **Excelência Técnica e Padronização Nacional do BPA**, garantindo que as exportações do SisTEA sejam 100% compatíveis com os validadores oficiais do DATASUS (BPA-Mag).
+
+### 📄 Padronização BPA-I (DATASUS)
+- **Layout Posicional de 350 Caracteres:** Refatoração completa do `BpaExportService` para seguir a régua milimétrica de colunas exigida pelo Ministério da Saúde.
+- **Correção de Alinhamento de Endereço:** Ajuste crítico na sequência de campos (CEP, Número, Complemento, Logradouro, Bairro e Telefone) eliminando o deslocamento de colunas e garantindo que o Telefone inicie na posição exata 275.
+- **Cálculo de Checksum (Verificador):** Implementação do algoritmo oficial para o campo de controle do cabeçalho, garantindo a integridade do arquivo.
+
+### 🛡️ Higienização & Sanitização de Dados
+- **Motor de Normalização de Texto:** Conversão automática de todos os dados demográficos para **CAIXA ALTA** e remoção de acentos, eliminando falhas de leitura em sistemas legados.
+- **Sanitização Específica:** 
+    - **Telefone:** Remoção de máscaras e caracteres especiais, exportando apenas os 11 dígitos numéricos.
+    - **CID-10:** Ajuste na limpeza para preservar a letra identificadora (ex: F84.0 agora é exportado corretamente como `F840`).
+- **Validação Antecipada:** Bloqueio de exportação para pacientes com dados demográficos incompletos, com avisos claros ao usuário.
+
+### 🚀 Automação & UX de Exportação
+- **Extensões Dinâmicas por Competência:** O sistema agora identifica o mês e aplica a extensão correta automaticamente (ex: Competência 05 -> `.MAI`, Competência 04 -> `.ABR`).
+- **Nomenclatura Oficial:** Arquivos agora seguem o padrão `BPA_[CNES]_[AAAAMM].[EXT]`, facilitando a organização administrativa.
+
+### 🔧 Governança do Projeto
+- **Sincronização de Versão:** Versão do sistema agora unificada entre Código, Banco de Dados e Documentação.
+- **Git Hygiene:** Pasta de exemplos temporários (`BPA-EXEMPLO`) devidamente ignorada no versionamento para manter o repositório limpo.
+
 ## [0.9.5-beta] - 2026-05-14
 
 Esta versão foca na **Governança do BPA e Integridade do CBO**, automatizando processos administrativos para eliminar erros de faturamento e aumentando a transparência na auditoria de competências.
