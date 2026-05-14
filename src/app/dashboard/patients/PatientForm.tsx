@@ -654,11 +654,12 @@ export function PatientForm({
                     type="button"
                     onClick={() => {
                       const phone = watch('phone')?.replace(/\D/g, '')
+                      const name = watch('name')
                       if (!phone || phone.length < 10) {
                         setErrorMsg('O paciente não possui um telefone válido cadastrado para envio.')
                         return
                       }
-                      const message = `Olá! Esta é uma mensagem da *Regulação da SMS (SisTEA)*. \n\nO seu token de validação digital para confirmar seus atendimentos via QR Code é: *${currentToken}* \n\nEste código é pessoal e deve ser utilizado *APENAS por você* no momento da assinatura digital. \n\n⚠️ *ATENÇÃO:* Não forneça este código para funcionários da clínica. Guarde-o com segurança para garantir o registro correto das suas sessões.`
+                      const message = `Olá, *${name}*! Esta é uma mensagem da *Regulação da SMS (SisTEA)*. \n\nO seu token de validação digital para confirmar seus atendimentos via QR Code é: *${currentToken}* \n\nEste código é pessoal e deve ser utilizado *APENAS por você* no momento da assinatura digital. \n\n⚠️ *ATENÇÃO:* Não forneça este código para funcionários da clínica. Guarde-o com segurança para garantir o registro correto das suas sessões.`
                       window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank')
                     }}
                     className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 text-white px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
