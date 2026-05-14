@@ -208,28 +208,30 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        {/* Clínicas Card */}
-        <div className="bento-card p-6 relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-amber-500/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
-              <Building className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+        {/* Clínicas Card - Only for Admin */}
+        {profile?.role === 'SMS_ADMIN' && (
+          <div className="bento-card p-6 relative overflow-hidden group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-amber-500/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                <Building className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-500/5 px-2 py-0.5 rounded-full">Gestão</span>
+              </div>
             </div>
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-500/5 px-2 py-0.5 rounded-full">Gestão</span>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                Clínicas Ativas
+              </p>
+              <h3 className="text-3xl font-heading font-bold text-foreground">
+                {totalClinicsActive}
+              </h3>
+            </div>
+            <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+              <Building className="h-24 w-24 text-amber-600" />
             </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">
-              {profile?.role === 'SMS_ADMIN' ? 'Clínicas Ativas' : 'Minha Clínica'}
-            </p>
-            <h3 className="text-3xl font-heading font-bold text-foreground">
-              {profile?.role === 'SMS_ADMIN' ? totalClinicsActive : 1}
-            </h3>
-          </div>
-          <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
-            <Building className="h-24 w-24 text-amber-600" />
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Clínicas Performance Chart */}
