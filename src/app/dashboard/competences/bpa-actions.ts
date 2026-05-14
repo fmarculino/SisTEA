@@ -27,7 +27,8 @@ export async function generateBpaTxtAction(clinic_id: string, month_year: string
 
   try {
     const txtContent = await BpaExportService.generateTxt(clinic_id, month_year)
-    return { success: true, txtContent }
+    const filename = await BpaExportService.getSuggestedFilename(clinic_id, month_year)
+    return { success: true, txtContent, filename }
   } catch (err: any) {
     return { error: err.message || 'Erro inesperado na geração.' }
   }

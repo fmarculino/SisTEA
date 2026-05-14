@@ -53,8 +53,7 @@ export function BpaExportButton({ clinicId, month, year, isAdminView = false }: 
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      // Padrão de nome BPA_CNES_COMPETENCIA
-      a.download = `BPA_EXPORT_${monthYearStr.replace('/', '')}.txt` 
+      a.download = genResult.filename || `BPA_EXPORT_${monthYearStr.replace('/', '')}.txt` 
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
