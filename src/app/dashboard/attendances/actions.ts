@@ -9,7 +9,49 @@ import { buildValidationURL, generateValidationHMAC, isLinkExpired, verifyValida
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/utils/supabase/admin'
 
-async function checkCompetenceLock(supabase: any, clinic_id: string, attendance_date: string) {
+async function validateProcedureQuantityLimit(
+  supabase: any,
+  attendanceId: string | null,
+  patientId: string,
+  professionalId: string,
+  procedureId: string,
+  attendanceDate: string,
+  incomingSessionsCount: number
+) {
+  const { data: procedure } = await supabase
+    .from('procedures')
+    .select('max_quantity')
+    .eq('id', procedureId)
+    .single()
+
+  if (!procedure || !procedure.max_quantity) return null
+
+  const [year, month] = attendanceDate.split('-')
+  const monthYear = `${month}/${year}`
+
+  // Count existing sessions in other attendances for this professional/patient/procedure in the same month
+  const { count, error } = await supabase
+    .from('attendance_sessions')
+    .select('id, attendances!inner(patient_id, professional_id, procedure_id, month_year)', { count: 'exact', head: true })
+    .eq('attendances.patient_id', patientId)
+    .eq('attendances.professional_id', professionalId)
+    .eq('attendances.procedure_id', procedureId)
+    .eq('attendances.month_year', monthYear)
+    .neq('attendance_id', attendanceId || '00000000-0000-0000-0000-000000000000')
+
+  if (error) return { error: `Erro ao validar limite de quantidade: ${error.message}` }
+
+  const total = (count || 0) + incomingSessionsCount
+  if (total > procedure.max_quantity) {
+    return { 
+      error: `Limite de sessões atingido para este procedimento (${procedure.max_quantity}). Você está tentando lançar ${incomingSessionsCount} frequência(s), mas já existem ${count} frequência(s) registradas para este profissional/paciente nesta competência (${monthYear}).` 
+    }
+  }
+
+  return null
+}
+
+export async function checkCompetenceLock(supabase: any, clinic_id: string, attendance_date: string) {
   const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', clinic_id).single()
   const endDay = clinicConfig?.competence_end_day || 31
 
@@ -99,6 +141,18 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   // --- COMPETENCE CHECK ---
   const compError = await checkCompetenceLock(supabase, rawAttendanceData.clinic_id, rawAttendanceData.attendance_date)
   if (compError) return compError
+
+  // --- QUANTITY LIMIT CHECK (BR-004) ---
+  const qtyLimitError = await validateProcedureQuantityLimit(
+    supabase,
+    null,
+    rawAttendanceData.patient_id,
+    rawAttendanceData.professional_id,
+    rawAttendanceData.procedure_id,
+    rawAttendanceData.attendance_date,
+    sessions?.length || 0
+  )
+  if (qtyLimitError) return qtyLimitError
 
   // --- FETCH PROCEDURE VALUE (Historical Contract Snapshot) ---
   const { data: contractPrice } = await supabase
@@ -299,6 +353,18 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   // --- COMPETENCE CHECK ---
   const compError = await checkCompetenceLock(supabase, rawAttendanceData.clinic_id, rawAttendanceData.attendance_date)
   if (compError) return compError
+
+  // --- QUANTITY LIMIT CHECK (BR-004) ---
+  const qtyLimitError = await validateProcedureQuantityLimit(
+    supabase,
+    id,
+    rawAttendanceData.patient_id,
+    rawAttendanceData.professional_id,
+    rawAttendanceData.procedure_id,
+    rawAttendanceData.attendance_date,
+    sessions?.length || 0
+  )
+  if (qtyLimitError) return qtyLimitError
 
   // --- FETCH PROCEDURE VALUE (Historical Contract Snapshot) ---
   const { data: contractPrice } = await supabase

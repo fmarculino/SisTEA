@@ -7,7 +7,7 @@ import {
   Activity, Users, UserSquare2, Building2, Stethoscope, FileText, 
   CalendarCheck, FileOutput, Shield, Lock, DatabaseBackup, 
   ScrollText, Archive, ShieldCheck, Settings, Database, 
-  ClipboardList, ChevronDown, LayoutDashboard
+  ClipboardList, ChevronDown, LayoutDashboard, BookOpen
 } from 'lucide-react'
 import { AboutMenu } from './about-menu'
 
@@ -38,6 +38,8 @@ const navigation = [
       { name: 'Contratos', href: '/dashboard/contracts', icon: ScrollText, roles: ['SMS_ADMIN'] },
       { name: 'Procedimentos', href: '/dashboard/procedures', icon: Stethoscope, roles: ['SMS_ADMIN'] },
       { name: 'Especialidades', href: '/dashboard/specialties', icon: FileText, roles: ['SMS_ADMIN'] },
+      { name: 'Classificação DATASUS', href: '/dashboard/service-classifications', icon: Activity, roles: ['SMS_ADMIN'] },
+      { name: 'CID-10', href: '/dashboard/cid', icon: BookOpen, roles: ['SMS_ADMIN'] },
     ]
   },
   {

@@ -100,17 +100,45 @@ export function AttendanceForm({
   const isCompetenceLocked = competenceStatus === 'FECHADA' || competenceStatus === 'ENVIADA_MS';
   const isHeaderLocked = isCompetenceLocked || (userRole === 'CLINIC_USER' && hasValidatedSession);
 
-  // Filter procedures based on professional specialties
+  // Derive patient age
+  const selectedPatientId = watch('patient_id')
+  const patientAge = (() => {
+    if (!selectedPatientId) return null
+    const patient = patients.find(p => p.id === selectedPatientId)
+    if (!patient || !patient.birth_date) return null
+    
+    // Calculate age precisely based on current date
+    const birthDate = new Date(patient.birth_date)
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const m = today.getMonth() - birthDate.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  })()
+
+  // Filter procedures based on professional specialties AND patient age
   const filteredProcedures = selectedProfessionalId 
     ? procedures.filter(proc => {
         const professional = professionals.find(p => p.id === selectedProfessionalId)
         if (!professional || !professional.specialty_ids) return false
         
+        // 1. Specialty Filter
         // Se o procedimento não tem especialidades vinculadas, mostramos para todos (regra de segurança)
-        if (!proc.specialty_ids || proc.specialty_ids.length === 0) return true
+        const hasSpecialtyMatch = (!proc.specialty_ids || proc.specialty_ids.length === 0) 
+          ? true 
+          : proc.specialty_ids.some((id: string) => professional.specialty_ids.includes(id))
 
-        // Verifica se há interseção entre as especialidades do profissional e as do procedimento
-        return proc.specialty_ids.some((id: string) => professional.specialty_ids.includes(id))
+        if (!hasSpecialtyMatch) return false
+
+        // 2. Age Filter (Restrição de Idade)
+        if (patientAge !== null) {
+          if (proc.min_age !== null && proc.min_age !== undefined && patientAge < proc.min_age) return false
+          if (proc.max_age !== null && proc.max_age !== undefined && patientAge > proc.max_age) return false
+        }
+
+        return true
       })
     : []
 
@@ -164,6 +192,36 @@ export function AttendanceForm({
       }
     }
   }, [selectedProcedureId, selectedProfessionalId, professionals, procedures, setValue])
+
+  // Derive CBO Description for display
+  const professionalCbo = watch('professional_cbo')
+  const cboDescription = (() => {
+    if (!professionalCbo || !selectedProfessionalId) return ''
+    const professional = professionals.find(p => p.id === selectedProfessionalId)
+    if (!professional) return ''
+    
+    // Se temos o specialties_full (vindo das páginas novas/edit)
+    if (professional.specialties_full) {
+      // Se tivermos um procedimento selecionado, tentamos achar a especialidade comum
+      if (selectedProcedureId) {
+        const procedure = procedures.find(p => p.id === selectedProcedureId)
+        const commonId = procedure?.specialty_ids?.find((id: string) => 
+          professional.specialty_ids?.includes(id)
+        )
+        if (commonId) {
+          const spec = professional.specialties_full.find((s: any) => s.id === commonId)
+          if (spec?.cbo === professionalCbo) return spec.name
+        }
+      }
+      
+      // Fallback: procura qualquer uma que bata com o CBO
+      const spec = professional.specialties_full.find((s: any) => s.cbo === professionalCbo)
+      return spec?.name || ''
+    }
+    
+    return ''
+  })()
+
 
   const onSubmit = async (data: AttendanceFormData) => {
     setIsPending(true)
@@ -320,6 +378,27 @@ export function AttendanceForm({
       />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-8 rounded-2xl shadow-xl border border-border/40 mb-10">
 
+      {/* Mensagens de Erro do Servidor (ex: Limite de Quantidade) */}
+      {errorMsg && (
+        <div className="bg-rose-600 border border-rose-500 rounded-2xl p-6 flex items-start gap-4 shadow-xl shadow-rose-900/20 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="shrink-0 bg-white/20 p-2 rounded-xl text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Bloqueio de Validação</h4>
+            <p className="text-sm text-white/90 font-bold leading-relaxed">
+              {errorMsg}
+            </p>
+          </div>
+          <button 
+            onClick={() => setErrorMsg('')}
+            className="text-white/60 hover:text-white transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      )}
+
       {(competenceStatus === 'FECHADA' || competenceStatus === 'ENVIADA_MS') && (
         <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-start gap-3">
           <div className="shrink-0 mt-0.5 text-rose-500">
@@ -410,6 +489,17 @@ export function AttendanceForm({
             )}
           />
           {errors.patient_id && <p className="mt-1 text-sm text-rose-500">{errors.patient_id.message}</p>}
+          
+          {patientAge !== null && (
+            <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/5 border border-blue-500/10">
+              <div className="shrink-0 text-blue-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              </div>
+              <p className="text-[10px] text-blue-600 font-bold uppercase tracking-tight">
+                Idade do Paciente: {patientAge} anos. A lista de procedimentos foi filtrada automaticamente.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="sm:col-span-1">
@@ -460,14 +550,21 @@ export function AttendanceForm({
 
         <div className="sm:col-span-1">
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">CBO de Atuação (Automático)</label>
-          <div className="relative group">
-            <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
-            <input
-              {...register('professional_cbo')}
-              readOnly
-              className="mt-1 block w-full rounded-xl border-border/60 shadow-sm sm:text-sm pl-10 pr-4 py-2 border bg-muted/30 font-bold text-foreground cursor-not-allowed transition-all"
-              placeholder="CBO Automático..."
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative group w-32 shrink-0">
+              <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
+              <input
+                {...register('professional_cbo')}
+                readOnly
+                className="mt-1 block w-full rounded-xl border-border/60 shadow-sm sm:text-sm pl-10 pr-3 py-2 border bg-muted/30 font-bold text-foreground cursor-not-allowed transition-all"
+                placeholder="CBO..."
+              />
+            </div>
+            {cboDescription && (
+              <div className="flex-1 mt-1 px-4 py-2 bg-primary/5 border border-primary/10 rounded-xl text-[11px] font-bold text-primary uppercase tracking-tight animate-in fade-in slide-in-from-left-2 truncate" title={cboDescription}>
+                {cboDescription}
+              </div>
+            )}
           </div>
           <p className="mt-1 text-[10px] text-muted-foreground">O CBO é identificado automaticamente com base no procedimento e profissional.</p>
         </div>

@@ -128,6 +128,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
 
     const specialtiesFull = (p.professional_specialties as any[])?.map((ps: any) => ({
       id: ps.specialty_id,
+      name: ps.specialties?.name,
       cbo: ps.specialties?.cbo
     })).filter((s: any) => s.id)
 

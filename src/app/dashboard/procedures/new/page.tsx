@@ -8,11 +8,12 @@ export default async function NewProcedurePage() {
   if (profile?.role !== 'SMS_ADMIN') redirect('/dashboard')
 
   const supabase = await createClient()
-  const { data: specialties } = await supabase
-    .from('specialties')
-    .select('id, name, cbo')
-    .eq('active', true)
-    .order('name')
+  
+  const [specialtiesRes, serviceClassificationsRes, cidRes] = await Promise.all([
+    supabase.from('specialties').select('id, name, cbo').eq('active', true).order('name'),
+    supabase.from('service_classifications').select('id, name, service_code, classification_code').eq('active', true).order('service_code'),
+    supabase.from('cid').select('id, name, code').eq('active', true).order('code')
+  ])
 
   return (
     <div className="space-y-6">
@@ -21,7 +22,11 @@ export default async function NewProcedurePage() {
           Novo Procedimento
         </h2>
       </div>
-      <ProcedureForm specialties={specialties || []} />
+      <ProcedureForm 
+        specialties={specialtiesRes.data || []} 
+        serviceClassifications={serviceClassificationsRes.data || []}
+        cidList={cidRes.data || []}
+      />
     </div>
   )
 }

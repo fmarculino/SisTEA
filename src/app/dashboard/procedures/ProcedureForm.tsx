@@ -7,17 +7,24 @@ import { createProcedureAction, updateProcedureAction } from './actions'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
+import { MultiSearchSelect } from '@/components/ui/MultiSearchSelect'
 
 type SpecialtyOption = { id: string; name: string; cbo: string }
+type ServiceClassificationOption = { id: string; name: string; service_code: string; classification_code: string }
+type CidOption = { id: string; name: string; code: string }
 
 export function ProcedureForm({ 
   initialData, 
   id,
-  specialties = []
+  specialties = [],
+  serviceClassifications = [],
+  cidList = []
 }: { 
   initialData?: Partial<ProcedureFormData>; 
   id?: string;
   specialties?: SpecialtyOption[];
+  serviceClassifications?: ServiceClassificationOption[];
+  cidList?: CidOption[];
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
@@ -33,7 +40,7 @@ export function ProcedureForm({
     resolver: zodResolver(procedureSchema) as any,
     defaultValues: {
       code: initialData?.code || '',
-      hasNoCode: !initialData?.code && !!id, // If editing and has no code
+      hasNoCode: !initialData?.code && !!id, 
       name: initialData?.name || '',
       description: initialData?.description || '',
       valor_sus: initialData?.valor_sus || 0,
@@ -41,6 +48,11 @@ export function ProcedureForm({
       bpa_type: initialData?.bpa_type || 'NAO_APLICA',
       active: initialData?.active ?? true,
       specialty_ids: initialData?.specialty_ids || [],
+      service_classification_ids: initialData?.service_classification_ids || [],
+      cid_ids: initialData?.cid_ids || [],
+      max_quantity: initialData?.max_quantity ?? null,
+      min_age: initialData?.min_age ?? null,
+      max_age: initialData?.max_age ?? null,
     },
   })
 
@@ -79,9 +91,7 @@ export function ProcedureForm({
   }
 
   const handleCurrencyChange = (name: 'valor_sus' | 'valor_rp', value: string) => {
-    // Remove all non-digits
     const cleanValue = value.replace(/\D/g, '')
-    // Convert to number (cents / 100)
     let numericValue = Number(cleanValue) / 100
     if (isNaN(numericValue)) numericValue = 0
     setValue(name, numericValue, { shouldValidate: true })
@@ -108,24 +118,24 @@ export function ProcedureForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl bg-card text-card-foreground p-6 rounded-lg shadow border">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-4xl bg-card text-card-foreground p-8 rounded-[2rem] shadow-2xl border border-border/40">
       {errorMsg && (
-        <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm mb-4">
+        <div className="bg-destructive/10 text-destructive p-4 rounded-xl text-sm mb-4 border border-destructive/20 font-medium">
           {errorMsg}
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div>
-          <div className="flex items-center justify-between">
-            <label className="block text-sm font-medium text-foreground">Código SUS *</label>
-            <label className="flex items-center space-x-1 cursor-pointer">
+      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+        <div className="sm:col-span-1">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest">Código SUS *</label>
+            <label className="flex items-center space-x-2 cursor-pointer group">
               <input
                 type="checkbox"
                 {...register('hasNoCode')}
-                className="w-3 h-3 rounded border-input text-primary focus:ring-primary/20 bg-background transition-all"
+                className="w-4 h-4 rounded border-input text-primary focus:ring-primary/20 bg-background transition-all"
               />
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Sem código</span>
+              <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter group-hover:text-primary transition-colors">Sem código</span>
             </label>
           </div>
           <input
@@ -134,132 +144,207 @@ export function ProcedureForm({
             {...register('code')}
             onChange={handleSUSCodeChange}
             disabled={hasNoCode}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background disabled:bg-muted disabled:opacity-50"
+            className="block w-full rounded-xl border-border/40 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-3 border bg-muted/30 disabled:opacity-50 font-mono font-bold"
           />
-          {errors.code && <p className="mt-1 text-sm text-destructive">{errors.code.message}</p>}
+          {errors.code && <p className="mt-1 text-xs text-destructive font-bold">{errors.code.message}</p>}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-foreground">Nome do Procedimento *</label>
+        <div className="sm:col-span-1">
+          <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Nome do Procedimento *</label>
           <input
             type="text"
             {...register('name')}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+            className="block w-full rounded-xl border-border/40 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-3 border bg-muted/30 font-bold"
           />
-          {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>}
+          {errors.name && <p className="mt-1 text-xs text-destructive font-bold">{errors.name.message}</p>}
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-foreground">Descrição</label>
+          <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Descrição</label>
           <textarea
             {...register('description')}
-            rows={3}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
+            rows={2}
+            className="block w-full rounded-xl border-border/40 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-3 border bg-muted/30 font-medium"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-foreground">Valor SUS (R$) *</label>
-          <Controller
-            name="valor_sus"
-            control={control}
-            render={({ field }) => (
-              <input
-                type="text"
-                value={formatNumberBR(field.value)}
-                onChange={(e) => handleCurrencyChange('valor_sus', e.target.value)}
-                className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
-              />
-            )}
-          />
-          {errors.valor_sus && <p className="mt-1 text-sm text-destructive">{errors.valor_sus.message}</p>}
+        {/* RESTRIÇÕES */}
+        <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6 p-6 rounded-2xl border border-dashed border-border bg-muted/5">
+          <div className="col-span-1">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Qtd. Máxima (Lançamento)</label>
+            <input
+              type="number"
+              {...register('max_quantity')}
+              placeholder="Sem limite"
+              className="block w-full rounded-xl border-border/40 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-3 border bg-background font-bold"
+            />
+            <p className="mt-1 text-[9px] text-muted-foreground italic">Limite de execuções permitidas.</p>
+          </div>
+          
+          <div className="col-span-1">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Idade Mínima ({'>'}=)</label>
+            <input
+              type="number"
+              {...register('min_age')}
+              placeholder="Ex: 2"
+              className="block w-full rounded-xl border-border/40 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-3 border bg-background font-bold"
+            />
+          </div>
+
+          <div className="col-span-1">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Idade Máxima ({'<'}=)</label>
+            <input
+              type="number"
+              {...register('max_age')}
+              placeholder="Ex: 18"
+              className="block w-full rounded-xl border-border/40 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-3 border bg-background font-bold"
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-foreground">Valor Repasse (R$) *</label>
-          <Controller
-            name="valor_rp"
-            control={control}
-            render={({ field }) => (
-              <input
-                type="text"
-                value={formatNumberBR(field.value)}
-                onChange={(e) => handleCurrencyChange('valor_rp', e.target.value)}
-                className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background"
-              />
-            )}
-          />
-          {errors.valor_rp && <p className="mt-1 text-sm text-destructive">{errors.valor_rp.message}</p>}
+        <div className="grid grid-cols-2 gap-4 sm:col-span-2">
+          <div>
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Valor SUS (R$) *</label>
+            <Controller
+              name="valor_sus"
+              control={control}
+              render={({ field }) => (
+                <input
+                  type="text"
+                  value={formatNumberBR(field.value)}
+                  onChange={(e) => handleCurrencyChange('valor_sus', e.target.value)}
+                  className="block w-full rounded-xl border-border/40 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-3 border bg-muted/30 font-bold"
+                />
+              )}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Valor Repasse (R$) *</label>
+            <Controller
+              name="valor_rp"
+              control={control}
+              render={({ field }) => (
+                <input
+                  type="text"
+                  value={formatNumberBR(field.value)}
+                  onChange={(e) => handleCurrencyChange('valor_rp', e.target.value)}
+                  className="block w-full rounded-xl border-border/40 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-3 border bg-muted/30 font-bold"
+                />
+              )}
+            />
+          </div>
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-foreground mb-1">Instrumento de Registro (BPA)</label>
+          <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Instrumento de Registro (BPA)</label>
           <select
             {...register('bpa_type')}
             disabled={hasNoCode}
-            className="mt-1 block w-full rounded-md border-input shadow-sm focus:border-ring focus:ring-ring sm:text-sm px-3 py-2 border bg-background disabled:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            className="block w-full rounded-xl border-border/40 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm px-4 py-3 border bg-muted/30 disabled:opacity-50 font-bold appearance-none bg-no-repeat bg-[right_1rem_center] cursor-pointer"
           >
             <option value="NAO_APLICA">Não se Aplica (Não exportar)</option>
             <option value="BPA_I">BPA-I (Individualizado)</option>
             <option value="BPA_C">BPA-C (Consolidado)</option>
             <option value="AMBOS">Ambos</option>
           </select>
-          <p className="mt-1 text-xs text-muted-foreground">Define se este procedimento será incluído no arquivo de exportação do DATASUS.</p>
-          {errors.bpa_type && <p className="mt-1 text-sm text-destructive">{errors.bpa_type.message}</p>}
+          <p className="mt-2 text-[10px] text-muted-foreground font-medium italic">Define se este procedimento será incluído no arquivo de exportação do DATASUS.</p>
         </div>
 
-        <div className="sm:col-span-2 bg-accent/10 p-4 rounded-lg border border-dashed border-accent">
+        <div className="sm:col-span-2 bg-primary/5 p-6 rounded-2xl border border-primary/10 backdrop-blur-sm">
           <div className="flex justify-between items-center">
-            <span className="text-sm font-semibold text-foreground uppercase tracking-wider">Valor Total do Procedimento</span>
-            <span className="text-xl font-bold text-primary">{formatCurrency(totalValue)}</span>
+            <span className="text-xs font-black text-primary uppercase tracking-widest">Valor Total do Procedimento</span>
+            <span className="text-2xl font-black text-primary tracking-tighter">{formatCurrency(totalValue)}</span>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground italic">Soma do Valor SUS + Valor Repasse</p>
+          <p className="mt-1 text-[10px] text-primary/60 font-medium italic uppercase tracking-tighter">Soma do Valor SUS + Valor Repasse</p>
         </div>
 
-        <div className="sm:col-span-2">
-          <label className="block text-sm font-semibold text-foreground mb-1 uppercase tracking-tight mb-2 italic">OCUPAÇÃO (Especialidades autorizadas) *</label>
-          <div className="mt-1 space-y-2 max-h-48 overflow-y-auto p-4 border rounded-xl bg-background/50 backdrop-blur-sm border-dashed">
-            {specialties.map((s) => (
-              <label key={s.id} className="flex items-center space-x-3 text-sm cursor-pointer hover:bg-primary/5 p-2 rounded-lg transition-all group">
-                <input
-                  type="checkbox"
-                  value={s.id}
-                  {...register('specialty_ids')}
-                  className="w-4 h-4 rounded border-input text-primary focus:ring-primary/20 bg-background transition-all"
-                />
-                <span className="text-foreground group-hover:text-primary transition-colors">{s.name} (CBO: {s.cbo})</span>
-              </label>
-            ))}
-          </div>
-          {errors.specialty_ids && <p className="mt-1 text-xs text-destructive font-bold">{errors.specialty_ids.message}</p>}
+        <div className="sm:col-span-2 space-y-10 mt-6 border-t border-border/40 pt-10">
+          <h3 className="text-sm font-black text-primary uppercase tracking-[0.3em]">Configurações Avançadas e Vínculos</h3>
+
+          {/* Especialidades */}
+          <Controller
+            name="specialty_ids"
+            control={control}
+            render={({ field }) => (
+              <MultiSearchSelect
+                label="Ocupação (Especialidades Autorizadas) *"
+                options={specialties}
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Pesquisar por nome ou código CBO..."
+                emptyMessage="Especialidade não encontrada"
+              />
+            )}
+          />
+          {errors.specialty_ids && (
+            <p className="mt-1 text-[10px] text-destructive font-black uppercase tracking-tighter">
+              {errors.specialty_ids.message}
+            </p>
+          )}
+
+          {/* Classificação DATASUS */}
+          <Controller
+            name="service_classification_ids"
+            control={control}
+            render={({ field }) => (
+              <MultiSearchSelect
+                label="Serviço / Classificação (BPA)"
+                options={serviceClassifications.map(sc => ({
+                  ...sc,
+                  code: `${sc.service_code}/${sc.classification_code}`
+                }))}
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Pesquisar por nome ou código (S:XXX / C:XXX)..."
+                emptyMessage="Serviço/Classificação não encontrado"
+              />
+            )}
+          />
+
+          {/* CIDs Autorizados */}
+          <Controller
+            name="cid_ids"
+            control={control}
+            render={({ field }) => (
+              <MultiSearchSelect
+                label="CIDs Autorizados"
+                options={cidList}
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Pesquisar por código CID ou nome da doença..."
+                emptyMessage="CID não encontrado"
+              />
+            )}
+          />
         </div>
 
-        <div className="sm:col-span-2">
-          <label className="flex items-center space-x-2">
+        <div className="sm:col-span-2 pt-4">
+          <label className="flex items-center space-x-3 group cursor-pointer w-fit">
             <input
               type="checkbox"
               {...register('active')}
-              className="rounded border-input text-primary focus:ring-ring bg-background"
+              className="w-5 h-5 rounded border-input text-primary focus:ring-primary/20 bg-background transition-all"
             />
-            <span className="text-sm font-medium text-foreground">Ativo</span>
+            <span className="text-sm font-black text-foreground uppercase tracking-[0.2em] group-hover:text-primary transition-colors">Procedimento Ativo</span>
           </label>
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3 border-t border-border pt-4">
+      <div className="flex justify-end space-x-4 border-t border-border/40 pt-8 mt-8">
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground"
+          className="rounded-xl border border-border/40 bg-background px-6 py-3 text-[11px] font-black text-muted-foreground uppercase tracking-widest shadow-sm hover:bg-muted transition-all"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex justify-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
+          className="inline-flex justify-center rounded-xl bg-primary px-8 py-3 text-[11px] font-black text-primary-foreground uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/10 disabled:opacity-50 transition-all active:scale-95"
         >
-          {isPending ? 'Salvando...' : 'Salvar'}
+          {isPending ? 'Processando...' : 'Salvar Alterações'}
         </button>
       </div>
     </form>

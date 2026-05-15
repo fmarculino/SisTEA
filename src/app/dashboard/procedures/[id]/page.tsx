@@ -13,20 +13,27 @@ export default async function EditProcedurePage({ params }: { params: Promise<{ 
   const { data: procedure } = await supabase.from('procedures').select('*').eq('id', id).single()
   if (!procedure) notFound()
 
-  const { data: specialties } = await supabase
-    .from('specialties')
-    .select('id, name, cbo')
-    .eq('active', true)
-    .order('name')
-
-  const { data: currentSpecialties } = await supabase
-    .from('procedure_specialties')
-    .select('specialty_id')
-    .eq('procedure_id', id)
+  const [
+    specialtiesRes, 
+    serviceClassificationsRes, 
+    cidRes,
+    currentSpecialties,
+    currentServiceClassifications,
+    currentCid
+  ] = await Promise.all([
+    supabase.from('specialties').select('id, name, cbo').eq('active', true).order('name'),
+    supabase.from('service_classifications').select('id, name, service_code, classification_code').eq('active', true).order('service_code'),
+    supabase.from('cid').select('id, name, code').eq('active', true).order('code'),
+    supabase.from('procedure_specialties').select('specialty_id').eq('procedure_id', id),
+    supabase.from('procedure_service_classifications').select('service_classification_id').eq('procedure_id', id),
+    supabase.from('procedure_cid').select('cid_id').eq('procedure_id', id),
+  ])
 
   const initialData = {
     ...procedure,
-    specialty_ids: currentSpecialties?.map(s => s.specialty_id) || []
+    specialty_ids: currentSpecialties.data?.map(s => s.specialty_id) || [],
+    service_classification_ids: currentServiceClassifications.data?.map(s => s.service_classification_id) || [],
+    cid_ids: currentCid.data?.map(s => s.cid_id) || []
   }
 
   return (
@@ -39,7 +46,9 @@ export default async function EditProcedurePage({ params }: { params: Promise<{ 
       <ProcedureForm 
         id={procedure.id}
         initialData={initialData}
-        specialties={specialties || []}
+        specialties={specialtiesRes.data || []}
+        serviceClassifications={serviceClassificationsRes.data || []}
+        cidList={cidRes.data || []}
       />
     </div>
   )

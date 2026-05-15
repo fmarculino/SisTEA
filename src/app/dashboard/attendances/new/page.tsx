@@ -45,7 +45,7 @@ export default async function NewAttendancePage() {
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
-    supabase.from('procedures').select('id, name, code, valor_total, active, procedure_specialties(specialty_id)').eq('active', true).order('name'),
+    supabase.from('procedures').select('id, name, code, valor_total, active, min_age, max_age, max_quantity, procedure_specialties(specialty_id)').eq('active', true).order('name'),
     profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : Promise.resolve({ data: [] }),
     supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single()
   ])
@@ -68,6 +68,7 @@ export default async function NewAttendancePage() {
 
     const specialtiesFull = (p.professional_specialties as any[])?.map((ps: any) => ({
       id: ps.specialty_id,
+      name: ps.specialties?.name,
       cbo: ps.specialties?.cbo
     })).filter((s: any) => s.id)
     

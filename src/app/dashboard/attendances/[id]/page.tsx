@@ -18,7 +18,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
       *, 
       sessions:attendance_sessions(*),
       patient:patients(id, name, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color),
-      professional:professionals(id, name, cns, professional_specialties(specialties(name, cbo))),
+      professional:professionals(id, name, cns, professional_specialties(specialty_id, specialties(name, cbo))),
       procedure:procedures(id, name, code, valor_total)
     `)
     .eq('id', id)
@@ -44,9 +44,9 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   let patientsQuery = supabase.from('patients').select('id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color').order('name')
   
   // Use professional_clinics for many-to-many join, and professional_specialties for specialties
-  let profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics(clinic_id)'
+  let profSelect = 'id, name, cns, professional_specialties(specialty_id, specialties(name, cbo)), professional_clinics(clinic_id)'
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    profSelect = 'id, name, cns, professional_specialties(specialties(name, cbo)), professional_clinics!inner(clinic_id)'
+    profSelect = 'id, name, cns, professional_specialties(specialty_id, specialties(name, cbo)), professional_clinics!inner(clinic_id)'
   }
 
   let professionalsQuery = supabase
@@ -68,7 +68,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
-    supabase.from('procedures').select('id, name, code, active, valor_total, procedure_specialties(specialty_id)').order('name'),
+    supabase.from('procedures').select('id, name, code, active, valor_total, min_age, max_age, max_quantity, procedure_specialties(specialty_id)').order('name'),
     profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : supabase.from('clinics').select('id, name, cnes').eq('id', profile?.clinic_id || '').order('name'),
     supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single()
   ])
@@ -85,12 +85,24 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
       (ps: any) => ps.specialties?.cbo
     ).filter(Boolean)
 
+    const specialtyIds = (p.professional_specialties as any[])?.map(
+      (ps: any) => ps.specialty_id
+    ).filter(Boolean)
+
+    const specialtiesFull = (p.professional_specialties as any[])?.map((ps: any) => ({
+      id: ps.specialty_id,
+      name: ps.specialties?.name,
+      cbo: ps.specialties?.cbo
+    })).filter((s: any) => s.id)
+
     return {
       id: p.id,
       name: p.name,
       cns: p.cns,
       cbo: cbos?.length > 0 ? cbos[0] : '',
       professional_clinics: p.professional_clinics,
+      specialty_ids: specialtyIds,
+      specialties_full: specialtiesFull,
       specialty: specialtyNames?.length > 0 ? specialtyNames.join(', ') : 'Sem especialidade'
     }
   })
