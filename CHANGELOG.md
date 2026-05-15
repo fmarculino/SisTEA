@@ -2,6 +2,33 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.9.7-beta] - 2026-05-15
+
+Esta versão foca na **Governança Clínica e Eficiência Operacional**, introduzindo travas de segurança administrativas e uma interface de busca otimizada para grandes catálogos.
+
+### 🛡️ Restrições Clínicas & Regras de Negócio (BR-004)
+- **Validação de Idade (Filtro Adaptativo):** O sistema agora calcula a idade do paciente em tempo real e filtra automaticamente a lista de procedimentos, ocultando aqueles que não atendem à faixa etária permitida (`min_age` e `max_age`).
+- **Teto de Quantidade por Profissional:** Implementação de trava de segurança que limita o número de sessões de um procedimento para o mesmo paciente dentro da competência atual, considerando o vínculo individual do profissional.
+- **Bloqueio de Servidor:** Validações robustas no backend que impedem a gravação de guias que violem as restrições clínicas, com mensagens de erro claras e informativas.
+
+### 🔍 Experiência do Usuário (UX) & Busca Inteligente
+- **Componente MultiSearchSelect:** Substituição de extensas listas de checkboxes por um seletor dinâmico de tags com busca difusa (Fuzzy Search).
+- **Busca Omnidirecional:** 
+    - **Especialidades:** Localização instantânea por Nome ou código **CBO**.
+    - **CID-10:** Busca por Nome da doença ou código CID.
+    - **Serviços DATASUS:** Busca por Nome ou código de Serviço/Classificação.
+- **Feedback de Validação:** Novo sistema de banners de alerta no formulário de atendimento para informar violações de regras de negócio de forma proeminente.
+
+### 📚 Gestão de Catálogos & Dados Mestres
+- **Catálogo CID-10:** Implementação de módulo completo para gestão de CIDs autorizados no sistema.
+- **Serviços de Classificação:** Novo cadastro para gerenciamento de serviços e classificações BPA.
+- **Política de Preservação Histórica:** Desativação do recurso de exclusão física para CID e Serviços, garantindo a integridade dos dados históricos através de inativação lógica.
+
+### 📖 Documentação Técnica
+- **Manual de Regras de Negócio:** Criação do documento `DOCS_REGRAS_NEGOCIO.md` detalhando as lógicas de validação para suporte futuro.
+
+---
+
 ## [0.9.6-beta] - 2026-05-14
 
 Esta versão foca na **Excelência Técnica e Padronização Nacional do BPA**, garantindo que as exportações do SisTEA sejam 100% compatíveis com os validadores oficiais do DATASUS (BPA-Mag).
