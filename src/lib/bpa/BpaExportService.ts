@@ -173,7 +173,7 @@ export class BpaExportService {
 
     // --- Linhas de Produção ---
     // Ordenar por Profissional + CBO para agrupar boletins
-    const sortedAttendances = [...attendances].sort((a, b) => {
+    const sortedAttendances = [...(attendances as any[])].sort((a, b) => {
       const keyA = `${a.professionals.cns}-${a.professional_cbo}`;
       const keyB = `${b.professionals.cns}-${b.professional_cbo}`;
       return keyA.localeCompare(keyB);
