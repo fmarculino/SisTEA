@@ -156,41 +156,46 @@ export class BpaExportService {
     const [month, year] = month_year.split('/');
     const compYYYYMM = `${year}${month.padStart(2, '0')}`;
 
-    // --- Cálculo do Checksum (Control Field) ---
-    // Regra: (Soma das Qtds + Soma dos Procs) % 1111 + 1111
-    let sumQty = 0;
-    let sumProcs = 0;
-    attendances.forEach((att: any) => {
-      sumQty += Number(att.quantity || 1);
-      sumProcs += Number(sanitize(att.procedures.code));
-    });
-    const checksum = (sumQty + sumProcs) % 1111 + 1111;
-
-    // --- Header (Registro 01) - 126 caracteres ---
+    // --- Header (Registro 01) - 127 caracteres seguindo padrão PACOMU.ABR ---
     const headerLine = 
       '01' +                                      // 1-2: Identificador
       '#BPA#' +                                   // 3-7: Fixo
       compYYYYMM +                                // 8-13: Competência AAAAMM
-      padLeft(attendances.length, 6) +            // 14-19: Total de Linhas
-      padLeft(Math.ceil(attendances.length / 20), 6) + // 20-25: Total de Folhas (estimado)
-      padLeft(checksum, 4) +                      // 26-29: Checksum
-      padRight(clinic.name, 30) +                 // 30-59: Órgão Responsável
-      padRight('SISTEA', 6) +                     // 60-65: Sigla
-      padLeft(clinic.cnpj, 14) +                  // 66-79: CNPJ
-      padRight('', 40) +                          // 80-119: Destino (Vazio)
-      'M' +                                       // 120: Destino Indicador (M=Municipal)
-      padRight('MD04.12', 10);                    // 121-130: Versão (exemplo)
+      padLeft(attendances.length.toString(), 6) + // 14-19: Quantidade de Registros
+      padLeft(clinic.cnes, 12) +                  // 20-31: CNES/Órgão Emissor
+      padRight(normalizeText(clinic.name), 30) +  // 32-61: Nome do Órgão
+      'NVM' +                                     // 62-64: Sigla (Nova Versão Magnético)
+      padLeft(clinic.cnpj || '', 14) +            // 65-78: CNPJ
+      padRight('', 42) +                          // 79-120: Reserva
+      'MD04.12';                                  // 121-127: Versão Layout
       
-    lines.push(headerLine.substring(0, 126));
+    lines.push(headerLine);
 
     // --- Linhas de Produção ---
-    attendances.forEach((att: any, index: number) => {
+    // Ordenar por Profissional + CBO para agrupar boletins
+    const sortedAttendances = [...attendances].sort((a, b) => {
+      const keyA = `${a.professionals.cns}-${a.professional_cbo}`;
+      const keyB = `${b.professionals.cns}-${b.professional_cbo}`;
+      return keyA.localeCompare(keyB);
+    });
+
+    let currentFolha = 1;
+    let currentSeq = 1;
+    let lastKey = '';
+
+    sortedAttendances.forEach((att: any) => {
       const procCode = sanitize(att.procedures.code);
-      const folha = Math.ceil((index + 1) / 20);
-      const sequencial = (index % 20) + 1;
+      const key = `${att.professionals.cns}-${att.professional_cbo}`;
+
+      // Se mudou o profissional/CBO, inicia novo boletim (nova folha, seq 1)
+      if (lastKey && key !== lastKey) {
+        currentFolha++;
+        currentSeq = 1;
+      }
+      lastKey = key;
 
       if (att.procedures.bpa_type === 'BPA_C') {
-        // BPA-C (Consolidado)
+        // BPA-C (Consolidado) - Não usa Folha/Seq
         const line = 
           '02' +                                  // 1-2
           padLeft(clinic.cnes, 7) +               // 3-9
@@ -203,46 +208,54 @@ export class BpaExportService {
         // BPA-I (Individualizado) - 350 caracteres fixos
         const attDate = sanitize(att.attendance_date); // YYYYMMDD
         const birthDate = sanitize(att.patients.birth_date); // YYYYMMDD
-        
         const genderCode = att.patients.gender === 'Feminino' ? 'F' : 'M';
-
-        // Cálculo simples de idade
         const age = birthDate ? Math.floor((new Date().getTime() - new Date(att.patients.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
 
         const line = 
-          '03' +                                  // 1-2
-          padLeft(clinic.cnes, 7) +               // 3-9
-          compYYYYMM +                            // 10-15
-          padLeft(att.professionals.cns, 15) +    // 16-30
-          padRight(att.professional_cbo, 6) +     // 31-36
-          attDate +                               // 37-44
-          padLeft(folha, 3) +                     // 45-47
-          padLeft(sequencial, 2) +                // 48-49
-          padLeft(procCode, 10) +                 // 50-59
-          padLeft(att.patients.cns_patient, 15) + // 60-74
-          genderCode +                            // 75
-          padLeft(att.patients.ibge_code, 6) +    // 76-81
-          padRight(sanitizeCid(att.cid || 'F840'), 4) + // 82-85
-          padLeft(age, 3) +                       // 86-88
-          padLeft(att.quantity, 6) +              // 89-94
-          padLeft(att.attendance_character || '01', 2) + // 95-96
-          padRight('', 13) +                      // 97-109 (Autorização)
-          'BPA' +                                 // 110-112 (Origem)
-          padRight(normalizeText(att.patients.name), 30) + // 113-142 (Nome)
-          birthDate +                             // 143-150 (Data Nasc)
-          mapRaceColor(att.patients.race_color) + // 151-152 (Raça)
-          padLeft(att.patients.ethnicity || '', 4) + // 153-156 (Etnia)
-          padLeft(att.patients.nationality || '010', 3) + // 157-159 (Nacionalidade)
-          padLeft(att.patients.ibge_code, 6) +    // 160-165 (Município Residência)
-          padRight('', 26) +                      // 166-191 (RESERVA / BRANCOS)
-          padLeft(sanitize(att.patients.cep), 8) + // 192-199 (CEP)
-          padRight(normalizeText(att.patients.address_number), 5) + // 200-204 (Número)
-          padRight(normalizeText(att.patients.address_complement), 10) + // 205-214 (Complemento)
-          padRight(normalizeText(att.patients.address_street), 30) + // 215-244 (Logradouro/Rua)
-          padRight(normalizeText(att.patients.address_neighborhood), 30) + // 245-274 (Bairro)
-          padRight(sanitizePhone(att.patients.phone), 11); // 275-285 (Telefone)
+          '03' +                                  // 1-2: Identificador Registro
+          padLeft(clinic.cnes, 7) +               // 3-9: CNES Unidade
+          compYYYYMM +                            // 10-15: Competência AAAAMM
+          padLeft(att.professionals.cns, 15) +    // 16-30: CNS Profissional
+          padRight(att.professional_cbo, 6) +     // 31-36: CBO
+          attDate +                               // 37-44: Data Atendimento (YYYYMMDD)
+          padLeft(currentFolha, 3) +              // 45-47: Folha
+          padLeft(currentSeq, 2) +                // 48-49: Sequencial
+          padLeft(procCode, 10) +                 // 50-59: Procedimento
+          padLeft(att.patients.cns_patient, 15) + // 60-74: CNS Paciente
+          genderCode +                            // 75: Sexo
+          padLeft(att.patients.ibge_code, 6) +    // 76-81: IBGE Município Residência
+          padRight(sanitizeCid(att.cid || 'F840'), 4) + // 82-85: CID
+          padLeft(age, 3) +                       // 86-88: Idade
+          padLeft(att.quantity, 6) +              // 89-94: Quantidade
+          padLeft(att.attendance_character || '01', 2) + // 95-96: Caráter Atendimento
+          padRight('', 13) +                      // 97-109: Número Autorização
+          'BPA' +                                 // 110-112: Origem
+          padRight(normalizeText(att.patients.name), 30) + // 113-142: Nome Paciente
+          birthDate +                             // 143-150: Data Nascimento (YYYYMMDD)
+          mapRaceColor(att.patients.race_color) + // 151-152: Raça/Cor
+          padLeft(att.patients.ethnicity || '', 4) + // 153-156: Etnia
+          padLeft(att.patients.nationality || '010', 3) + // 157-159: Nacionalidade
+          '135' +                                 // 160-162: Serviço (Reabilitação)
+          '002' +                                 // 163-165: Classificação (Intelectual/TEA)
+          padRight('', 8) +                       // 166-173: Equipe Seq
+          padRight('', 4) +                       // 174-177: Equipe Area
+          padLeft(clinic.cnpj || '', 14) +        // 178-191: CNPJ Unidade
+          padLeft(sanitize(att.patients.cep), 8) + // 192-199: CEP Paciente
+          '081' +                                 // 200-202: Código Logradouro (Default: RUA)
+          padRight(normalizeText(att.patients.address_street), 30) + // 203-232: Logradouro (Rua)
+          padRight(normalizeText(att.patients.address_complement), 10) + // 233-242: Complemento
+          padRight(normalizeText(att.patients.address_number), 5) + // 243-247: Número
+          padRight(normalizeText(att.patients.address_neighborhood), 30) + // 248-277: Bairro
+          padRight(sanitizePhone(att.patients.phone), 11); // 278-288: Telefone
 
         lines.push(padRight(line, 350)); 
+        
+        // Controle de Folha e Sequencial (Max 20 por folha)
+        currentSeq++;
+        if (currentSeq > 20) {
+          currentFolha++;
+          currentSeq = 1;
+        }
       }
     });
 
