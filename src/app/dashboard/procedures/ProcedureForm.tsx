@@ -171,7 +171,23 @@ export function ProcedureForm({
         {/* RESTRIÇÕES */}
         <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6 p-6 rounded-2xl border border-dashed border-border bg-muted/5">
           <div className="col-span-1">
-            <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Qtd. Máxima (Lançamento)</label>
+            <div className="flex items-center gap-2 mb-2">
+            <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest">Qtd. Máxima (Lançamento)</label>
+            <div className="group relative">
+              <div className="cursor-help text-primary/60 hover:text-primary transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+              </div>
+              <div className="absolute left-0 bottom-full mb-2 w-64 p-4 bg-card border border-border shadow-2xl rounded-2xl text-[11px] text-foreground font-medium leading-relaxed hidden group-hover:block z-50 animate-in fade-in zoom-in-95 duration-200">
+                <div className="bg-primary/10 text-primary font-black uppercase tracking-tighter mb-2 px-2 py-1 rounded-lg w-fit">Regra de Limite</div>
+                Define o teto de frequências permitidas. O limite é aplicado por <span className="font-bold text-primary">Profissional + Paciente</span> dentro da mesma <span className="font-bold text-primary">Competência (Mês/Ano)</span>. 
+                <br/><br/>
+                Exemplo: se o limite for 20, o Profissional A pode lançar 20 sessões e o Profissional B outras 20 para o mesmo paciente no mesmo mês.
+                <br/><br/>
+                <span className="italic opacity-70 italic text-[10px]">Deixe em branco para ilimitado.</span>
+                <div className="absolute top-full left-4 border-8 border-transparent border-t-card"></div>
+              </div>
+            </div>
+          </div>
             <input
               type="number"
               {...register('max_quantity')}
