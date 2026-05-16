@@ -6,11 +6,12 @@ import { redirect } from 'next/navigation'
 import { SpecialtyActions } from './SpecialtyActions'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { Pagination } from '@/components/ui/Pagination'
 
 export default async function SpecialtiesPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string }
+  searchParams: { q?: string; status?: string; page?: string; limit?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
@@ -20,7 +21,12 @@ export default async function SpecialtiesPage({
 
   const supabase = await createClient()
 
-  let query = supabase.from('specialties').select('*')
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 20
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  let query = supabase.from('specialties').select('*', { count: 'exact' })
 
   // Apply Search Filter
   if (queryParams.q) {
@@ -32,7 +38,9 @@ export default async function SpecialtiesPage({
     query = query.eq('active', queryParams.status === 'true')
   }
 
-  const { data: specialties } = await query.order('name')
+  const { data: specialties, count } = await query
+    .order('name')
+    .range(from, to)
 
   return (
     <div className="space-y-10">
@@ -136,8 +144,8 @@ export default async function SpecialtiesPage({
             </tbody>
           </table>
         </div>
+        <Pagination totalItems={count || 0} itemsPerPage={limit} currentPage={page} />
       </div>
     </div>
   )
 }
-

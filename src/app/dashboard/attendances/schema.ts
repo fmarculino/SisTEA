@@ -5,7 +5,7 @@ export const attendanceSessionSchema = z.object({
   session_date: z.string().min(1, 'Data é obrigatória'),
   start_time: z.string().min(1, 'Hora inicial é obrigatória'),
   end_time: z.string().min(1, 'Hora final é obrigatória'),
-  status: z.enum(['Realizada', 'Pendente', 'Glosado']),
+  status: z.enum(['Realizada', 'Pendente', 'Glosado', 'Não Realizado']),
   justification: z.string().optional().nullable(),
   // Audit fields (read-only)
   validated_at: z.string().optional().nullable(),
@@ -26,6 +26,7 @@ export const attendanceSchema = z.object({
   authorization_date: z.string().optional().nullable(),
   authorized_quantity: z.coerce.number().min(1, 'Quantidade deve ser maior que zero').default(20),
   cid: z.string().optional().nullable(),
+  service_classification_id: z.string().optional().nullable().transform(val => (val === '' ? null : val)),
   attendance_character: z.string().optional().nullable(),
   quantity: z.coerce.number().default(1).optional().nullable(),
   

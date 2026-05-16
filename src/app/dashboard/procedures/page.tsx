@@ -1,16 +1,18 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import Link from 'next/link'
-import { Edit2, Plus } from 'lucide-react'
+import { Edit2, Plus, Scissors } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { Pagination } from '@/components/ui/Pagination'
 import { formatCurrency } from '@/utils/format'
+import { applyMask } from '@/utils/maskUtils'
 
 export default async function ProceduresPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; specialty?: string }
+  searchParams: { q?: string; status?: string; specialty?: string; page?: string; limit?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
@@ -19,6 +21,11 @@ export default async function ProceduresPage({
   }
 
   const supabase = await createClient()
+
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 20
+  const from = (page - 1) * limit
+  const to = from + limit - 1
 
   // Fetch specialties for filter
   const { data: specialtiesList } = await supabase
@@ -43,11 +50,13 @@ export default async function ProceduresPage({
     `
   }
 
-  let query = supabase.from('procedures').select(selectStr)
+  let query = supabase.from('procedures').select(selectStr, { count: 'exact' })
 
-  // Apply Search Filter
+  // Filtro de Busca Inteligente
   if (queryParams.q) {
-    query = query.or(`name.ilike.%${queryParams.q}%,code.ilike.%${queryParams.q}%`)
+    const cleanQ = queryParams.q.replace(/\D/g, '')
+    // Busca pela descrição, pelo valor formatado ou pelo valor limpo (sem pontos/traços)
+    query = query.or(`name.ilike.%${queryParams.q}%,code.ilike.%${queryParams.q}%,code.ilike.%${cleanQ}%`)
   }
 
   // Apply Status Filter
@@ -60,118 +69,149 @@ export default async function ProceduresPage({
     query = query.eq('procedure_specialties.specialty_id', queryParams.specialty)
   }
 
-  const { data: procedures } = await query.order('name')
+  const { data: procedures, count } = await query
+    .order('name')
+    .range(from, to)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
-            Procedimentos
+          <h2 className="text-3xl font-black leading-tight text-foreground tracking-tight sm:text-4xl">
+            Catálogo de <span className="text-primary tracking-tighter">Procedimentos</span>
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie o catálogo de procedimentos e seus valores de repasse.
+          <p className="mt-2 text-base text-muted-foreground font-medium max-w-xl">
+            Gerencie o catálogo oficial de procedimentos, valores de repasse e vínculos com especialidades.
           </p>
         </div>
         <Link
           href="/dashboard/procedures/new"
-          className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex items-center rounded-2xl bg-primary px-6 py-3.5 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary/10 transition-all active:scale-95 group uppercase tracking-widest"
         >
-          <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+          <Plus className="-ml-1 mr-2 h-5 w-5 stroke-[3]" aria-hidden="true" />
           Novo Procedimento
         </Link>
       </div>
 
-      <DataTableFilters 
-        placeholder="Pesquisar por nome ou código..." 
-        extraFilters={[
-          {
-            paramName: 'specialty',
-            placeholder: 'Todas Ocupações',
-            options: (specialtiesList || []).map(s => ({ value: s.id, label: s.name }))
-          }
-        ]}
-      />
+      <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
+        <DataTableFilters 
+          searchType="procedure"
+          placeholder="Pesquisar por nome ou código..." 
+          extraFilters={[
+            {
+              paramName: 'specialty',
+              placeholder: 'Todas Ocupações',
+              options: (specialtiesList || []).map(s => ({ value: s.id, label: s.name }))
+            }
+          ]}
+        />
+      </div>
 
-      <div className="overflow-x-auto shadow ring-1 ring-border sm:rounded-lg">
-        <table className="min-w-full divide-y divide-border">
-          <thead className="bg-muted">
-            <tr>
-              <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground sm:pl-6">
-                Código
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
-                Nome
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
-                Ocupação
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
-                Valor SUS
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
-                Repasse
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
-                Total
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
-                Status
-              </th>
-              <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                <span className="sr-only">Ações</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border bg-card">
-            {(procedures as any[])?.map((procedure) => (
-              <tr key={procedure.id}>
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
-                  {procedure.code}
-                </td>
-                <td className="px-3 py-4 text-sm text-muted-foreground min-w-[300px]">
-                  {procedure.name}
-                </td>
-                <td className="px-3 py-4 text-sm text-muted-foreground italic">
-                  <div className="flex flex-wrap gap-1 max-w-[200px]">
-                    {/* @ts-ignore */}
-                    {procedure.specialties?.map((s: any, idx: number) => (
-                      <span key={idx} className="block text-[11px] bg-accent/30 px-1.5 py-0.5 rounded">
-                        {s.specialties?.name}
-                      </span>
-                    )) || '-'}
-                  </div>
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                  {formatCurrency(procedure.valor_sus)}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                  {formatCurrency(procedure.valor_rp)}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-foreground font-medium">
-                  {formatCurrency(procedure.valor_total || (procedure.valor_sus + procedure.valor_rp))}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
-                  <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${procedure.active ? 'bg-green-500/10 text-green-700 dark:text-green-400 ring-green-600/20' : 'bg-destructive/10 text-destructive dark:text-destructive-foreground ring-destructive/20'}`}>
-                    {procedure.active ? 'Ativo' : 'Inativo'}
-                  </span>
-                </td>
-                <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                  <Link href={`/dashboard/procedures/${procedure.id}`} className="text-primary hover:text-primary/80 mr-4">
-                    <Edit2 className="h-4 w-4 inline" />
-                  </Link>
-                </td>
-              </tr>
-            ))}
-            {(!procedures || procedures.length === 0) && (
+      <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border/30">
+            <thead className="bg-muted/50">
               <tr>
-                <td colSpan={8} className="py-4 text-center text-sm text-muted-foreground">
-                  Nenhum procedimento encontrado.
-                </td>
+                <th scope="col" className="py-5 pl-8 pr-3 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Código / Nome
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Ocupações
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Valores (SUS / RP)
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Total
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Status
+                </th>
+                <th scope="col" className="relative py-5 pl-3 pr-8">
+                  <span className="sr-only">Ações</span>
+                </th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border/20">
+              {(procedures as any[])?.map((procedure) => (
+                <tr 
+                  key={procedure.id}
+                  className={`transition-colors group/row hover:bg-muted/30 ${!procedure.active ? 'opacity-60 grayscale-[0.3]' : ''}`}
+                >
+                  <td className="whitespace-nowrap py-6 pl-8 pr-3">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-primary/70 uppercase tracking-widest mb-1">
+                        {procedure.code ? applyMask(procedure.code, 'procedure') : '-'}
+                      </span>
+                      <span className="text-sm font-bold text-foreground group-hover/row:text-primary transition-colors max-w-xs truncate">
+                        {procedure.name}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-6">
+                    <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+                      {/* @ts-ignore */}
+                      {procedure.specialties?.map((s: any, idx: number) => (
+                        <span key={idx} className="inline-flex items-center rounded-lg bg-primary/5 px-2 py-0.5 text-[9px] font-black text-primary border border-primary/10 uppercase tracking-tighter">
+                          {s.specialties?.name}
+                        </span>
+                      )) || <span className="text-[9px] text-muted-foreground italic">Nenhuma</span>}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-6">
+                    <div className="flex flex-col space-y-0.5">
+                      <span className="text-[10px] text-muted-foreground font-medium">SUS: <span className="text-foreground font-bold">{formatCurrency(procedure.valor_sus)}</span></span>
+                      <span className="text-[10px] text-muted-foreground font-medium">RP: <span className="text-foreground font-bold">{formatCurrency(procedure.valor_rp)}</span></span>
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-6">
+                    <span className="text-sm font-black text-foreground">
+                      {formatCurrency(procedure.valor_total || (procedure.valor_sus + procedure.valor_rp))}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-6">
+                    {procedure.active ? (
+                      <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                        Ativo
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-xl bg-muted px-3 py-1.5 text-[10px] font-black text-muted-foreground border border-border uppercase tracking-widest leading-none">
+                        Inativo
+                      </span>
+                    )}
+                  </td>
+                  <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end">
+                      <Link 
+                        href={`/dashboard/procedures/${procedure.id}`} 
+                        className="p-2.5 rounded-xl text-primary bg-primary/5 hover:bg-primary/20 transition-all border border-primary/10 shadow-sm"
+                        title="Editar Procedimento"
+                      >
+                        <Edit2 className="h-4 w-4 stroke-[2.5]" />
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {(!procedures || procedures.length === 0) && (
+                <tr>
+                  <td colSpan={6} className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                        <Scissors className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground">Nenhum procedimento encontrado</h3>
+                        <p className="text-sm text-muted-foreground">Tente ajustar seus filtros de pesquisa.</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination totalItems={count || 0} itemsPerPage={limit} currentPage={page} />
       </div>
     </div>
   )

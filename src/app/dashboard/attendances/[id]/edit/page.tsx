@@ -89,7 +89,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
-    supabase.from('procedures').select('id, name, code, active, valor_total, procedure_specialties(specialty_id)').order('name'),
+    supabase.from('procedures').select('id, name, code, active, valor_total, procedure_specialties(specialty_id), procedure_cid(cid_id, cid(code, name)), procedure_service_classifications(service_classifications(*))').order('name'),
     profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : supabase.from('clinics').select('id, name, cnes').eq('id', profile?.clinic_id || '').order('name'),
     supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single(),
     supabase.from('clinics').select('competence_end_day').eq('id', attendance.clinic_id).single()
@@ -148,6 +148,18 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   const mappedProcedures = procedures?.map(p => ({
     ...p,
     specialty_ids: (p.procedure_specialties as any[])?.map((ps: any) => ps.specialty_id),
+    cid_options: (p.procedure_cid as any[])?.map((pc: any) => ({
+      id: pc.cid?.code,
+      name: `${pc.cid?.code} — ${pc.cid?.name}`
+    })).filter(c => c.id),
+    datasus_options: (p.procedure_service_classifications as any[])?.map((psc: any) => {
+      const sc = psc.service_classifications;
+      if (!sc) return null;
+      return {
+        id: sc.id,
+        name: `${sc.service_code}/${sc.classification_code} — ${sc.name}`
+      };
+    }).filter(Boolean),
     default_value: p.valor_total // Mapeia valor_total para default_value esperado pelo form
   }))
 

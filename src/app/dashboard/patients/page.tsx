@@ -4,15 +4,22 @@ import Link from 'next/link'
 import { Edit2, Plus, User, CheckCircle, XCircle } from 'lucide-react'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { Pagination } from '@/components/ui/Pagination'
+import { applyMask } from '@/utils/maskUtils'
 
 export default async function PatientsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; clinic?: string }
+  searchParams: { q?: string; status?: string; clinic?: string; page?: string; limit?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
   const supabase = await createClient()
+
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 20
+  const from = (page - 1) * limit
+  const to = from + limit - 1
 
   // Fetch clinics for filter
   const { data: clinicsList } = await supabase
@@ -23,11 +30,20 @@ export default async function PatientsPage({
 
   let query = supabase
     .from('patients')
-    .select('*, patient_clinics(clinic_id, active, clinics(name))')
+    .select('*, patient_clinics!inner(clinic_id, active, clinics(name))', { count: 'exact' })
 
-  // Apply Search Filter
+  // Apply Clinic Filter
+  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
+    query = query.eq('patient_clinics.clinic_id', profile.clinic_id)
+  } else if (queryParams.clinic && queryParams.clinic !== 'all') {
+    query = query.eq('patient_clinics.clinic_id', queryParams.clinic)
+  }
+
+  // Filtro de Busca Inteligente
   if (queryParams.q) {
-    query = query.or(`name.ilike.%${queryParams.q}%,cns_patient.ilike.%${queryParams.q}%`)
+    const cleanQ = queryParams.q.replace(/[^\w]/g, '')
+    // Busca pelo nome, pelo valor formatado ou pelo valor limpo (sem pontos/traços)
+    query = query.or(`name.ilike.%${queryParams.q}%,cns_patient.ilike.%${queryParams.q}%,cns_patient.ilike.%${cleanQ}%,cpf.ilike.%${queryParams.q}%,cpf.ilike.%${cleanQ}%`)
   }
 
   // Apply Status Filter
@@ -35,20 +51,9 @@ export default async function PatientsPage({
     query = query.eq('active', queryParams.status === 'true')
   }
 
-  // Apply Clinic Filter
-  if (queryParams.clinic && queryParams.clinic !== 'all') {
-    // We use a separate sub-select or just filter the main query if we used !inner
-    // For simplicity with Supabase JS and RLS, we can filter by the legacy clinic_id 
-    // OR use the new relationship. Let's use the new relationship with !inner if filtered.
-    if (queryParams.clinic && queryParams.clinic !== 'all') {
-        query = supabase
-          .from('patients')
-          .select('*, clinics(name), patient_clinics!inner(clinic_id, clinics(name))')
-          .eq('patient_clinics.clinic_id', queryParams.clinic)
-    }
-  }
-
-  const { data: patients } = await query.order('name')
+  const { data: patients, count } = await query
+    .order('name')
+    .range(from, to)
 
   return (
     <div className="space-y-10">
@@ -72,7 +77,8 @@ export default async function PatientsPage({
 
       <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
         <DataTableFilters 
-          placeholder="Pesquisar por nome ou CNS..." 
+          searchType="auto"
+          placeholder="Pesquisar por nome ou documento..." 
           extraFilters={[
             {
               paramName: 'clinic',
@@ -117,12 +123,17 @@ export default async function PatientsPage({
                         <User className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-foreground group-hover/row:text-primary transition-colors">
+                        <span className="text-sm font-black text-foreground tracking-tight">
                           {patient.name}
                         </span>
-                        <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
-                          Mãe: {patient.mother_name || '-'}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-muted-foreground/80 mt-1 flex items-center">
+                            {patient.cns_patient ? applyMask(patient.cns_patient, 'cns') : 'CNS não inf.'}
+                          </span>
+                          <span className="text-xs font-bold text-muted-foreground/80 mt-1 flex items-center">
+                            {patient.cpf ? applyMask(patient.cpf, 'cpf') : 'CPF não inf.'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -205,8 +216,8 @@ export default async function PatientsPage({
             </tbody>
           </table>
         </div>
+        <Pagination totalItems={count || 0} itemsPerPage={limit} currentPage={page} />
       </div>
     </div>
   )
 }
-

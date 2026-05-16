@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { MultiSearchSelect } from '@/components/ui/MultiSearchSelect'
+import { applyMask } from '@/utils/maskUtils'
 
 type SpecialtyOption = { id: string; name: string; cbo: string }
 type ServiceClassificationOption = { id: string; name: string; service_code: string; classification_code: string }
@@ -39,7 +40,7 @@ export function ProcedureForm({
   } = useForm<ProcedureFormData>({
     resolver: zodResolver(procedureSchema) as any,
     defaultValues: {
-      code: initialData?.code || '',
+      code: initialData?.code ? applyMask(initialData.code, 'procedure') : '',
       hasNoCode: !initialData?.code && !!id, 
       name: initialData?.name || '',
       description: initialData?.description || '',

@@ -5,11 +5,12 @@ import { Edit2, Plus, CheckCircle, XCircle, BookOpen } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { CidActions } from './CidActions'
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { Pagination } from '@/components/ui/Pagination'
 
 export default async function CidPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string }
+  searchParams: { q?: string; status?: string; page?: string; limit?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
@@ -19,11 +20,18 @@ export default async function CidPage({
 
   const supabase = await createClient()
 
-  let query = supabase.from('cid').select('*')
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 20
+  const from = (page - 1) * limit
+  const to = from + limit - 1
 
-  // Apply Search Filter
+  let query = supabase.from('cid').select('*', { count: 'exact' })
+
+  // Filtro de Busca Inteligente
   if (queryParams.q) {
-    query = query.or(`name.ilike.%${queryParams.q}%,code.ilike.%${queryParams.q}%`)
+    const cleanQ = queryParams.q.replace(/[^\w]/g, '')
+    // Busca pela descrição, pelo valor formatado ou pelo valor limpo (sem pontos/traços)
+    query = query.or(`name.ilike.%${queryParams.q}%,code.ilike.%${queryParams.q}%,code.ilike.%${cleanQ}%`)
   }
 
   // Apply Status Filter
@@ -31,7 +39,9 @@ export default async function CidPage({
     query = query.eq('active', queryParams.status === 'true')
   }
 
-  const { data: cidList } = await query.order('code')
+  const { data: cidList, count } = await query
+    .order('code')
+    .range(from, to)
 
   return (
     <div className="space-y-10">
@@ -54,7 +64,10 @@ export default async function CidPage({
       </div>
 
       <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
-        <DataTableFilters placeholder="Pesquisar por código ou descrição..." />
+        <DataTableFilters 
+          searchType="cid"
+          placeholder="Pesquisar por código ou descrição..." 
+        />
       </div>
 
       <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
@@ -135,6 +148,7 @@ export default async function CidPage({
             </tbody>
           </table>
         </div>
+        <Pagination totalItems={count || 0} itemsPerPage={limit} currentPage={page} />
       </div>
     </div>
   )

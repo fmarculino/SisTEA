@@ -18,9 +18,11 @@ export const procedureSchema = z.object({
 }).refine((data) => {
   if (data.hasNoCode) return true;
   if (!data.code) return false;
-  return /^\d{2}\.\d{2}\.\d{2}\.\d{3}-\d{1}$/.test(data.code);
+  // Aceita tanto o formato mascarado (00.00.00.000-0) quanto o limpo (10 dígitos)
+  const clean = data.code.replace(/\D/g, '');
+  return clean.length === 10;
 }, {
-  message: "Código SUS inválido ou obrigatório (00.00.00.000-0)",
+  message: "Código SUS inválido (deve ter 10 dígitos)",
   path: ["code"],
 });
 

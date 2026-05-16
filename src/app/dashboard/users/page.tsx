@@ -4,13 +4,13 @@ import Link from 'next/link'
 import { Edit2, Shield, Building, UserPlus, CheckCircle, XCircle } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import UserActions from './UserActions'
-
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { Pagination } from '@/components/ui/Pagination'
 
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; clinic?: string }
+  searchParams: { q?: string; status?: string; clinic?: string; page?: string; limit?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
@@ -21,6 +21,11 @@ export default async function UsersPage({
 
   const supabase = await createClient()
 
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 20
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
   // Fetch clinics for filter
   const { data: clinicsList } = await supabase
     .from('clinics')
@@ -28,7 +33,7 @@ export default async function UsersPage({
     .eq('active', true)
     .order('name')
 
-  let query = supabase.from('users').select('*, clinics(name)')
+  let query = supabase.from('users').select('*, clinics(name)', { count: 'exact' })
 
   // Apply Search Filter
   if (queryParams.q) {
@@ -45,7 +50,9 @@ export default async function UsersPage({
     query = query.eq('clinic_id', queryParams.clinic)
   }
 
-  const { data: users } = await query.order('email')
+  const { data: users, count } = await query
+    .order('email')
+    .range(from, to)
 
   return (
     <div className="space-y-10">
@@ -184,8 +191,8 @@ export default async function UsersPage({
             </tbody>
           </table>
         </div>
+        <Pagination totalItems={count || 0} itemsPerPage={limit} currentPage={page} />
       </div>
     </div>
   )
 }
-

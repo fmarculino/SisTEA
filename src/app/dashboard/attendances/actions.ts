@@ -305,8 +305,8 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     
     for (const s of dbSessions) {
       if (!incomingIds.has(s.id)) {
-        // Rule 1: Clinic User can only delete sessions that are "Pendente" and NOT validated
-        if (profile?.role === 'CLINIC_USER' && (s.status !== 'Pendente' || s.validated_at)) {
+        // Rule 1: Clinic User can only delete sessions that are "Pendente" or "Não Realizado" and NOT validated
+        if (profile?.role === 'CLINIC_USER' && ((s.status !== 'Pendente' && s.status !== 'Não Realizado') || s.validated_at)) {
           return { error: 'Clínicas não têm permissão para remover frequências que já foram realizadas ou validadas.' };
         }
         // Rule 2: Admin cannot delete a session validated by patient (digital signature)
@@ -509,7 +509,10 @@ export async function deleteAttendanceAction(id: string) {
 
   // --- SECURITY: Deletion rules ---
   if (profile?.role === 'CLINIC_USER') {
-    return { error: 'Clínicas não têm permissão para excluir atendimentos. Caso necessário, entre em contato com a administração.' }
+    const sessions = (attendance as any).sessions || []
+    if (sessions.length > 0) {
+      return { error: 'Clínicas não têm permissão para excluir atendimentos que já possuem frequências registradas. Caso necessário, entre em contato com a administração.' }
+    }
   }
 
   if (profile?.role === 'SMS_ADMIN') {

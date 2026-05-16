@@ -11,7 +11,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { generateFrequencyPDF } from '@/utils/generateFrequencyPDF'
 import { QRCodeModal } from './QRCodeModal'
 import { StatusModal } from '@/components/ui/StatusModal'
-import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck } from 'lucide-react'
+import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck, Smartphone } from 'lucide-react'
 
 export function AttendanceForm({ 
   initialData, 
@@ -66,6 +66,7 @@ export function AttendanceForm({
       authorization_date: initialData?.authorization_date || '',
       authorized_quantity: initialData?.authorized_quantity || 20,
       cid: initialData?.cid || '',
+      service_classification_id: initialData?.service_classification_id || '',
       attendance_character: initialData?.attendance_character || '01',
       quantity: initialData?.quantity ?? 1,
       value_applied: initialData?.value_applied || 0,
@@ -142,6 +143,16 @@ export function AttendanceForm({
       })
     : []
 
+  // Filter CIDs based on selected procedure
+  const filteredCids = selectedProcedureId
+    ? procedures.find(p => p.id === selectedProcedureId)?.cid_options || []
+    : []
+
+  // Filter DataSUS classifications based on selected procedure
+  const filteredDatasus = selectedProcedureId
+    ? procedures.find(p => p.id === selectedProcedureId)?.datasus_options || []
+    : []
+
   // Reset procedure if professional changes and current procedure is not in filtered list
   useEffect(() => {
     if (selectedProcedureId && selectedProfessionalId) {
@@ -152,6 +163,25 @@ export function AttendanceForm({
       }
     }
   }, [selectedProfessionalId, filteredProcedures, selectedProcedureId, setValue])
+
+  // Reset CID and DataSUS if procedure changes and current values are not in filtered lists
+  useEffect(() => {
+    const currentCid = getValues('cid')
+    if (currentCid && selectedProcedureId) {
+      const isValid = filteredCids.some((c: any) => c.id === currentCid)
+      if (!isValid) {
+        setValue('cid', '', { shouldDirty: true })
+      }
+    }
+
+    const currentDatasus = getValues('service_classification_id')
+    if (currentDatasus && selectedProcedureId) {
+      const isValid = filteredDatasus.some((d: any) => d.id === currentDatasus)
+      if (!isValid) {
+        setValue('service_classification_id', '', { shouldDirty: true })
+      }
+    }
+  }, [selectedProcedureId, filteredCids, filteredDatasus, setValue, getValues])
 
   // Calculate value and quantity based on realized sessions
   useEffect(() => {
@@ -221,6 +251,10 @@ export function AttendanceForm({
     
     return ''
   })()
+  const hasSavedValidSessions = sessions?.some(s => 
+    (s.status === 'Realizada' || s.status === 'Glosado') && !!s.id
+  )
+  const canPrint = !!id && hasSavedValidSessions
 
 
   const onSubmit = async (data: AttendanceFormData) => {
@@ -365,6 +399,26 @@ export function AttendanceForm({
 
     localStorage.setItem('print_frequency_data', JSON.stringify(fullData));
     window.open('/imprimir/frequencia', '_blank');
+  };
+
+  const handleDeleteAttendance = async () => {
+    if (!id) return;
+    if (!window.confirm('Tem certeza que deseja excluir este atendimento permanentemente?')) return;
+
+    setIsPending(true);
+    try {
+      const { deleteAttendanceAction } = await import('./actions');
+      const result = await deleteAttendanceAction(id);
+      if (result?.error) {
+        setErrorMsg(result.error);
+      } else {
+        router.push('/dashboard/attendances');
+      }
+    } catch (err) {
+      setErrorMsg('Ocorreu um erro ao tentar excluir o atendimento.');
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -611,31 +665,60 @@ export function AttendanceForm({
           />
         </div>
 
-        <div className="sm:col-span-1">
-          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">CID principal</label>
-          <input
-            type="text"
-            placeholder="Ex: F84.0"
-            {...register('cid')}
-            readOnly={isHeaderLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
-          />
-        </div>
+        <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-8">
+          <div className="sm:col-span-1">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">CID principal</label>
+            <Controller
+              control={control}
+              name="cid"
+              render={({ field }) => (
+                <SearchableSelect
+                  options={filteredCids}
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  disabled={isHeaderLocked || !selectedProcedureId}
+                  placeholder={!selectedProcedureId ? "Selecione o procedimento primeiro..." : "Selecione o CID..."}
+                  className="mt-1"
+                />
+              )}
+            />
+            {errors.cid && <p className="mt-1 text-sm text-rose-500">{errors.cid.message}</p>}
+          </div>
 
-        <div className="sm:col-span-1">
-          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Caráter de Atendimento</label>
-          <select
-             {...register('attendance_character')}
-             disabled={isHeaderLocked}
-             className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
-          >
-            <option value="01">01 - Eletivo</option>
-            <option value="02">02 - Urgência</option>
-            <option value="03">03 - Acidente no local de trabalho</option>
-            <option value="04">04 - Acidente no trajeto do trabalho</option>
-            <option value="05">05 - Outros tipos de acidente de trânsito</option>
-            <option value="06">06 - Outros tipos de lesões/envenenamentos</option>
-          </select>
+          <div className="sm:col-span-1">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Classificação DataSUS</label>
+            <Controller
+              control={control}
+              name="service_classification_id"
+              render={({ field }) => (
+                <SearchableSelect
+                  options={filteredDatasus}
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  disabled={isHeaderLocked || !selectedProcedureId}
+                  placeholder={!selectedProcedureId ? "Selecione o procedimento primeiro..." : "Selecione a classificação..."}
+                  className="mt-1"
+                />
+              )}
+            />
+            {errors.service_classification_id && <p className="mt-1 text-sm text-rose-500">{errors.service_classification_id.message}</p>}
+          </div>
+
+          <div className="sm:col-span-1">
+            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Caráter de Atendimento</label>
+            <select
+               {...register('attendance_character')}
+               disabled={isHeaderLocked}
+               className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+            >
+              <option value="01">01 - Eletivo</option>
+              <option value="02">02 - Urgência</option>
+              <option value="03">03 - Acidente no local de trabalho</option>
+              <option value="04">04 - Acidente no trajeto do trabalho</option>
+              <option value="05">05 - Outros tipos de acidente de trânsito</option>
+              <option value="06">06 - Outros tipos de lesões/envenenamentos</option>
+            </select>
+          </div>
         </div>
 
         <div className="sm:col-span-1">
@@ -684,7 +767,7 @@ export function AttendanceForm({
           <button
             type="button"
             disabled={sessionFields.length >= authorizedQuantity || isCompetenceLocked}
-            onClick={() => append({ session_date: new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(new Date()), start_time: '08:00', end_time: '08:50', status: userRole === 'CLINIC_USER' ? 'Pendente' : 'Realizada' })}
+            onClick={() => append({ session_date: new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(new Date()), start_time: '08:00', end_time: '08:50', status: 'Não Realizado' })}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
           >
             {sessionFields.length >= authorizedQuantity ? 'Limite Atingido' : '+ Adicionar Sessão'}
@@ -699,7 +782,14 @@ export function AttendanceForm({
 
         <div className="space-y-4">
           {sessionFields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-end p-5 bg-muted/10 border border-border/40 rounded-2xl relative group transition-all hover:bg-muted/20 hover:border-border/60">
+            <div key={field.id} className="flex gap-4 items-start group">
+              <div className="mt-8 flex flex-col items-center gap-1">
+                <span className="text-[10px] font-black text-primary/40 group-hover:text-primary/60 transition-colors uppercase tracking-tighter tabular-nums">
+                  #{String(index + 1).padStart(2, '0')}
+                </span>
+                <div className="w-px h-full bg-border/40 group-hover:bg-primary/20 transition-colors min-h-[40px]" />
+              </div>
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-4 items-end p-5 bg-muted/10 border border-border/40 rounded-2xl relative transition-all hover:bg-muted/20 hover:border-border/60 shadow-sm">
               <div className="sm:col-span-1">
                 <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Data</label>
                 <input
@@ -750,12 +840,14 @@ export function AttendanceForm({
                       className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
                         watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 
                         watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 font-bold border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
-                        watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : ''
+                        watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : 
+                        watch(`sessions.${index}.status`) === 'Não Realizado' ? 'text-muted-foreground font-bold border-border bg-muted/30' : ''
                       }`}
                     >
-                      <option value="Realizada">Realizada</option>
-                      <option value="Pendente">Pendente</option>
-                      <option value="Glosado" className="text-rose-600 font-bold">Glosado</option>
+                      <option value="Não Realizado">○ Não Realizada</option>
+                      <option value="Realizada">✓ Realizada</option>
+                      <option value="Pendente">⏳ Pendente</option>
+                      <option value="Glosado" className="text-rose-600 font-bold">✗ Glosado</option>
                     </select>
                     
                     {/* Audit Info Badge for SMS_ADMIN */}
@@ -806,11 +898,13 @@ export function AttendanceForm({
                     <div className={`block w-full rounded-lg shadow-sm py-2 px-3 text-sm border font-bold text-center ${
                       watch(`sessions.${index}.status` as any) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 
                       watch(`sessions.${index}.status` as any) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
-                      watch(`sessions.${index}.status` as any) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500 dark:border-emerald-500/50 bg-amber-50/50 dark:bg-emerald-500/10' : 'border-border/60 bg-background'
+                      watch(`sessions.${index}.status` as any) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : 
+                      'text-muted-foreground border-border bg-muted/30'
                     }`}>
                       {watch(`sessions.${index}.status` as any) === 'Realizada' ? '✓ Realizada' : 
                        watch(`sessions.${index}.status` as any) === 'Pendente' ? '⏳ Pendente' : 
-                       watch(`sessions.${index}.status` as any) === 'Glosado' ? '✗ Glosado' : watch(`sessions.${index}.status` as any)}
+                       watch(`sessions.${index}.status` as any) === 'Glosado' ? '✗ Glosado' : 
+                       watch(`sessions.${index}.status` as any) === 'Não Realizado' ? '○ Não Realizada' : watch(`sessions.${index}.status` as any)}
                     </div>
                   </>
                 )}
@@ -837,9 +931,9 @@ export function AttendanceForm({
               )}
 
               {/* Action buttons area */}
-              {watch(`sessions.${index}.status` as any) === 'Realizada' ? (
+              {(watch(`sessions.${index}.status` as any) === 'Realizada' || watch(`sessions.${index}.status` as any) === 'Glosado') ? (
                 <div className="sm:col-span-1 flex items-end justify-end">
-                  {!isCompetenceLocked && (!watch(`sessions.${index}.id`) || (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`))) && (
+                  {!isCompetenceLocked && !watch(`sessions.${index}.id`) && (
                     <button
                       type="button"
                       onClick={() => remove(index)}
@@ -851,7 +945,7 @@ export function AttendanceForm({
                 </div>
               ) : (
                 <div className="sm:col-span-1 flex flex-col items-end justify-center gap-2">
-                   {userRole === 'CLINIC_USER' && watch(`sessions.${index}.status`) === 'Pendente' && id && watch(`sessions.${index}.id`) && !isCompetenceLocked && (
+                   {userRole === 'CLINIC_USER' && (watch(`sessions.${index}.status`) === 'Pendente' || watch(`sessions.${index}.status`) === 'Não Realizado') && id && watch(`sessions.${index}.id`) && !isCompetenceLocked && (
                     <button
                       type="button"
                       onClick={() => setQrModalSession({ index, sessionId: watch(`sessions.${index}.id`)! })}
@@ -864,7 +958,7 @@ export function AttendanceForm({
                   {!isCompetenceLocked && (
                     !watch(`sessions.${index}.id`) || 
                     (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`)) ||
-                    (userRole === 'CLINIC_USER' && watch(`sessions.${index}.status` as any) === 'Pendente' && !watch(`sessions.${index}.validated_at`))
+                    (userRole === 'CLINIC_USER' && (watch(`sessions.${index}.status` as any) === 'Pendente' || watch(`sessions.${index}.status` as any) === 'Não Realizado') && !watch(`sessions.${index}.validated_at`))
                   ) && (
                     <button
                       type="button"
@@ -878,6 +972,7 @@ export function AttendanceForm({
               )}
               <div className="absolute -left-2 top-1/2 -translate-y-1/2 h-8 w-1 rounded-full bg-primary/20 group-hover:bg-primary transition-all" />
             </div>
+          </div>
           ))}
         </div>
       </div>
@@ -890,24 +985,36 @@ export function AttendanceForm({
         >
           Descartar
         </button>
+        {id && !hasValidatedSession && !isCompetenceLocked && (
+          <button
+            type="button"
+            onClick={handleDeleteAttendance}
+            disabled={isPending}
+            className="rounded-xl border border-rose-500/30 bg-rose-500/5 px-6 py-2.5 text-sm font-bold text-rose-600 shadow-sm hover:bg-rose-500 hover:text-white transition-all active:scale-95 disabled:opacity-30 disabled:grayscale"
+          >
+            {isPending ? 'Excluindo...' : 'Excluir Guia'}
+          </button>
+        )}
         {id && (
           <div className="flex gap-2 mr-auto">
             <button
               type="button"
+              disabled={!canPrint}
               onClick={handlePrint}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-100 text-indigo-700 px-4 py-2.5 text-sm font-bold shadow-sm hover:bg-indigo-200 focus:outline-none focus:ring-4 focus:ring-indigo-600/20 transition-all active:scale-95"
-              title="Formulário preenchido no PDF original do SUS"
+              className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-bold text-primary shadow-sm hover:bg-primary/10 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:grayscale"
+              title={!canPrint ? "Grave o atendimento com sessões realizadas para habilitar a impressão" : "Gerar PDF da guia"}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+              <Printer className="w-4 h-4" />
               PDF Antigo
             </button>
             <button
               type="button"
+              disabled={!canPrint}
               onClick={handlePrintDigital}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-600/20 transition-all active:scale-95"
-              title="Nova versão digital aprimorada"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:grayscale"
+              title={!canPrint ? "Grave o atendimento com sessões realizadas para habilitar a impressão" : "Abrir versão digital para impressão"}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+              <Smartphone className="w-4 h-4" />
               Imprimir Nova Versão Digital
             </button>
           </div>

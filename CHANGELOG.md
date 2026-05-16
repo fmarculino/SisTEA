@@ -2,6 +2,30 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.9.8-beta] - 2026-05-16
+
+Esta versão foca na **Integridade de Faturamento e Conformidade DataSUS**, introduzindo a classificação oficial de serviços do SUS e blindando o sistema contra exclusões acidentais de dados auditados.
+
+### 🏥 Integração DataSUS & Faturamento BPA
+- **Classificação de Serviço SUS:** Implementação do campo "Classificação DataSUS" no fluxo de atendimento. O sistema agora permite selecionar a classificação específica vinculada ao procedimento selecionado, garantindo conformidade com o layout do BPA (Boletim de Produção Ambulatorial).
+- **Filtro Dinâmico de Classificação:** O seletor de classificação DataSUS é filtrado automaticamente com base no procedimento escolhido, eliminando erros de preenchimento e garantindo que apenas códigos válidos sejam utilizados.
+- **Persistência de Faturamento:** Garantia de que o `service_classification_id` seja persistido e recuperado corretamente tanto em novos atendimentos quanto na edição.
+
+### 🛡️ Governança Contra Exclusão & Integridade (Audit-Safe)
+- **Bloqueio de Exclusão de Guia:** O botão "Excluir Guia" agora é ocultado automaticamente se o atendimento possuir qualquer frequência validada ("Realizada" ou "Glosado"), impedindo a perda de dados de faturamento auditados.
+- **Governança de Remoção de Sessões:** Sessões validadas e gravadas no banco não podem mais ser removidas diretamente. Para excluir uma sessão errada, o administrador deve primeiro revertê-la para o status "Pendente", garantindo um fluxo de revisão claro.
+- **Sincronização de Regras:** As regras de exclusão foram unificadas entre o formulário de atendimento e o dashboard geral de listagem.
+
+### 🔄 Novo Fluxo de Frequência
+- **Status "Não Realizado":** Introdução do status inicial "Não Realizado" para novas sessões, permitindo o planejamento de agenda sem a necessidade imediata de validação.
+- **Fluxo de Assinatura:** Otimização do botão de assinatura, que agora aparece apenas para sessões em aberto ("Não Realizado" ou "Pendente"), ocultando-se automaticamente após a validação.
+
+### 🎨 Melhorias de UI & Estética Premium
+- **Truncamento de Texto (Visual Bug Fix):** Correção de estouro de texto nos campos de Procedimento, CID e DataSUS. Nomes longos agora são exibidos com reticências (`...`) elegantes, mantendo o alinhamento do formulário impecável.
+- **Tooltips Informativos:** Adição de atributo `title` nos seletores para permitir a leitura do texto completo ao passar o mouse.
+- **Ajuste de Densidade:** Refinamento do grid de cabeçalho para acomodar CID, DataSUS e Caráter de Atendimento em uma única linha harmoniosa.
+
+
 ## [0.9.7-beta] - 2026-05-15
 
 Esta versão foca na **Governança Clínica e Eficiência Operacional**, introduzindo travas de segurança administrativas e uma interface de busca otimizada para grandes catálogos.

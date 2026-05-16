@@ -5,11 +5,12 @@ import { Edit2, Plus, CheckCircle, XCircle, Settings2 } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { ServiceClassificationActions } from './ServiceClassificationActions'
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { Pagination } from '@/components/ui/Pagination'
 
 export default async function ServiceClassificationsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string }
+  searchParams: { q?: string; status?: string; page?: string; limit?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
@@ -19,11 +20,18 @@ export default async function ServiceClassificationsPage({
 
   const supabase = await createClient()
 
-  let query = supabase.from('service_classifications').select('*')
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 20
+  const from = (page - 1) * limit
+  const to = from + limit - 1
 
-  // Apply Search Filter
+  let query = supabase.from('service_classifications').select('*', { count: 'exact' })
+
+  // Filtro de Busca Inteligente
   if (queryParams.q) {
-    query = query.or(`name.ilike.%${queryParams.q}%,service_code.ilike.%${queryParams.q}%,classification_code.ilike.%${queryParams.q}%`)
+    const cleanQ = queryParams.q.replace(/\D/g, '')
+    // Busca pelo nome, valor formatado ou valor limpo
+    query = query.or(`name.ilike.%${queryParams.q}%,service_code.ilike.%${queryParams.q}%,service_code.ilike.%${cleanQ}%,classification_code.ilike.%${queryParams.q}%,classification_code.ilike.%${cleanQ}%`)
   }
 
   // Apply Status Filter
@@ -31,7 +39,10 @@ export default async function ServiceClassificationsPage({
     query = query.eq('active', queryParams.status === 'true')
   }
 
-  const { data: classifications } = await query.order('service_code').order('classification_code')
+  const { data: classifications, count } = await query
+    .order('service_code')
+    .order('classification_code')
+    .range(from, to)
 
   return (
     <div className="space-y-10">
@@ -143,6 +154,7 @@ export default async function ServiceClassificationsPage({
             </tbody>
           </table>
         </div>
+        <Pagination totalItems={count || 0} itemsPerPage={limit} currentPage={page} />
       </div>
     </div>
   )

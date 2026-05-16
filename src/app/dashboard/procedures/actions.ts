@@ -18,7 +18,7 @@ export async function createProcedureAction(data: ProcedureFormData) {
 
   const finalProcedureData = {
     ...procedureData,
-    code: hasNoCode ? null : procedureData.code || null
+    code: hasNoCode ? null : (procedureData.code?.replace(/\D/g, '') || null)
   }
 
   const { data: procedure, error } = await supabase.from('procedures').insert({
@@ -82,7 +82,7 @@ export async function updateProcedureAction(id: string, data: ProcedureFormData)
 
   const finalProcedureData = {
     ...procedureData,
-    code: hasNoCode ? null : procedureData.code || null
+    code: hasNoCode ? null : (procedureData.code?.replace(/\D/g, '') || null)
   }
 
   const { error } = await supabase.from('procedures').update({

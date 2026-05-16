@@ -3,11 +3,13 @@
 import { Search, Filter } from 'lucide-react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { applyMask } from '@/utils/maskUtils'
 
 interface DataTableFiltersProps {
   placeholder?: string
   showStatus?: boolean
   className?: string
+  searchType?: 'procedure' | 'cpf' | 'cnpj' | 'cns' | 'cid' | 'none' | 'auto'
   extraFilters?: {
     paramName: string;
     placeholder: string;
@@ -19,6 +21,7 @@ export function DataTableFilters({
   placeholder = "Pesquisar...", 
   showStatus = true,
   className = "mb-8",
+  searchType = 'none',
   extraFilters = []
 }: DataTableFiltersProps) {
   const router = useRouter()
@@ -35,6 +38,8 @@ export function DataTableFilters({
     } else {
       params.delete(name)
     }
+    // Always reset to page 1 when filter changes
+    params.delete('page')
     router.push(`${pathname}?${params.toString()}`)
   }, [searchParams, pathname, router])
 
@@ -48,6 +53,25 @@ export function DataTableFilters({
     return () => clearTimeout(timer)
   }, [searchValue, searchParams, updateParams])
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    
+    // Se tiver um tipo de busca definido, tenta aplicar a máscara
+    if (searchType !== 'none') {
+      // Se estiver apagando, não forçamos a máscara para não irritar o usuário
+      const isDeleting = searchValue.length > value.length
+      if (isDeleting) {
+        setSearchValue(value)
+        return
+      }
+
+      const maskedValue = applyMask(value, searchType)
+      setSearchValue(maskedValue)
+    } else {
+      setSearchValue(value)
+    }
+  }
+
   return (
     <div className={`flex flex-col sm:flex-row gap-4 items-stretch sm:items-center flex-wrap ${className}`}>
       <div className="relative flex-1 min-w-[280px] group">
@@ -59,7 +83,7 @@ export function DataTableFilters({
           className="block w-full pl-11 pr-4 py-2.5 border border-border bg-card/50 backdrop-blur-sm rounded-xl text-sm shadow-sm transition-all focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none placeholder:text-muted-foreground/60"
           placeholder={placeholder}
           value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
+          onChange={handleSearchChange}
         />
       </div>
 

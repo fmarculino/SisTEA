@@ -2,14 +2,16 @@ import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Edit2, Plus } from 'lucide-react'
+import { Edit2, Plus, User } from 'lucide-react'
+import { applyMask } from '@/utils/maskUtils'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { Pagination } from '@/components/ui/Pagination'
 
 export default async function ProfessionalsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; specialty?: string; clinic?: string }
+  searchParams: { q?: string; status?: string; specialty?: string; clinic?: string; page?: string; limit?: string }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
@@ -17,6 +19,11 @@ export default async function ProfessionalsPage({
     redirect('/dashboard')
   }
   const supabase = await createClient()
+
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 20
+  const from = (page - 1) * limit
+  const to = from + limit - 1
 
   // Fetch filter options
   const [{ data: specialties }, { data: clinics }] = await Promise.all([
@@ -40,7 +47,7 @@ export default async function ProfessionalsPage({
 
   let query = supabase
     .from('professionals')
-    .select(selectQuery)
+    .select(selectQuery, { count: 'exact' })
 
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
     query = query.eq('professional_clinics.clinic_id', profile.clinic_id)
@@ -52,9 +59,11 @@ export default async function ProfessionalsPage({
     query = query.eq('professional_specialties.specialty_id', queryParams.specialty)
   }
 
-  // Apply Search Filter
+  // Filtro de Busca Inteligente
   if (queryParams.q) {
-    query = query.or(`name.ilike.%${queryParams.q}%,cns.ilike.%${queryParams.q}%,cpf.ilike.%${queryParams.q}%`)
+    const cleanQ = queryParams.q.replace(/[^\w]/g, '')
+    // Busca pelo nome, pelo valor formatado ou pelo valor limpo (sem pontos/traços)
+    query = query.or(`name.ilike.%${queryParams.q}%,cpf.ilike.%${queryParams.q}%,cpf.ilike.%${cleanQ}%,cns.ilike.%${queryParams.q}%,cns.ilike.%${cleanQ}%`)
   }
 
   // Apply Status Filter
@@ -62,7 +71,9 @@ export default async function ProfessionalsPage({
     query = query.eq('active', queryParams.status === 'true')
   }
 
-  const { data: professionals } = await query.order('name')
+  const { data: professionals, count } = await query
+    .order('name')
+    .range(from, to)
 
   const extraFilters = []
   if (specialties && specialties.length > 0) {
@@ -103,7 +114,8 @@ export default async function ProfessionalsPage({
 
       <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
         <DataTableFilters 
-          placeholder="Pesquisar por nome, CNS ou CPF..." 
+          searchType="auto"
+          placeholder="Pesquisar por nome ou documento..." 
           extraFilters={extraFilters}
         />
       </div>
@@ -142,8 +154,8 @@ export default async function ProfessionalsPage({
                         {prof.name}
                       </span>
                       <div className="text-[10px] text-muted-foreground mt-1.5 flex flex-col space-y-0.5 font-mono uppercase tracking-tight opacity-70">
-                        {prof.cpf && <span>CPF: {prof.cpf}</span>}
-                        {prof.cns && <span>CNS: {prof.cns}</span>}
+                        {prof.cpf && <span>CPF: {applyMask(prof.cpf, 'cpf')}</span>}
+                        {prof.cns && <span>CNS: {applyMask(prof.cns, 'cns')}</span>}
                         {prof.document_type && <span>{prof.document_type}: {prof.document_number}</span>}
                       </div>
                     </div>
@@ -197,7 +209,7 @@ export default async function ProfessionalsPage({
                   <td colSpan={5} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                        <Plus className="h-8 w-8 text-muted-foreground" />
+                        <User className="h-8 w-8 text-muted-foreground" />
                       </div>
                       <div>
                         <h3 className="text-lg font-bold text-foreground">Nenhum profissional encontrado</h3>
@@ -210,6 +222,7 @@ export default async function ProfessionalsPage({
             </tbody>
           </table>
         </div>
+        <Pagination totalItems={count || 0} itemsPerPage={limit} currentPage={page} />
       </div>
     </div>
   )

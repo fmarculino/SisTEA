@@ -80,7 +80,7 @@ export function SearchableSelect({
         onClick={() => setIsOpen(!isOpen)}
         className={`flex h-11 w-full items-center justify-between rounded-xl border border-border/60 bg-background px-4 py-2 text-sm shadow-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:opacity-50 disabled:cursor-not-allowed ${isOpen ? 'ring-4 ring-primary/10 border-primary' : ''}`}
       >
-        <span className={selectedOption ? "text-foreground" : "text-muted-foreground"}>
+        <span className={`block truncate text-left flex-1 ${selectedOption ? "text-foreground" : "text-muted-foreground"}`}>
           {selectedOption ? selectedOption.name : placeholder}
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -121,7 +121,7 @@ export function SearchableSelect({
                     value === option.id ? "bg-primary/5 text-primary font-medium" : "text-foreground"
                   }`}
                 >
-                  <span className="flex-1 text-left">{option.name}</span>
+                  <span className="flex-1 text-left truncate" title={option.name}>{option.name}</span>
                   {value === option.id && (
                     <Check className="h-4 w-4 shrink-0 text-primary ml-2" />
                   )}

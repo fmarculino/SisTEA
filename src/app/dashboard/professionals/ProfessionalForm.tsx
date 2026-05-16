@@ -1,13 +1,14 @@
 'use client'
 
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { professionalSchema, type ProfessionalFormData } from './schema'
 import { createProfessionalAction, updateProfessionalAction } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { StatusModal } from '@/components/ui/StatusModal'
-import { User, CreditCard, Mail, Building, Briefcase, ChevronDown, CheckCircle, Smartphone, FileText } from 'lucide-react'
+import { User, Mail, Building, Briefcase, CheckCircle } from 'lucide-react'
+import { MultiSearchSelect } from '@/components/ui/MultiSearchSelect'
 
 type ClinicOption = { id: string; name: string }
 type SpecialtyOption = { id: string; name: string; cbo: string }
@@ -50,6 +51,7 @@ export function ProfessionalForm({
 
   const {
     register,
+    control,
     handleSubmit,
     setValue,
     watch,
@@ -176,23 +178,20 @@ export function ProfessionalForm({
           
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
             <div className="sm:col-span-6">
-              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Especialidades / Funções *</label>
-              <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto p-6 border rounded-[2rem] bg-background/50 backdrop-blur-sm border-dashed border-border/60">
-                {specialties.map((s) => (
-                  <label key={s.id} className="flex items-center space-x-3 text-sm cursor-pointer hover:bg-primary/5 p-3 rounded-xl transition-all group border border-transparent hover:border-primary/10">
-                    <input
-                      type="checkbox"
-                      value={s.id}
-                      {...register('specialty_ids')}
-                      className="w-5 h-5 rounded-lg border-border/60 text-primary focus:ring-primary/10 bg-background transition-all"
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors uppercase tracking-tight">{s.name}</span>
-                      <span className="text-[10px] text-muted-foreground font-medium">CBO: {s.cbo}</span>
-                    </div>
-                  </label>
-                ))}
-              </div>
+              <Controller
+                name="specialty_ids"
+                control={control}
+                render={({ field }) => (
+                  <MultiSearchSelect
+                    label="Especialidades / Funções *"
+                    options={specialties}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Pesquisar por nome ou código CBO..."
+                    emptyMessage="Especialidade não encontrada"
+                  />
+                )}
+              />
               {errors.specialty_ids && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.specialty_ids.message}</p>}
             </div>
 
@@ -218,31 +217,25 @@ export function ProfessionalForm({
           
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
             <div className="sm:col-span-6">
-              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Unidades Vinculadas *</label>
-              <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-3 p-6 border rounded-[2rem] bg-background/50 backdrop-blur-sm border-dashed border-border/60">
-                {clinics.map((c) => (
-                  <label key={c.id} className={`flex items-center space-x-3 text-sm p-4 rounded-xl transition-all group border ${
-                    userRole !== 'SMS_ADMIN' && c.id !== userClinicId 
-                      ? 'opacity-50 cursor-not-allowed bg-muted/20 grayscale' 
-                      : 'cursor-pointer hover:bg-primary/5 hover:border-primary/10'
-                  }`}>
-                    <input
-                      type="checkbox"
-                      value={c.id}
-                      {...register('clinic_ids')}
-                      disabled={userRole !== 'SMS_ADMIN' && c.id !== userClinicId}
-                      className="w-5 h-5 rounded-lg border-border/60 text-primary focus:ring-primary/10 bg-background transition-all"
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-xs font-black text-foreground group-hover:text-primary transition-colors uppercase tracking-widest">{c.name}</span>
-                    </div>
-                  </label>
-                ))}
-              </div>
+              <Controller
+                name="clinic_ids"
+                control={control}
+                render={({ field }) => (
+                  <MultiSearchSelect
+                    label="Unidades Vinculadas *"
+                    options={clinics}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Pesquisar por nome da clínica..."
+                    emptyMessage="Clínica não encontrada"
+                    disabled={userRole !== 'SMS_ADMIN'}
+                  />
+                )}
+              />
               {errors.clinic_ids && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.clinic_ids.message}</p>}
               {userRole !== 'SMS_ADMIN' && (
                 <p className="mt-3 text-[10px] text-muted-foreground italic font-medium px-2">
-                  Como usuário de clínica, você só pode gerenciar o vínculo com sua própria unidade.
+                  Como usuário de clínica, seu vínculo é fixo com sua unidade de origem.
                 </p>
               )}
             </div>
