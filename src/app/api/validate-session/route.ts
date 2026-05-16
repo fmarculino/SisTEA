@@ -123,6 +123,8 @@ export async function POST(request: NextRequest) {
         validation_ua: userAgent,
         validation_geo: geo,
         validation_nonce: null, // Invalidate nonce (one-time use)
+        validation_type: 'QR_CODE',
+        action_by_login: null,
       })
       .eq('id', sessionId)
 

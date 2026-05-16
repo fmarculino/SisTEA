@@ -10,7 +10,7 @@ import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { QRCodeModal } from './QRCodeModal'
 import { StatusModal } from '@/components/ui/StatusModal'
-import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck, Smartphone } from 'lucide-react'
+import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck, Smartphone, UserCheck, UserCog } from 'lucide-react'
 
 export function AttendanceForm({ 
   initialData, 
@@ -843,14 +843,18 @@ export function AttendanceForm({
                         onChange: (e) => {
                           if (userRole === 'SMS_ADMIN') {
                             const newStatus = e.target.value;
-                            if (newStatus === 'Realizada' || newStatus === 'Glosado') {
+                            if (newStatus === 'Realizada' || newStatus === 'Glosado' || newStatus === 'Pendente') {
                               const currentValidatedAt = watch(`sessions.${index}.validated_at` as any);
                               if (!currentValidatedAt) {
                                 setValue(`sessions.${index}.validated_at` as any, new Date().toISOString());
                               }
+                              // Seta o type na UI para atualizar a bolinha imediatamente
+                              const newType = newStatus === 'Glosado' ? 'GLOSA' : newStatus === 'Pendente' ? 'PENDENCIA' : 'MANUAL_AUTH';
+                              setValue(`sessions.${index}.validation_type` as any, newType);
                             } else {
-                              // Se o administrador mudar o status de volta para Pendente ou Não Realizado
+                              // Se o administrador mudar o status de volta para Não Realizado
                               setValue(`sessions.${index}.validated_at` as any, null);
+                              setValue(`sessions.${index}.validation_type` as any, null);
                             }
                           }
                         }
@@ -870,46 +874,62 @@ export function AttendanceForm({
                     </select>
                     
                     {/* Audit Info Badge for SMS_ADMIN */}
-                    {watch(`sessions.${index}.status` as any) === 'Realizada' && watch(`sessions.${index}.validated_at` as any) && (
-                      <div className="absolute -top-2 -right-2 z-10">
-                        <div className="bg-emerald-500 text-white p-1 rounded-full shadow-lg cursor-help group/tooltip">
-                          <ShieldCheck className="h-3 w-3" />
-                          
-                          {/* Tooltip Content */}
-                          <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-auto border border-white/10 backdrop-blur-md z-[100]">
-                            <p className="font-bold border-b border-white/10 pb-1 mb-1 text-emerald-400 uppercase tracking-widest">Auditoria de Assinatura</p>
-                            <div className="space-y-1">
-                              <p><span className="opacity-50">Data/Hora:</span> {new Date(watch(`sessions.${index}.validated_at` as any)!).toLocaleString('pt-BR')}</p>
-                              <p><span className="opacity-50">IP:</span> {watch(`sessions.${index}.validation_ip` as any)}</p>
-                              <p className="truncate"><span className="opacity-50">Dispositivo:</span> {watch(`sessions.${index}.validation_ua` as any)}</p>
-                              {watch(`sessions.${index}.validation_geo` as any) && (
-                                <div className="space-y-0.5 border-t border-white/10 pt-1 mt-1">
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-sky-400 font-medium">
-                                      📍 Localização: {(watch(`sessions.${index}.validation_geo` as any) as any).lat.toFixed(4)}, {(watch(`sessions.${index}.validation_geo` as any) as any).lng.toFixed(4)}
-                                    </p>
+                    {['Realizada', 'Glosado', 'Pendente'].includes(watch(`sessions.${index}.status` as any)) && watch(`sessions.${index}.validated_at` as any) && (() => {
+                      const validationType = watch(`sessions.${index}.validation_type` as any);
+                      const actionByLogin = watch(`sessions.${index}.action_by_login` as any);
+                      const isDigital = validationType === 'QR_CODE' || (!validationType && !actionByLogin && watch(`sessions.${index}.status` as any) === 'Realizada');
+                      const isGlosa = validationType === 'GLOSA' || watch(`sessions.${index}.status` as any) === 'Glosado';
+                      const isPendente = validationType === 'PENDENCIA' || watch(`sessions.${index}.status` as any) === 'Pendente';
+                      
+                      const badgeColor = isDigital ? 'bg-emerald-500' : isGlosa ? 'bg-rose-500' : isPendente ? 'bg-amber-500' : 'bg-blue-500';
+                      const titleColor = isDigital ? 'text-emerald-400' : isGlosa ? 'text-rose-400' : isPendente ? 'text-amber-400' : 'text-blue-400';
+                      const BadgeIcon = isDigital ? ShieldCheck : isGlosa ? UserCog : isPendente ? AlertCircle : UserCheck;
+                      const titleText = isDigital ? 'Auditoria de Assinatura' : isGlosa ? 'Auditoria de Glosa' : isPendente ? 'Auditoria de Pendência' : 'Autorização Manual';
+
+                      return (
+                        <div className="absolute -top-2 -right-2 z-10">
+                          <div className={`${badgeColor} text-white p-1 rounded-full shadow-lg cursor-help group/tooltip`}>
+                            <BadgeIcon className="h-3 w-3" />
+                            
+                            {/* Tooltip Content */}
+                            <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-auto border border-white/10 backdrop-blur-md z-[100]">
+                              <p className={`font-bold border-b border-white/10 pb-1 mb-1 ${titleColor} uppercase tracking-widest`}>{titleText}</p>
+                              <div className="space-y-1">
+                                {!isDigital && actionByLogin && (
+                                  <p><span className="opacity-50">Usuário:</span> {actionByLogin}</p>
+                                )}
+                                <p><span className="opacity-50">Data/Hora:</span> {new Date(watch(`sessions.${index}.validated_at` as any)!).toLocaleString('pt-BR')}</p>
+                                <p><span className="opacity-50">IP:</span> {watch(`sessions.${index}.validation_ip` as any)}</p>
+                                <p className="truncate"><span className="opacity-50">Dispositivo:</span> {watch(`sessions.${index}.validation_ua` as any)}</p>
+                                {isDigital && watch(`sessions.${index}.validation_geo` as any) && (
+                                  <div className="space-y-0.5 border-t border-white/10 pt-1 mt-1">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-sky-400 font-medium">
+                                        📍 Localização: {(watch(`sessions.${index}.validation_geo` as any) as any).lat.toFixed(4)}, {(watch(`sessions.${index}.validation_geo` as any) as any).lng.toFixed(4)}
+                                      </p>
+                                    </div>
+                                    {watch(`sessions.${index}.validation_distance` as any) !== undefined && watch(`sessions.${index}.validation_distance` as any) !== null && (
+                                      <p className={`font-bold ${watch(`sessions.${index}.is_out_of_range` as any) ? 'text-amber-400' : 'text-emerald-400/80'}`}>
+                                        📏 Distância: {Math.round(watch(`sessions.${index}.validation_distance` as any) as number)}m da clínica
+                                        {watch(`sessions.${index}.is_out_of_range` as any) && ' ⚠️ ASSINATURA REMOTA'}
+                                      </p>
+                                    )}
+                                    <a 
+                                      href={`https://www.google.com/maps/search/?api=1&query=${(watch(`sessions.${index}.validation_geo` as any) as any).lat},${(watch(`sessions.${index}.validation_geo` as any) as any).lng}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="mt-2 flex items-center justify-center gap-1.5 w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 py-1.5 rounded-lg border border-emerald-500/30 transition-all font-bold uppercase tracking-tighter"
+                                    >
+                                      🗺️ Ver no Google Maps
+                                    </a>
                                   </div>
-                                  {watch(`sessions.${index}.validation_distance` as any) !== undefined && watch(`sessions.${index}.validation_distance` as any) !== null && (
-                                    <p className={`font-bold ${watch(`sessions.${index}.is_out_of_range` as any) ? 'text-amber-400' : 'text-emerald-400/80'}`}>
-                                      📏 Distância: {Math.round(watch(`sessions.${index}.validation_distance` as any) as number)}m da clínica
-                                      {watch(`sessions.${index}.is_out_of_range` as any) && ' ⚠️ ASSINATURA REMOTA'}
-                                    </p>
-                                  )}
-                                  <a 
-                                    href={`https://www.google.com/maps/search/?api=1&query=${(watch(`sessions.${index}.validation_geo` as any) as any).lat},${(watch(`sessions.${index}.validation_geo` as any) as any).lng}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="mt-2 flex items-center justify-center gap-1.5 w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 py-1.5 rounded-lg border border-emerald-500/30 transition-all font-bold uppercase tracking-tighter"
-                                  >
-                                    🗺️ Ver no Google Maps
-                                  </a>
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 ) : (
                   <>

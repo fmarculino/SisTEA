@@ -43,8 +43,8 @@ async function validateProcedureQuantityLimit(
 
   const total = (count || 0) + incomingSessionsCount
   if (total > procedure.max_quantity) {
-    return { 
-      error: `Limite de sessões atingido para este procedimento (${procedure.max_quantity}). Você está tentando lançar ${incomingSessionsCount} frequência(s), mas já existem ${count} frequência(s) registradas para este profissional/paciente nesta competência (${monthYear}).` 
+    return {
+      error: `Limite de sessões atingido para este procedimento (${procedure.max_quantity}). Você está tentando lançar ${incomingSessionsCount} frequência(s), mas já existem ${count} frequência(s) registradas para este profissional/paciente nesta competência (${monthYear}).`
     }
   }
 
@@ -89,7 +89,11 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   const supabase = await createClient()
   const { getUserProfile } = await import('@/lib/dal')
   const profile = await getUserProfile()
-  
+
+  const headersList = await headers()
+  const ip = headersList.get('x-forwarded-for') || 'unknown'
+  const userAgent = headersList.get('user-agent') || 'unknown'
+
   const validatedFields = attendanceSchema.safeParse(data)
   if (!validatedFields.success) return { error: 'Validação falhou' }
 
@@ -117,11 +121,11 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
   const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
   const systemTimezone = settingsMap.get('system_timezone') || 'America/Sao_Paulo'
-  
+
   if (!allowFuture) {
     const now = new Date()
     const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now) // YYYY-MM-DD
-    
+
     // Check main attendance date
     if (rawAttendanceData.attendance_date > todayLocal) {
       return { error: 'O sistema está configurado para não permitir o registro de atendimentos com data futura.' }
@@ -133,7 +137,7 @@ export async function createAttendanceAction(data: AttendanceFormData) {
       if (hasFuture) return { error: 'O sistema está configurado para não permitir o registro de frequências com data futura.' }
     }
   }
-  
+
   if (sessions && sessions.length > rawAttendanceData.authorized_quantity) {
     return { error: `Limite de sessões excedido (${rawAttendanceData.authorized_quantity} autorizadas)` }
   }
@@ -197,15 +201,36 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   if (error) return { error: error.message }
 
   if (sessions && sessions.length > 0) {
-    const sessionsToInsert = sessions.map(session => ({
-      attendance_id: attendance.id,
-      session_date: session.session_date,
-      start_time: session.start_time,
-      end_time: session.end_time,
-      status: session.status,
-      justification: session.justification,
-    }))
-    
+    const sessionsToInsert = sessions.map(session => {
+      let auditData = {
+        validated_at: session.validated_at,
+        validation_ip: session.validation_ip,
+        validation_ua: session.validation_ua,
+        action_by_login: session.action_by_login,
+        validation_type: session.validation_type,
+      }
+
+      if (profile?.role === 'SMS_ADMIN' && (session.status === 'Realizada' || session.status === 'Glosado' || session.status === 'Pendente')) {
+        auditData = {
+          validated_at: new Date().toISOString(),
+          validation_ip: ip,
+          validation_ua: userAgent,
+          action_by_login: profile.email || 'admin',
+          validation_type: session.status === 'Glosado' ? 'GLOSA' : session.status === 'Pendente' ? 'PENDENCIA' : 'MANUAL_AUTH'
+        }
+      }
+
+      return {
+        attendance_id: attendance.id,
+        session_date: session.session_date,
+        start_time: session.start_time,
+        end_time: session.end_time,
+        status: session.status,
+        justification: session.justification,
+        ...auditData
+      }
+    })
+
     const { error: sessionError } = await supabase.from('attendance_sessions').insert(sessionsToInsert)
     if (sessionError) return { error: `Erro ao salvar sessões: ${sessionError.message}` }
   }
@@ -229,7 +254,11 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   const supabase = await createClient()
   const { getUserProfile } = await import('@/lib/dal')
   const profile = await getUserProfile()
-  
+
+  const headersList = await headers()
+  const ip = headersList.get('x-forwarded-for') || 'unknown'
+  const userAgent = headersList.get('user-agent') || 'unknown'
+
   const validatedFields = attendanceSchema.safeParse(data)
   if (!validatedFields.success) return { error: 'Validação falhou' }
 
@@ -256,11 +285,11 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   const settingsMap = new Map(settings?.map(s => [s.key, s.value]))
   const allowFuture = settingsMap.get('allow_future_attendances') === undefined ? true : (settingsMap.get('allow_future_attendances') === true || settingsMap.get('allow_future_attendances') === 'true')
   const systemTimezone = settingsMap.get('system_timezone') || 'America/Sao_Paulo'
-  
+
   if (!allowFuture) {
     const now = new Date()
     const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now) // YYYY-MM-DD
-    
+
     // Check main attendance date
     if (rawAttendanceData.attendance_date > todayLocal) {
       return { error: 'O sistema está configurado para não permitir o registro de atendimentos com data futura.' }
@@ -293,8 +322,8 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     const dateChanged = rawAttendanceData.attendance_date !== currentAttendance.attendance_date
 
     if (patientChanged || professionalChanged || procedureChanged || dateChanged) {
-      return { 
-        error: 'Não é possível alterar o Paciente, Profissional, Procedimento ou Data de Competência após uma sessão ter sido realizada ou glosada.' 
+      return {
+        error: 'Não é possível alterar o Paciente, Profissional, Procedimento ou Data de Competência após uma sessão ter sido realizada ou glosada.'
       }
     }
   }
@@ -302,7 +331,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   // --- SECURITY: Session deletion check ---
   if (sessions) {
     const incomingIds = new Set(sessions.map(s => s.id).filter(Boolean));
-    
+
     for (const s of dbSessions) {
       if (!incomingIds.has(s.id)) {
         // Rule 1: Clinic User can only delete sessions that are "Pendente" or "Não Realizado" and NOT validated
@@ -327,7 +356,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
       for (const session of sessions) {
         if (session.status === 'Realizada' && session.id) {
           const existing = existingSessionsMap.get(session.id)
-          
+
           // 1. Check if it was already validated
           if (!existing?.validated_at) {
             return { error: 'Sessões só podem ser marcadas como "Realizada" através da validação por QR Code.' }
@@ -417,10 +446,13 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     .filter((s: any) => {
       if (profile?.role === 'SMS_ADMIN') {
         const incoming = sessions?.find(is => is.id === s.id)
-        // If admin sets it to Pendente or Glosado, we DON'T keep the old validated version
-        // so it can be deleted and re-inserted with the new status/justification
-        if (incoming && (incoming.status === 'Pendente' || incoming.status === 'Glosado')) {
-          return false
+        // If admin modifies status or justification to Pendente, Glosado, or Realizada, 
+        // we DON'T keep the old validated version so it can be updated.
+        // We block reverting to 'Não Realizado' to enforce immutability of signed sessions.
+        if (incoming && (incoming.status !== s.status || incoming.justification !== s.justification)) {
+          if (['Pendente', 'Glosado', 'Realizada'].includes(incoming.status)) {
+            return false
+          }
         }
       }
       return !!s.validated_at
@@ -442,15 +474,40 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   if (sessions && sessions.length > 0) {
     const newSessionsToInsert = sessions
       .filter(session => !session.id || !sessionsToKeepIds.includes(session.id))
-      .map(session => ({
-        attendance_id: id,
-        session_date: session.session_date,
-        start_time: session.start_time,
-        end_time: session.end_time,
-        status: session.status,
-        justification: session.justification,
-      }))
-    
+      .map(session => {
+        let auditData = {
+          validated_at: session.validated_at,
+          validation_ip: session.validation_ip,
+          validation_ua: session.validation_ua,
+          action_by_login: session.action_by_login,
+          validation_type: session.validation_type,
+        }
+
+        if (profile?.role === 'SMS_ADMIN' && (session.status === 'Realizada' || session.status === 'Glosado' || session.status === 'Pendente')) {
+          // If the session is an untouched digital signature (QR_CODE) and stays Realizada, keep old audit data
+          const isUntouchedDigital = session.validation_type === 'QR_CODE' && session.status === 'Realizada';
+          if (!isUntouchedDigital) {
+            auditData = {
+              validated_at: new Date().toISOString(),
+              validation_ip: ip,
+              validation_ua: userAgent,
+              action_by_login: profile.email || 'admin',
+              validation_type: session.status === 'Glosado' ? 'GLOSA' : session.status === 'Pendente' ? 'PENDENCIA' : 'MANUAL_AUTH'
+            }
+          }
+        }
+
+        return {
+          attendance_id: id,
+          session_date: session.session_date,
+          start_time: session.start_time,
+          end_time: session.end_time,
+          status: session.status,
+          justification: session.justification,
+          ...auditData
+        }
+      })
+
     if (newSessionsToInsert.length > 0) {
       const { error: sessionError } = await supabase.from('attendance_sessions').insert(newSessionsToInsert)
       if (sessionError) return { error: `Erro ao salvar sessões: ${sessionError.message}` }
@@ -504,7 +561,7 @@ export async function deleteAttendanceAction(id: string) {
     .select('attendance_date, clinic_id, sessions:attendance_sessions(id, status)')
     .eq('id', id)
     .single()
-  
+
   if (!attendance) return { error: 'Atendimento não encontrado' }
 
   // --- SECURITY: Deletion rules ---
@@ -588,7 +645,7 @@ export async function generateValidationLinkAction(attendanceId: string, session
   const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now)
   const todayEnd = new Date(`${todayLocal}T23:59:59.999${timezoneOffset}`)
   const sessionDate = new Date(session.session_date + `T00:00:00${timezoneOffset}`)
-  
+
   if (!allowFuture && sessionDate > todayEnd) {
     return { error: 'O registro de frequências futuras não é permitido pelas configurações do sistema.' }
   }
@@ -605,10 +662,10 @@ export async function generateValidationLinkAction(attendanceId: string, session
     const scheduledDateTime = new Date(`${session.session_date}T${sessionWithTime.start_time}${timezoneOffset}`)
     const diffMs = now.getTime() - scheduledDateTime.getTime()
     const diffHours = Math.abs(diffMs / (1000 * 60 * 60))
-    
+
     if (diffHours > windowHours) {
-      return { 
-        error: `Assinatura negada. O horário atual está fora da janela permitida (${windowHours}h) para o atendimento marcado às ${sessionWithTime.start_time.substring(0, 5)}.` 
+      return {
+        error: `Assinatura negada. O horário atual está fora da janela permitida (${windowHours}h) para o atendimento marcado às ${sessionWithTime.start_time.substring(0, 5)}.`
       }
     }
   }
@@ -620,9 +677,9 @@ export async function generateValidationLinkAction(attendanceId: string, session
   // Store the nonce in the session record
   await supabase
     .from('attendance_sessions')
-    .update({ 
+    .update({
       validation_nonce: hmac, // Store the HMAC as nonce for extra security
-      validation_attempts: 0 
+      validation_attempts: 0
     })
     .eq('id', session.id)
 
@@ -697,9 +754,9 @@ export async function validateSessionAction(data: {
   // 4. Check rate limit
   const MAX_ATTEMPTS = 5
   if (session.validation_attempts >= MAX_ATTEMPTS) {
-    return { 
+    return {
       error: 'Número máximo de tentativas excedido. Solicite um novo QR Code.',
-      blocked: true 
+      blocked: true
     }
   }
 
@@ -738,7 +795,7 @@ export async function validateSessionAction(data: {
   // 8. Verify token
   if (token !== patient.auth_token) {
     const remaining = MAX_ATTEMPTS - (session.validation_attempts + 1)
-    return { 
+    return {
       error: `Token incorreto. ${remaining > 0 ? `Tentativas restantes: ${remaining}` : 'Sem tentativas restantes.'}`,
       attemptsRemaining: remaining,
       blocked: remaining <= 0
@@ -769,7 +826,7 @@ export async function validateSessionAction(data: {
   const todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(now)
   const todayEnd = new Date(`${todayLocal}T23:59:59.999${timezoneOffset}`)
   const sessionDate = new Date(session.session_date + `T00:00:00${timezoneOffset}`)
-  
+
   if (!allowFuture && sessionDate > todayEnd) {
     return { error: 'O registro de frequências futuras não é permitido pelas configurações do sistema.' }
   }
@@ -778,10 +835,10 @@ export async function validateSessionAction(data: {
   const scheduledDateTime = new Date(`${session.session_date}T${session.start_time}${timezoneOffset}`)
   const diffMs = now.getTime() - scheduledDateTime.getTime()
   const diffHours = Math.abs(diffMs / (1000 * 60 * 60))
-  
+
   if (diffHours > windowHours) {
-    return { 
-      error: `Assinatura negada. O horário atual está fora da janela permitida (${windowHours}h) para o atendimento marcado às ${session.start_time.substring(0, 5)}.` 
+    return {
+      error: `Assinatura negada. O horário atual está fora da janela permitida (${windowHours}h) para o atendimento marcado às ${session.start_time.substring(0, 5)}.`
     }
   }
 
@@ -801,10 +858,10 @@ export async function validateSessionAction(data: {
     const Δλ = (lon2 - lon1) * Math.PI / 180
 
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    
+
     validation_distance = R * c
     if (validation_distance > threshold) {
       is_out_of_range = true
@@ -835,7 +892,7 @@ export async function validateSessionAction(data: {
     const newToken = Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
     await supabase
       .from('patients')
-      .update({ 
+      .update({
         auth_token: newToken,
         token_updated_at: new Date().toISOString()
       })
@@ -872,7 +929,7 @@ export async function validateSessionAction(data: {
 
   await supabase
     .from('attendances')
-    .update({ 
+    .update({
       value_applied: realizedCount * unitValue,
       quantity: realizedCount,
       status: realizedCount > 0 ? 'Realizada' : 'Pendente'
@@ -884,8 +941,8 @@ export async function validateSessionAction(data: {
     action: 'UPDATE',
     table_name: 'attendance_sessions',
     record_id: sessionId,
-    new_data: { 
-      status: 'Realizada', 
+    new_data: {
+      status: 'Realizada',
       validation_method: 'Digital',
       ip,
       is_out_of_range,
@@ -930,12 +987,12 @@ async function validateSessionsAction(
       const s1 = sessions[i];
       const s2 = sessions[j];
       if (s1.session_date === s2.session_date) {
-         // Basic overlap check
-         if (s1.start_time < s2.end_time && s2.start_time < s1.end_time) {
-           return { 
-             error: `Conflito Interno: Existem duas sessões marcadas para o mesmo horário (${s1.start_time} - ${s1.end_time}) na data ${new Date(s1.session_date + 'T00:00:00').toLocaleDateString('pt-BR')}.` 
-           }
-         }
+        // Basic overlap check
+        if (s1.start_time < s2.end_time && s2.start_time < s1.end_time) {
+          return {
+            error: `Conflito Interno: Existem duas sessões marcadas para o mesmo horário (${s1.start_time} - ${s1.end_time}) na data ${new Date(s1.session_date + 'T00:00:00').toLocaleDateString('pt-BR')}.`
+          }
+        }
       }
     }
   }
@@ -956,11 +1013,11 @@ async function validateSessionsAction(
       console.error('Error checking conflicts:', conflictErr);
     } else if (conflictMsg) {
       // Use the specific message from RPC or a generic one
-      return { 
-        error: `${conflictMsg} (Data: ${new Date(s.session_date + 'T00:00:00').toLocaleDateString('pt-BR')}, Início: ${s.start_time.substring(0, 5)})` 
+      return {
+        error: `${conflictMsg} (Data: ${new Date(s.session_date + 'T00:00:00').toLocaleDateString('pt-BR')}, Início: ${s.start_time.substring(0, 5)})`
       };
     }
   }
-  
+
   return null;
 }

@@ -12,6 +12,8 @@ export const attendanceSessionSchema = z.object({
   validation_ip: z.string().optional().nullable(),
   validation_ua: z.string().optional().nullable(),
   validation_geo: z.any().optional().nullable(),
+  action_by_login: z.string().optional().nullable(),
+  validation_type: z.string().optional().nullable(),
 })
 
 export const attendanceSchema = z.object({
