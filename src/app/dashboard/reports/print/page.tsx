@@ -7,6 +7,7 @@ export default async function PrintReportPage({
   searchParams,
 }: {
   searchParams: Promise<{ 
+    request_id?: string;
     competence_id?: string;
     start_date?: string; 
     end_date?: string; 
