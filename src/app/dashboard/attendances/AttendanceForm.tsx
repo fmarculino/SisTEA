@@ -8,7 +8,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { generateFrequencyPDF } from '@/utils/generateFrequencyPDF'
 import { QRCodeModal } from './QRCodeModal'
 import { StatusModal } from '@/components/ui/StatusModal'
 import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck, Smartphone } from 'lucide-react'
@@ -324,51 +323,7 @@ export function AttendanceForm({
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
   }
 
-  const handlePrint = async () => {
-    const formData = getValues();
-    const clinic = clinics?.find(c => c.id === formData.clinic_id);
-    
-    // Preferimos os dados que vieram do servidor via join no initialData para evitar problemas de filtro
-    const isInitialPatient = (initialData as any)?.patient?.id === formData.patient_id;
-    const isInitialProfessional = (initialData as any)?.professional_data?.id === formData.professional_id;
 
-    let patient = isInitialPatient 
-      ? (initialData as any).patient 
-      : patients.find(p => p.id === formData.patient_id);
-      
-    let professional = isInitialProfessional 
-      ? (initialData as any).professional_data 
-      : professionals.find(p => p.id === formData.professional_id);
-
-    const procedure = procedures.find(p => p.id === formData.procedure_id);
-
-    const fullData = {
-      ...formData,
-      clinic_name: clinic?.name || 'COMUNICARE CENTRO MULTIDISCIPLINAR DE SERVIÇOS DE SAÚDE',
-      cnes: clinic?.cnes || '4352440',
-      professional_name: professional?.name,
-      professional_cns: professional?.cns,
-      professional_cbo: professional?.cbo,
-      patient_name: patient?.name,
-      patient_cns: patient?.cns_patient,
-      patient_birthdate: patient?.birth_date,
-      patient_gender: patient?.gender,
-      patient_mother: patient?.mother_name,
-      patient_phone: patient?.phone,
-      patient_race_color: patient?.race_color,
-      patient_address: patient?.address ? `${patient.address}` : '',
-      patient_cep: patient?.cep,
-      patient_city: patient?.city,
-      procedure_code: procedure?.code,
-    };
-
-    try {
-      await generateFrequencyPDF(fullData);
-    } catch (err) {
-      console.error('Erro ao gerar PDF', err);
-      setErrorMsg('Erro ao gerar PDF da ficha de frequência.');
-    }
-  }
 
   const handlePrintDigital = () => {
     const formData = getValues();
@@ -397,7 +352,7 @@ export function AttendanceForm({
       cnes: clinic?.cnes || '4352440',
       professional_name: professional?.name,
       professional_cns: professional?.cns,
-      professional_cbo: professional?.cbo,
+      professional_cbo: formData.professional_cbo,
       patient_name: patient?.name,
       patient_cns: patient?.cns_patient,
       patient_birthdate: patient?.birth_date,
@@ -1041,22 +996,12 @@ export function AttendanceForm({
             <button
               type="button"
               disabled={!canPrint}
-              onClick={handlePrint}
-              className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-6 py-2.5 text-sm font-bold text-primary shadow-sm hover:bg-primary/10 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:grayscale"
-              title={!canPrint ? "Grave o atendimento com sessões realizadas para habilitar a impressão" : "Gerar PDF da guia"}
-            >
-              <Printer className="w-4 h-4" />
-              PDF Antigo
-            </button>
-            <button
-              type="button"
-              disabled={!canPrint}
               onClick={handlePrintDigital}
               className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:grayscale"
-              title={!canPrint ? "Grave o atendimento com sessões realizadas para habilitar a impressão" : "Abrir versão digital para impressão"}
+              title={!canPrint ? "Grave o atendimento com sessões realizadas para habilitar a impressão" : "Imprimir Guia de Frequência (Oficial)"}
             >
-              <Smartphone className="w-4 h-4" />
-              Imprimir Nova Versão Digital
+              <Printer className="w-4 h-4" />
+              Imprimir Guia de Frequência
             </button>
           </div>
         )}

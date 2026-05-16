@@ -172,16 +172,19 @@ export async function generateFrequencyPDF(data: any) {
   
   for (let i = 0; i < 15; i++) { 
     const session = sessions[i];
+    const y = startY - (i * rowHeight);
+
+    // Desenhar número da sequência (Seq.)
+    drawText(String(i + 1).padStart(2, '0'), 30, y, 8);
+    
     if (session) {
-      const y = startY - (i * rowHeight);
-      
       if (session.session_date) {
         try {
           const d = new Date(session.session_date);
           if (!isNaN(d.getTime())) {
             const day = String(d.getUTCDate()).padStart(2, '0');
             const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-            drawText(`${day}/${month}`, 45, y);
+            drawText(`${day}/${month}`, 55, y);
           }
         } catch(e) {}
       }
@@ -191,9 +194,9 @@ export async function generateFrequencyPDF(data: any) {
       
       // Signature column
       if (session.status === 'Realizada') {
-        drawText('Assinado Digitalmente', 260, y, 6);
+        drawText('ASSINADO DIGITALMENTE', 255, y, 6);
       } else if (session.status === 'Glosado') {
-        drawText('FREQUÊNCIA GLOSADA', 260, y, 6, rgb(0.8, 0, 0));
+        drawText('FREQUÊNCIA GLOSADA', 255, y, 6, rgb(0.8, 0, 0));
       }
     }
   }
