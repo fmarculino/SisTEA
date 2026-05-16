@@ -290,7 +290,21 @@ export function PatientForm({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Nascimento *</label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">Nascimento *</label>
+                {watch('birth_date') && (
+                  <span className="text-[10px] font-black text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-md">
+                    {(() => {
+                      const birth = new Date(watch('birth_date'));
+                      const today = new Date();
+                      let age = today.getFullYear() - birth.getFullYear();
+                      const m = today.getMonth() - birth.getMonth();
+                      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+                      return `${age} Anos`;
+                    })()}
+                  </span>
+                )}
+              </div>
               <input
                 type="date"
                 {...register('birth_date')}
