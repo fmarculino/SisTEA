@@ -208,7 +208,7 @@ export class BpaExportService {
         // BPA-I (Individualizado) - 350 caracteres fixos
         const attDate = sanitize(att.attendance_date); // YYYYMMDD
         const birthDate = sanitize(att.patients.birth_date); // YYYYMMDD
-        const genderCode = att.patients.gender === 'Feminino' ? 'F' : 'M';
+        const genderCode = att.patients.gender === 'Feminino' ? 'F' : (att.patients.gender === 'Indefinido' ? 'I' : 'M');
         const age = birthDate ? Math.floor((new Date().getTime() - new Date(att.patients.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
 
         const line = 

@@ -137,9 +137,9 @@ export default function ReportsClient({
                 <tr className="border-b border-border/50 bg-muted/30">
                   <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Clínica / Profissional</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Realizados</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Faltas</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Glosadas</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Pendentes</th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Taxa Abs.</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Taxa de Glosa</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-right">Valor Total</th>
                 </tr>
               </thead>

@@ -276,6 +276,11 @@ export default function DigitalFrequencyPrintPage() {
                 </FieldBox>
                 <FieldBox label="Data de Nascimento" style={{ width: '25%', borderRight: '1px solid black' }}>
                   {formatDate(data.patient_birthdate)}
+                  {data.patient_birthdate && (
+                    <span style={{ marginLeft: '4px', fontSize: '9px' }}>
+                      - {Math.floor((new Date().getTime() - new Date(data.patient_birthdate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} Anos
+                    </span>
+                  )}
                 </FieldBox>
                 <div style={{ width: '25%', padding: '2px 4px' }}>
                   <div style={{ fontSize: '8px', textTransform: 'uppercase', color: '#555', lineHeight: 1, marginBottom: '2px' }}>Sexo</div>
@@ -289,6 +294,11 @@ export default function DigitalFrequencyPrintPage() {
                       <div style={{ width: '10px', height: '10px', border: '1px solid black', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: String(data.patient_gender).toUpperCase().startsWith('F') ? 'black' : 'white' }}>
                         {String(data.patient_gender).toUpperCase().startsWith('F') && <span style={{ color: 'white', fontSize: '7px' }}>X</span>}
                       </div> F
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <div style={{ width: '10px', height: '10px', border: '1px solid black', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: String(data.patient_gender).toUpperCase() === 'INDEFINIDO' ? 'black' : 'white' }}>
+                        {String(data.patient_gender).toUpperCase() === 'INDEFINIDO' && <span style={{ color: 'white', fontSize: '7px' }}>X</span>}
+                      </div> I
                     </label>
                   </div>
                 </div>
@@ -339,7 +349,7 @@ export default function DigitalFrequencyPrintPage() {
                   {data.cid || ''}
                 </FieldBox>
                 <FieldBox label="Caráter de Atendimento" style={{ width: '25%', borderRight: '1px solid black' }}>
-                  {data.attendance_character || ''}
+                  {data.attendance_character ? `${data.attendance_character} - Eletivo` : ''}
                 </FieldBox>
                 <FieldBox label="Nº da Autorização" style={{ width: '25%', borderRight: '1px solid black' }}>
                   {data.auth_number || ''}

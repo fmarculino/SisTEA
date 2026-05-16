@@ -83,6 +83,9 @@ export async function generateFrequencyPDF(data: any) {
         drawText(String(d.getUTCDate()).padStart(2, '0'), 335, 630);
         drawText(String(d.getUTCMonth() + 1).padStart(2, '0'), 365, 630);
         drawText(String(d.getUTCFullYear()), 395, 630);
+        
+        const age = Math.floor((new Date().getTime() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        drawText(`- ${age} Anos`, 425, 630);
       }
     } catch(e) {}
   }
@@ -143,7 +146,7 @@ export async function generateFrequencyPDF(data: any) {
   drawText('010', 520, 515); // Classificação, hardcode
 
   drawText(data.cid || '', 45, 490);
-  drawText(data.attendance_character || '', 150, 490);
+  drawText(data.attendance_character ? `${data.attendance_character} - Eletivo` : '01 - Eletivo', 150, 490);
   drawText(data.auth_number || '', 330, 490);
 
   // === Controle Frequência (Cabeçalho da tabela) ===
