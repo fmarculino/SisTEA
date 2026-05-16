@@ -99,7 +99,21 @@ export function AttendanceForm({
   const sessions = watch('sessions') || []
   const hasValidatedSession = sessions.some(s => s.status === 'Realizada' || s.status === 'Glosado');
   const isCompetenceLocked = competenceStatus === 'FECHADA' || competenceStatus === 'ENVIADA_MS';
-  const isHeaderLocked = isCompetenceLocked || (userRole === 'CLINIC_USER' && hasValidatedSession);
+  
+  // IDENTITY LOCK logic: 
+  // 1. Competence is closed/sent
+  // 2. OR any session is already validated (Realizada or Glosada)
+  // This applies to EVERYONE (including ADMIN) to ensure forensic integrity of the billing core.
+  const isHeaderLocked = isCompetenceLocked || hasValidatedSession;
+  
+  // METADATA LOCK logic:
+  // Same as identity, but allows SMS_ADMIN to adjust fields for BPA validation even if sessions are validated.
+  const isMetadataLocked = isCompetenceLocked || (userRole === 'CLINIC_USER' && hasValidatedSession);
+
+  // CLINIC LOCK logic:
+  // 1. All Identity Lock rules
+  // 2. OR it's an Edit Mode (id exists), because production cannot be moved between clinics once created.
+  const isClinicLocked = isHeaderLocked || !!id;
 
   // Derive patient age
   const selectedPatientId = watch('patient_id')
@@ -506,15 +520,19 @@ export function AttendanceForm({
             <label className="block text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2">Unidade de Saúde (Clínica)</label>
             <select
               {...register('clinic_id')}
-              disabled={isHeaderLocked}
-              className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background/50 transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+              disabled={isClinicLocked}
+              className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background/50 transition-all ${isClinicLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
             >
               <option value="">Selecione a clínica responsável...</option>
               {clinics?.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            <p className="mt-2 text-[10px] text-amber-600/70 font-medium">A seleção da clínica filtra os pacientes e profissionais disponíveis abaixo.</p>
+            <p className="mt-2 text-[10px] text-amber-600/70 font-medium">
+              {!!id 
+                ? 'Este campo está bloqueado permanentemente em modo de edição para evitar transferência de produção entre unidades.' 
+                : 'A seleção da clínica filtra os pacientes e profissionais disponíveis abaixo.'}
+            </p>
             {errors.clinic_id && <p className="mt-1 text-sm text-rose-500">{errors.clinic_id.message}</p>}
           </div>
         )}
@@ -530,16 +548,23 @@ export function AttendanceForm({
             control={control}
             name="patient_id"
             render={({ field }) => (
-              <SearchableSelect
-                options={filteredPatients}
-                value={field.value}
-                onChange={field.onChange}
-                disabled={isHeaderLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
-                placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
-                  ? 'Selecione a clínica primeiro' 
-                  : 'Selecione um paciente...'}
-                className="mt-1"
-              />
+              <div className="relative">
+                <SearchableSelect
+                  options={filteredPatients}
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={isHeaderLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
+                  placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
+                    ? 'Selecione a clínica primeiro' 
+                    : 'Selecione um paciente...'}
+                  className="mt-1"
+                />
+                {isHeaderLocked && !isCompetenceLocked && (
+                  <div className="absolute right-10 top-1/2 -translate-y-1/2 text-amber-500" title="Bloqueado: Existem sessões validadas. Reverta-as para alterar.">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
             )}
           />
           {errors.patient_id && <p className="mt-1 text-sm text-rose-500">{errors.patient_id.message}</p>}
@@ -562,19 +587,26 @@ export function AttendanceForm({
             control={control}
             name="professional_id"
             render={({ field }) => (
-              <SearchableSelect
-                options={filteredProfessionals.map(p => ({
-                  id: p.id,
-                  name: `${p.name} — ${p.specialty}`
-                }))}
-                value={field.value}
-                onChange={field.onChange}
-                disabled={isHeaderLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
-                placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
-                  ? 'Selecione a clínica primeiro' 
-                  : 'Selecione um profissional...'}
-                className="mt-1"
-              />
+              <div className="relative">
+                <SearchableSelect
+                  options={filteredProfessionals.map(p => ({
+                    id: p.id,
+                    name: `${p.name} — ${p.specialty}`
+                  }))}
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={isHeaderLocked || (userRole === 'SMS_ADMIN' && !selectedClinicId)}
+                  placeholder={userRole === 'SMS_ADMIN' && !selectedClinicId 
+                    ? 'Selecione a clínica primeiro' 
+                    : 'Selecione um profissional...'}
+                  className="mt-1"
+                />
+                {isHeaderLocked && !isCompetenceLocked && (
+                  <div className="absolute right-10 top-1/2 -translate-y-1/2 text-amber-500" title="Bloqueado: Existem sessões validadas. Reverta-as para alterar.">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
             )}
           />
           {errors.professional_id && <p className="mt-1 text-sm text-rose-500">{errors.professional_id.message}</p>}
@@ -585,18 +617,25 @@ export function AttendanceForm({
             control={control}
             name="procedure_id"
             render={({ field }) => (
-              <SearchableSelect
-                options={filteredProcedures.map(p => ({
-                  id: p.id,
-                  code: p.code,
-                  name: `${p.code ? p.code + ' — ' : ''}${p.name} (Valor: ${formatCurrency(p.valor_total)} / sessão)`
-                }))}
-                value={field.value}
-                onChange={field.onChange}
-                disabled={isHeaderLocked || !selectedProfessionalId}
-                placeholder={!selectedProfessionalId ? "Selecione primeiro o profissional..." : "Escolha o procedimento..."}
-                className="mt-1"
-              />
+              <div className="relative">
+                <SearchableSelect
+                  options={filteredProcedures.map(p => ({
+                    id: p.id,
+                    code: p.code,
+                    name: `${p.code ? p.code + ' — ' : ''}${p.name} (Valor: ${formatCurrency(p.valor_total)} / sessão)`
+                  }))}
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={isHeaderLocked || !selectedProfessionalId}
+                  placeholder={!selectedProfessionalId ? "Selecione primeiro o profissional..." : "Escolha o procedimento..."}
+                  className="mt-1"
+                />
+                {isHeaderLocked && !isCompetenceLocked && (
+                  <div className="absolute right-10 top-1/2 -translate-y-1/2 text-amber-500" title="Bloqueado: Existem sessões validadas. Reverta-as para alterar.">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
             )}
           />
           {errors.procedure_id && <p className="mt-1 text-sm text-rose-500">{errors.procedure_id.message}</p>}
@@ -623,49 +662,7 @@ export function AttendanceForm({
           <p className="mt-1 text-[10px] text-muted-foreground">O CBO é identificado automaticamente com base no procedimento e profissional.</p>
         </div>
 
-        <div className="sm:col-span-1">
-          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data da Guia/Atendimento *</label>
-          <input
-            type="date"
-            {...register('attendance_date')}
-            readOnly={isHeaderLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
-          />
-          {errors.attendance_date && <p className="mt-1 text-sm text-rose-500">{errors.attendance_date.message}</p>}
-        </div>
-
-        <div className="sm:col-span-1">
-          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Nº de Autorização (Guia)</label>
-          <input
-            type="text"
-            placeholder="Ex: 12345678"
-            {...register('auth_number')}
-            readOnly={isHeaderLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
-          />
-        </div>
-
-        <div className="sm:col-span-1">
-          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data de Autorização</label>
-          <input
-            type="date"
-            {...register('authorization_date')}
-            readOnly={isHeaderLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
-          />
-        </div>
-
-        <div className="sm:col-span-1">
-          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Qtd. Autorizada</label>
-          <input
-            type="number"
-            {...register('authorized_quantity', { valueAsNumber: true })}
-            readOnly={isHeaderLocked}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
-          />
-        </div>
-
-        <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-8">
+        <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-8 pt-4 pb-4 border-y border-border/30 bg-muted/5 -mx-8 px-8 my-2">
           <div className="sm:col-span-1">
             <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">CID principal</label>
             <Controller
@@ -676,7 +673,7 @@ export function AttendanceForm({
                   options={filteredCids}
                   value={field.value || ''}
                   onChange={field.onChange}
-                  disabled={isHeaderLocked || !selectedProcedureId}
+                  disabled={isMetadataLocked || !selectedProcedureId}
                   placeholder={!selectedProcedureId ? "Selecione o procedimento primeiro..." : "Selecione o CID..."}
                   className="mt-1"
                 />
@@ -695,7 +692,7 @@ export function AttendanceForm({
                   options={filteredDatasus}
                   value={field.value || ''}
                   onChange={field.onChange}
-                  disabled={isHeaderLocked || !selectedProcedureId}
+                  disabled={isMetadataLocked || !selectedProcedureId}
                   placeholder={!selectedProcedureId ? "Selecione o procedimento primeiro..." : "Selecione a classificação..."}
                   className="mt-1"
                 />
@@ -708,8 +705,8 @@ export function AttendanceForm({
             <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Caráter de Atendimento</label>
             <select
                {...register('attendance_character')}
-               disabled={isHeaderLocked}
-               className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all ${isHeaderLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+               disabled={isMetadataLocked}
+               className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2.5 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
             >
               <option value="01">01 - Eletivo</option>
               <option value="02">02 - Urgência</option>
@@ -722,26 +719,70 @@ export function AttendanceForm({
         </div>
 
         <div className="sm:col-span-1">
-          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Qtd. Produzida (BPA)</label>
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data da Guia/Atendimento *</label>
           <input
-            type="number"
-            {...register('quantity', { valueAsNumber: true })}
-            readOnly={true}
-            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-muted cursor-not-allowed opacity-70 transition-all`}
-            title="Calculado automaticamente com base nas sessões realizadas"
+            type="date"
+            {...register('attendance_date')}
+            readOnly={isMetadataLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+          />
+          {errors.attendance_date && <p className="mt-1 text-sm text-rose-500">{errors.attendance_date.message}</p>}
+        </div>
+
+        <div className="sm:col-span-1">
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Nº de Autorização (Guia)</label>
+          <input
+            type="text"
+            placeholder="Ex: 12345678"
+            {...register('auth_number')}
+            readOnly={isMetadataLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
         </div>
 
+        <div className="sm:col-span-1">
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data de Autorização</label>
+          <input
+            type="date"
+            {...register('authorization_date')}
+            readOnly={isMetadataLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+          />
+        </div>
+
+        <div className="sm:col-span-1">
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Qtd. Autorizada</label>
+          <input
+            type="number"
+            {...register('authorized_quantity', { valueAsNumber: true })}
+            readOnly={isMetadataLocked}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
+          />
+        </div>
+
+
         <div className="sm:col-span-2 bg-primary/5 dark:bg-primary/10 p-6 rounded-2xl border border-primary/10 dark:border-primary/20">
-          <label className="block text-xs font-bold text-primary dark:text-primary/90 uppercase tracking-widest mb-1">Valor Total Estimado (R$)</label>
-          <div className="flex items-center gap-4">
-            <div className="mt-1 block w-full max-w-[200px] rounded-xl border-transparent shadow-sm sm:text-lg font-bold px-4 py-2.5 bg-background dark:bg-muted/50 text-primary dark:text-primary min-h-[46px] flex items-center">
-              {formatNumberBR(watch('value_applied'))}
-              <input type="hidden" {...register('value_applied', { valueAsNumber: true })} />
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-primary dark:text-primary/90 uppercase tracking-widest">Valor Total Estimado (R$)</label>
+              <div className="flex items-center gap-4">
+                <div className="mt-1 block w-full min-w-[180px] rounded-xl border-transparent shadow-sm sm:text-xl font-black px-4 py-2.5 bg-background dark:bg-muted/50 text-primary dark:text-primary min-h-[50px] flex items-center">
+                  {formatNumberBR(watch('value_applied'))}
+                  <input type="hidden" {...register('value_applied', { valueAsNumber: true })} />
+                </div>
+                <p className="text-[11px] text-muted-foreground font-medium max-w-[200px] leading-relaxed">
+                  Calculado: (<span className="text-foreground font-bold">{sessions?.filter(s => s.status === 'Realizada').length || 0}</span> sessões realizadas) × valor unitário.
+                </p>
+              </div>
             </div>
-            <p className="text-[11px] text-muted-foreground font-medium flex-1">
-              Calculado: (<span className="text-foreground font-bold">{sessions?.filter(s => s.status === 'Realizada').length || 0}</span> sessões realizadas) × valor unitário.
-            </p>
+
+            <div className="flex flex-col items-end gap-1.5">
+              <label className="text-[10px] font-black text-muted-foreground/80 uppercase tracking-[0.15em]">Qtd. Produzida (BPA)</label>
+              <div className="w-[100px] rounded-xl border border-border/40 shadow-sm text-center font-black py-2.5 bg-background dark:bg-muted/50 text-foreground min-h-[46px] flex items-center justify-center text-lg">
+                 {watch('quantity') || 0}
+                 <input type="hidden" {...register('quantity', { valueAsNumber: true })} />
+              </div>
+            </div>
           </div>
           {errors.value_applied && <p className="mt-1 text-sm text-rose-500">{errors.value_applied.message}</p>}
         </div>

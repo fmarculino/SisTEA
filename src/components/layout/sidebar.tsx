@@ -7,7 +7,7 @@ import {
   Activity, Users, UserSquare2, Building2, Stethoscope, FileText, 
   CalendarCheck, FileOutput, Shield, Lock, DatabaseBackup, 
   ScrollText, Archive, ShieldCheck, Settings, Database, 
-  ClipboardList, ChevronDown, LayoutDashboard, BookOpen
+  ClipboardList, ChevronDown, LayoutDashboard, BookOpen, History
 } from 'lucide-react'
 import { AboutMenu } from './about-menu'
 
@@ -48,7 +48,8 @@ const navigation = [
     roles: ['SMS_ADMIN'],
     children: [
       { name: 'Auditoria Digital', href: '/dashboard/audit', icon: ShieldCheck, roles: ['SMS_ADMIN'] },
-      { name: 'Relatórios', href: '/dashboard/reports', icon: FileOutput, roles: ['SMS_ADMIN'] },
+      { name: 'Auditoria Histórica', href: '/dashboard/historical-audit', icon: History, roles: ['SMS_ADMIN'] },
+      { name: 'Relatórios', href: '/dashboard/reports', icon: FileOutput, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
     ]
   },
   {

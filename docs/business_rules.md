@@ -44,8 +44,7 @@ Este documento descreve as regras de integridade e validação implementadas no 
 ---
 
 ## 4. Fluxo de Trabalho e Configurações de Tempo
-
-### BR-007: Prioridade de Validação
+**BR-007: Prioridade de Validação**
 *   **Regra**: Validações de integridade de dados (conflitos de horário e sobreposição) devem ser processadas e exibidas ANTES de validações de regras de negócio (como bloqueio de datas futuras).
 *   **Objetivo**: Evitar mensagens de erro confusas quando o usuário comete um erro operacional de preenchimento.
 
@@ -78,4 +77,22 @@ Este documento descreve as regras de integridade e validação implementadas no 
 
 ---
 
-*Última atualização: 14/05/2026*
+## 7. Governança de Alterações e Imutabilidade
+
+### BR-012: Imutabilidade de Identidade do Atendimento
+*   **Regra**: Os campos que compõem a identidade principal de um atendimento (**Paciente, Profissional e Procedimento**) tornam-se imutáveis para **todos os perfis de usuário** (incluindo Administradores) assim que houver pelo menos uma sessão de atendimento validada (status `Realizada` ou `Glosado`).
+*   **Aplicação**: Bloqueio rígido de edição no formulário. Para alterar estes campos, o administrador deve obrigatoriamente reverter todas as sessões do atendimento para o status `Pendente` ou `Não Realizado`.
+*   **Objetivo**: Garantir a integridade forense do faturamento e evitar alterações em registros já assinados digitalmente.
+
+### BR-013: Governança de Metadados e Ajustes BPA
+*   **Regra**: Campos de classificação clínica e metadados procedimentais (**CID, Classificação DataSUS, Caráter de Atendimento, Datas de Guia/Autorização e Números de Guia**) são travados apenas para usuários de clínica (`CLINIC_USER`) após a validação de sessões. 
+*   **Exceção**: Administradores (`SMS_ADMIN`) mantêm o privilégio de edição destes campos mesmo após a validação das sessões, permitindo ajustes técnicos necessários para a exportação do BPA.
+*   **Objetivo**: Permitir correções de classificação técnica sem invalidar o fluxo de assinaturas e presenças já coletadas.
+
+### BR-014: Blindagem de Unidade de Saúde (Clínica)
+*   **Regra**: O campo de Unidade de Saúde (Clínica) é estritamente imutável em qualquer registro de atendimento já existente (Modo de Edição), independente do status das sessões ou nível de acesso do usuário.
+*   **Objetivo**: Impedir a transferência indevida de produção entre clínicas diferentes, evitando fraudes de cota ou erros graves de alocação orçamentária.
+
+---
+
+*Última atualização: 16/05/2026*

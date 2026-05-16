@@ -31,5 +31,21 @@ Este documento detalha as vulnerabilidades e gargalos identificados no sistema S
 - Dashboard e Relatórios processam grandes volumes de dados no lado do cliente (JavaScript) em vez do banco de dados (SQL).
 - **Impacto:** Alto consumo de memória e latência de rede.
 
-## 4. Inconsistências de Código
-- **Status de Atendimento:** Divergência entre strings no código (`present`, `Realizada`) e restrições no banco de dados (`REALIZADO`).
+
+## 5. Remediação e Hardening (Maio 2026)
+
+Após a auditoria de segurança, foram implementadas as seguintes camadas de proteção forense e governança de dados:
+
+### 5.1. Mecanismo de Lock em Duas Camadas (Attendance Governance)
+- **Lock de Identidade (BR-012):** Implementada imutabilidade estrita para os campos de Paciente, Profissional e Procedimento em atendimentos com sessões validadas. Isso impede que um atendimento já assinado e faturado seja "migrado" para outro paciente ou profissional sem o devido processo de reversão administrativa.
+- **Lock de Metadados (BR-013):** Segregação de acesso onde apenas administradores (`SMS_ADMIN`) podem ajustar campos técnicos (CID, DataSUS, Caráter) para conformidade com o BPA, enquanto usuários comuns permanecem bloqueados após a validação.
+
+### 5.2. Blindagem de Unidade de Saúde (BR-014)
+- Bloqueio permanente de alteração da clínica vinculada em registros de edição. Esta medida elimina o risco de transferências indevidas de produção entre estabelecimentos de saúde, garantindo a integridade orçamentária por unidade.
+
+### 5.3. Integridade de Importação Histórica
+- **Módulo de Auditoria Histórica:** Implementado fluxo de importação com validação obrigatória de clínica e mapeamento dinâmico de colunas.
+- **Resolução Manual Auditada:** Interface de correção de erros legados com indicadores visuais de integridade forense, garantindo que metadados BPA importados sejam revisados e rastreáveis.
+
+---
+*Atualizado em: 16 de Maio de 2026*

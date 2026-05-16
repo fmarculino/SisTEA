@@ -2,6 +2,54 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.10.0-beta] - 2026-05-16
+
+Esta versão introduz o módulo avançado de **Relatórios & BI (Business Intelligence)**, fornecendo uma infraestrutura robusta para análise estratégica, conferência de faturamento e auditoria de produtividade.
+
+### 📊 Relatórios Avançados & BI
+- **Dashboard de BI Multimodal:** Implementação de quatro categorias principais de relatórios:
+    - **Produção / Faturamento:** Visão detalhada da produção clínica por competência.
+    - **Conferência:** Ferramenta de validação linha a linha para pré-fechamento.
+    - **Performance & Produtividade:** Métricas de absenteísmo, sessões realizadas e valor gerado por profissional.
+    - **Auditoria de Consistência:** Identificação proativa de inconsistências e duplicidades.
+- **Totais Consolidados:** Adição de rodapés dinâmicos em todos os relatórios, oferecendo visibilidade imediata de valores financeiros e contagem de sessões.
+- **Paginação Server-Side:** Otimização de performance para grandes volumes de dados históricos, garantindo estabilidade na interface mesmo com milhares de registros.
+
+### 🛡️ Governança de Relatórios & Auditoria
+- **Modo "Prévia" por Padrão:** O sistema agora prioriza a visualização de dados em aberto ("Prévia") para facilitar a correção de pendências antes do fechamento.
+- **Trava de Modo Oficial:** A opção "Oficial" agora é desabilitada automaticamente se não houver competências fechadas, impedindo a geração de relatórios de produção falsos.
+- **Filtros Inteligentes:** Integração de filtros complexos por Clínica, Profissional, Paciente, Procedimento e Competência, com suporte a intervalos de datas customizados.
+
+### 🖨️ Fluxo de Impressão Profissional (Audit-Ready)
+- **Visualização em Nova Aba:** Implementação de um fluxo dedicado onde o relatório abre em uma aba limpa do navegador, otimizada exclusivamente para impressão.
+- **Layout Clean-Print:** Remoção automática de elementos de UI (menus, botões) na impressão, utilizando um design profissional em modo paisagem (`landscape`).
+- **Autenticidade & Governança:** Inclusão de IDs de autenticidade aleatórios e campos para assinatura responsável em todos os documentos impressos.
+
+### 🔧 Melhorias de Infraestrutura
+- **RPC Layer:** Migração da lógica de agregação de relatórios para o PostgreSQL via RPC, garantindo cálculos instantâneos de KPIs e totais.
+
+---
+
+## [0.9.9-beta] - 2026-05-16
+
+Esta versão foca no **Hardening Administrativo e Governança de Importação**, introduzindo travas de segurança forense e um módulo avançado para auditoria de dados históricos.
+
+### 🛡️ Hardening & Governança de Dados (Faturamento Seguro)
+- **Lock Forense de Identidade (BR-012):** Implementação de bloqueio permanente para os campos "Paciente", "Profissional" e "Procedimento" em atendimentos com sessões validadas. A alteração destes campos agora exige a reversão explícita do status das sessões, garantindo a integridade do rastro de auditoria.
+- **Lock de Metadados BPA (BR-013):** Introdução de permissões granulares onde administradores (`SMS_ADMIN`) podem ajustar metadados procedimentais (CID, DataSUS, Datas e Autorizações) sem invalidar as presenças já coletadas, enquanto usuários comuns permanecem bloqueados.
+- **Blindagem de Unidade (BR-014):** O campo de Unidade de Saúde (Clínica) agora é estritamente imutável em registros existentes, eliminando riscos de migração indevida de produção entre clínicas.
+- **Sinalização Visual de Segurança:** Adição de ícones de escudo (`ShieldCheck`) e tooltips informativos em campos sob trava de segurança, orientando o usuário sobre as regras de governança vigentes.
+
+### 📜 Auditoria Histórica & Resolução Manual
+- **Módulo de Importação Inteligente:** Nova interface para importação de planilhas legadas (Excel/Google Sheets) com instruções detalhadas de formatação e colunas obrigatórias.
+- **Resolução Manual Auditada:** Interface de reconciliação de registros importados com indicadores visuais de "Integridade Forense Ativa", garantindo que dados legados sejam saneados antes da integração oficial.
+- **Modelo de Padronização:** Disponibilização de download de planilha modelo para orientar operadores na preparação de dados históricos.
+
+### 🎨 Refinamentos de UI/UX
+- **Audit-Ready Design:** O modal de resolução manual foi redesenhado para transmitir autoridade e transparência, utilizando uma estética de "Fase de Auditoria" com agrupamento otimizado de campos BPA.
+
+---
+
 ## [0.9.8-beta] - 2026-05-16
 
 Esta versão foca na **Integridade de Faturamento e Conformidade DataSUS**, introduzindo a classificação oficial de serviços do SUS e blindando o sistema contra exclusões acidentais de dados auditados.

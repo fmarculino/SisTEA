@@ -55,7 +55,7 @@ export function AboutMenu() {
                 </span>
               </div>
               <span className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/40">
-                Enhanced Analytics & UX Refinements
+                Advanced Reports & BI Dashboard
               </span>
             </div>
           </div>

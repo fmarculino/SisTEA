@@ -32,7 +32,7 @@ export function DashboardShell({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 transform bg-background transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 transform bg-background transition-transform duration-300 ease-in-out lg:translate-x-0 no-print ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -40,14 +40,16 @@ export function DashboardShell({
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full lg:pl-72 transition-all duration-300 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-muted/50 via-background to-background">
-        <Header 
-          email={email} 
-          role={role} 
-          clinicName={clinicName}
-          onMenuClick={() => setSidebarOpen(true)} 
-        />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 animate-in">
+      <div className="flex-1 flex flex-col min-w-0 h-full lg:pl-72 print:pl-0 transition-all duration-300 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-muted/50 via-background to-background">
+        <div className="no-print">
+          <Header 
+            email={email} 
+            role={role} 
+            clinicName={clinicName}
+            onMenuClick={() => setSidebarOpen(true)} 
+          />
+        </div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 print:p-0 animate-in">
           <div className="mx-auto max-w-7xl">
             {children}
           </div>
