@@ -18,6 +18,7 @@ import {
 import { formatCurrency } from '@/utils/format'
 import { Pagination } from '@/components/ui/Pagination'
 import * as XLSX from 'xlsx'
+import { createReportRequest } from './actions'
 
 interface ReportsClientProps {
   initialData: any[]
@@ -90,19 +91,28 @@ export default function ReportsClient({
     XLSX.writeFile(workbook, fileName)
   }
 
-  const handlePrint = () => {
-    const params = new URLSearchParams()
-    params.set('type', type)
-    if (selectedCompetenceId) params.set('competence_id', selectedCompetenceId)
-    params.set('start_date', startDate)
-    params.set('end_date', endDate)
-    if (selectedClinic) params.set('clinic_id', selectedClinic)
-    if (selectedProfessional) params.set('professional_id', selectedProfessional)
-    if (selectedPatient) params.set('patient_id', selectedPatient)
-    if (selectedProcedure) params.set('procedure_id', selectedProcedure)
-    params.set('mode', mode)
-    
-    window.open(`/dashboard/reports/print?${params.toString()}`, '_blank')
+  const handlePrint = async () => {
+    try {
+      setLoading(true)
+      const requestId = await createReportRequest({
+        type,
+        competence_id: selectedCompetenceId,
+        start_date: startDate,
+        end_date: endDate,
+        clinic_id: selectedClinic,
+        professional_id: selectedProfessional,
+        patient_id: selectedPatient,
+        procedure_id: selectedProcedure,
+        mode
+      })
+      
+      window.open(`/dashboard/reports/print?request_id=${requestId}`, '_blank')
+    } catch (err) {
+      console.error(err)
+      alert('Falha ao preparar impressão. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const renderTable = () => {

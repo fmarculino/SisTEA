@@ -24,18 +24,53 @@ export default async function PrintReportPage({
 
   if (!profile) redirect('/login')
 
+  let reportFilters: any = params
+
+  if (params.request_id) {
+    const { data: request, error: requestError } = await supabase
+      .from('report_requests')
+      .select('*')
+      .eq('id', params.request_id)
+      .single()
+
+    if (requestError || !request) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-500">Link de Impressão Inválido</h1>
+            <p className="text-muted-foreground mt-2">O link pode ter expirado ou você não tem permissão para acessá-lo.</p>
+          </div>
+        </div>
+      )
+    }
+
+    // Check expiration
+    if (new Date(request.expires_at) < new Date()) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-500">Link Expirado</h1>
+            <p className="text-muted-foreground mt-2">Por motivos de segurança, links de impressão expiram em 10 minutos. Gere um novo relatório.</p>
+          </div>
+        </div>
+      )
+    }
+
+    reportFilters = request.filters
+  }
+
   // Use a very high limit for printing to get all data
   const limit = 10000 
   const offset = 0
 
-  let startDate = params.start_date || ''
-  let endDate = params.end_date || ''
-  const selectedCompetenceId = params.competence_id || ''
+  let startDate = reportFilters.start_date || ''
+  let endDate = reportFilters.end_date || ''
+  const selectedCompetenceId = reportFilters.competence_id || ''
 
-  if (selectedCompetenceId && (!params.start_date || !params.end_date)) {
+  if (selectedCompetenceId && (!reportFilters.start_date || !reportFilters.end_date)) {
     const { data: comp } = await supabase.from('competences').select('*').eq('id', selectedCompetenceId).single()
     if (comp) {
-      const { data: clinic } = await supabase.from('clinics').select('closing_day').eq('id', comp.clinic_id || params.clinic_id || profile.clinic_id).single()
+      const { data: clinic } = await supabase.from('clinics').select('closing_day').eq('id', comp.clinic_id || reportFilters.clinic_id || profile.clinic_id).single()
       const closingDay = clinic?.closing_day || 25
       const end = new Date(comp.year, comp.month - 1, closingDay)
       const start = new Date(comp.year, comp.month - 2, closingDay + 1)
@@ -50,13 +85,13 @@ export default async function PrintReportPage({
     endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
   }
 
-  const reportType = (params.type as any) || 'billing'
-  const mode = params.mode || 'official'
+  const reportType = (reportFilters.type as any) || 'billing'
+  const mode = reportFilters.mode || 'official'
 
-  const selectedClinic = profile.role === 'CLINIC_USER' ? profile.clinic_id : (params.clinic_id || null)
-  const selectedProfessional = params.professional_id && params.professional_id !== '' ? params.professional_id : null
-  const selectedPatient = params.patient_id && params.patient_id !== '' ? params.patient_id : null
-  const selectedProcedure = params.procedure_id && params.procedure_id !== '' ? params.procedure_id : null
+  const selectedClinic = profile.role === 'CLINIC_USER' ? profile.clinic_id : (reportFilters.clinic_id || null)
+  const selectedProfessional = reportFilters.professional_id && reportFilters.professional_id !== '' ? reportFilters.professional_id : null
+  const selectedPatient = reportFilters.patient_id && reportFilters.patient_id !== '' ? reportFilters.patient_id : null
+  const selectedProcedure = reportFilters.procedure_id && reportFilters.procedure_id !== '' ? reportFilters.procedure_id : null
 
   // Names for the header
   let clinicName = ''
