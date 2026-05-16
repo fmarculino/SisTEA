@@ -834,14 +834,14 @@ export function AttendanceForm({
                       {...register(`sessions.${index}.status` as const, {
                         onChange: (e) => {
                           if (userRole === 'SMS_ADMIN') {
-                            if (e.target.value === 'Realizada') {
+                            const newStatus = e.target.value;
+                            if (newStatus === 'Realizada' || newStatus === 'Glosado') {
                               const currentValidatedAt = watch(`sessions.${index}.validated_at` as any);
                               if (!currentValidatedAt) {
                                 setValue(`sessions.${index}.validated_at` as any, new Date().toISOString());
                               }
-                            } else if (e.target.value !== 'Realizada') {
-                              // Se o administrador mudar o status de volta, removemos o timestamp de validação
-                              // a menos que seja uma assinatura digital (mas admins não devem reverter assinaturas digitais levianamente)
+                            } else {
+                              // Se o administrador mudar o status de volta para Pendente ou Não Realizado
                               setValue(`sessions.${index}.validated_at` as any, null);
                             }
                           }

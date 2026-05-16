@@ -70,33 +70,42 @@ export default function DigitalFrequencyPrintPage() {
   const getSignatureContent = (session: any) => {
     if (!session) return '';
     
+    const formatDateTime = (val: string) => {
+      try {
+        const date = new Date(val);
+        return date.toLocaleString('pt-BR', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+      } catch (e) {
+        return '';
+      }
+    };
+
     if (session.status === 'Realizada') {
       if (session.validated_at) {
-        try {
-          const date = new Date(session.validated_at);
-          const formatted = date.toLocaleString('pt-BR', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric', 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          });
-          
-          if (session.validation_ua || session.validation_ip) {
-            return `Assinado Digitalmente em ${formatted}`;
-          } else {
-            return `Autorizada Manualmente em ${formatted}`;
-          }
-        } catch (e) {
-          return 'Assinado Digitalmente';
+        const formatted = formatDateTime(session.validated_at);
+        if (session.validation_ua || session.validation_ip) {
+          return `Assinado Digitalmente em ${formatted}`;
+        } else {
+          return `Autorizada Manualmente em ${formatted}`;
         }
       }
-      return 'Assinado Digitalmente';
+      return 'Autorizada Manualmente';
     }
     
     if (session.status === 'Pendente') return 'Pendente';
     if (session.status === 'Não Realizado') return 'Não Realizada';
-    if (session.status === 'Glosado') return 'FREQUÊNCIA GLOSADA';
+    
+    if (session.status === 'Glosado') {
+      if (session.validated_at) {
+        return `FREQUÊNCIA GLOSADA em ${formatDateTime(session.validated_at)}`;
+      }
+      return 'FREQUÊNCIA GLOSADA';
+    }
     
     return '';
   };
