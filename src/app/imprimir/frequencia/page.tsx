@@ -88,13 +88,15 @@ export default function DigitalFrequencyPrintPage() {
     if (session.status === 'Realizada') {
       if (session.validated_at) {
         const formatted = formatDateTime(session.validated_at);
-        if (session.validation_ua || session.validation_ip) {
+        const isDigital = session.validation_type === 'QR_CODE' || (!session.validation_type && !session.action_by_login);
+        
+        if (isDigital) {
           return `Assinado Digitalmente em ${formatted}`;
         } else {
-          return `Autorizada Manualmente em ${formatted}`;
+          return `Assinado Manualmente em ${formatted}`;
         }
       }
-      return 'Autorizada Manualmente';
+      return 'Assinado Manualmente';
     }
     
     if (session.status === 'Pendente') return 'Pendente';

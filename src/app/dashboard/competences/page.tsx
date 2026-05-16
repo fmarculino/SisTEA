@@ -20,7 +20,61 @@ export default async function CompetencesPage() {
 
   if (isAdmin) {
     const { data: comp } = await supabase.from('competences').select('*, clinic:clinics(name)').order('year', { ascending: false }).order('month', { ascending: false })
-    closedCompetences = comp || []
+    const closed = comp || []
+
+    const { data: clinicsData } = await supabase.from('clinics').select('id, name, competence_end_day').eq('active', true)
+    
+    // Buscar todos os meses com atendimento
+    const { data: attendances } = await supabase.from('attendances').select('clinic_id, attendance_date')
+
+    const clinicsMap = new Map()
+    clinicsData?.forEach(c => clinicsMap.set(c.id, c))
+
+    const openCompetencesMap = new Map<string, any>()
+
+    attendances?.forEach(a => {
+      const clinic = clinicsMap.get(a.clinic_id)
+      if (!clinic) return
+      
+      const dateParts = a.attendance_date.split('-')
+      const day = parseInt(dateParts[2], 10)
+      let month = parseInt(dateParts[1], 10)
+      let year = parseInt(dateParts[0], 10)
+      const endDay = clinic.competence_end_day || 31
+
+      if (day > endDay && endDay < 31) {
+        month += 1
+        if (month > 12) {
+          month = 1
+          year += 1
+        }
+      }
+      
+      const key = `${a.clinic_id}_${year}_${month}`
+      
+      // se já está fechada para esta clínica, ignora
+      if (closed.some(c => c.clinic_id === a.clinic_id && c.year === year && c.month === month)) {
+        return
+      }
+
+      if (!openCompetencesMap.has(key)) {
+        openCompetencesMap.set(key, {
+          id: `open_${key}`,
+          clinic_id: a.clinic_id,
+          year,
+          month,
+          status: 'ABERTA',
+          clinic: { name: clinic.name }
+        })
+      }
+    })
+
+    const openList = Array.from(openCompetencesMap.values())
+    closedCompetences = [...openList, ...closed].sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year
+      if (a.month !== b.month) return b.month - a.month
+      return a.clinic.name.localeCompare(b.clinic.name)
+    })
   } else {
     const { data: comp } = await supabase.from('competences').select('*').eq('clinic_id', profile.clinic_id)
     closedCompetences = comp || []
@@ -158,20 +212,29 @@ export default async function CompetencesPage() {
                       <span className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black text-indigo-500 border border-indigo-500/20 uppercase tracking-widest leading-none">
                         <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Enviada (Hard Lock)
                       </span>
-                    ) : (
+                    ) : comp.status === 'FECHADA' ? (
                       <span className="inline-flex items-center rounded-xl bg-red-500/10 px-3 py-1.5 text-[10px] font-black text-red-500 border border-red-500/20 uppercase tracking-widest leading-none">
                         <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Fechada
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Aberta
                       </span>
                     )}
                   </td>
                   <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right">
                     <div className="flex items-center justify-end gap-3">
-                      <BpaExportButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} />
+                      {comp.status !== 'ABERTA' && (
+                        <BpaExportButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} />
+                      )}
                       {comp.status === 'FECHADA' && (
                         <>
                           <ReopenCompetenceButton id={comp.id} />
                           <SendToMSButton id={comp.id} />
                         </>
+                      )}
+                      {comp.status === 'ABERTA' && (
+                        <CloseCompetenceButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} />
                       )}
                     </div>
                   </td>

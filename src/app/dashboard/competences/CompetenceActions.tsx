@@ -4,7 +4,7 @@ import { useTransition } from 'react'
 import { Lock, Unlock } from 'lucide-react'
 import { closeCompetenceAction, reopenCompetenceAction } from './actions'
 
-export function CloseCompetenceButton({ clinicId, month, year }: { clinicId: string, month: number, year: number }) {
+export function CloseCompetenceButton({ clinicId, month, year, isAdminView }: { clinicId: string, month: number, year: number, isAdminView?: boolean }) {
   const [isPending, startTransition] = useTransition()
 
   const handleClose = () => {
@@ -22,11 +22,15 @@ export function CloseCompetenceButton({ clinicId, month, year }: { clinicId: str
     <button 
       onClick={handleClose}
       disabled={isPending}
-      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-red-500 hover:bg-red-600 transition-all shadow-md shadow-red-500/20 disabled:opacity-50"
+      className={
+        isAdminView
+          ? "p-2.5 rounded-xl text-red-500 bg-red-500/5 hover:bg-red-500/20 transition-all border border-red-500/10 shadow-sm disabled:opacity-50"
+          : "inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-red-500 hover:bg-red-600 transition-all shadow-md shadow-red-500/20 disabled:opacity-50"
+      }
       title="Encerrar Competência"
     >
       <Lock className="h-4 w-4 stroke-[2.5]" />
-      {isPending ? 'Encerrando...' : 'Encerrar Mês'}
+      {!isAdminView && (isPending ? 'Encerrando...' : 'Encerrar Mês')}
     </button>
   )
 }

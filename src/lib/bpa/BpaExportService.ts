@@ -131,7 +131,8 @@ export class BpaExportService {
     const { data: attendances, error } = await supabase
       .from('attendances')
       .select(`
-        id, attendance_date, quantity, attendance_character, professional_cbo,
+        id, attendance_date, quantity, attendance_character, professional_cbo, cid, auth_number, authorization_date,
+        service_classifications ( service_code, classification_code ),
         patients!inner ( name, cns_patient, birth_date, gender, ibge_code, race_color, nationality, ethnicity, cep, address_street, address_complement, address_neighborhood, address_number, city, phone ),
         professionals!inner ( name, cns ),
         procedures!inner ( name, code, bpa_type ),
@@ -228,15 +229,15 @@ export class BpaExportService {
           padLeft(age, 3) +                       // 86-88: Idade
           padLeft(att.quantity, 6) +              // 89-94: Quantidade
           padLeft(att.attendance_character || '01', 2) + // 95-96: Caráter Atendimento
-          padRight('', 13) +                      // 97-109: Número Autorização
+          padRight(sanitize(att.auth_number) || '', 13) + // 97-109: Número Autorização (APAC)
           'BPA' +                                 // 110-112: Origem
           padRight(normalizeText(att.patients.name), 30) + // 113-142: Nome Paciente
           birthDate +                             // 143-150: Data Nascimento (YYYYMMDD)
           mapRaceColor(att.patients.race_color) + // 151-152: Raça/Cor
           padLeft(att.patients.ethnicity || '', 4) + // 153-156: Etnia
           padLeft(att.patients.nationality || '010', 3) + // 157-159: Nacionalidade
-          '135' +                                 // 160-162: Serviço (Reabilitação)
-          '002' +                                 // 163-165: Classificação (Intelectual/TEA)
+          padLeft(att.service_classifications?.service_code || '135', 3) + // 160-162: Serviço
+          padLeft(att.service_classifications?.classification_code || '002', 3) + // 163-165: Classificação
           padRight('', 8) +                       // 166-173: Equipe Seq
           padRight('', 4) +                       // 174-177: Equipe Area
           padLeft(clinic.cnpj || '', 14) +        // 178-191: CNPJ Unidade

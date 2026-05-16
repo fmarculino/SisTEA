@@ -99,11 +99,6 @@ export async function createAttendanceAction(data: AttendanceFormData) {
 
   const { sessions, ...rawAttendanceData } = validatedFields.data
 
-  // --- SECURITY: Force "Pendente" status for CLINIC_USER ---
-  if (profile?.role === 'CLINIC_USER' && sessions) {
-    sessions.forEach(s => { s.status = 'Pendente' })
-  }
-
   // --- SECURITY: Conflict Check (BR-001, BR-002, BR-003) ---
   if (sessions && sessions.length > 0) {
     const conflictError = await validateSessionsAction(
