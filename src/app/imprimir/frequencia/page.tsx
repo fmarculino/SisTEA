@@ -78,8 +78,8 @@ export default function DigitalFrequencyPrintPage() {
 
   return (
     <div className="bg-white text-black min-h-screen font-sans p-2 print:p-0">
-      <div className="max-w-[210mm] mx-auto bg-white print:w-[210mm] print:h-[297mm] print:shadow-none shadow-lg border border-gray-200">
-        <div className="p-4 print:p-4">
+      <div className="max-w-[210mm] mx-auto bg-white print:w-[210mm] print:shadow-none shadow-lg border border-gray-200">
+        <div className="p-4 print:p-2">
 
           {/* Header */}
           <div className="flex border-b-2 border-black pb-4 mb-4">
@@ -106,7 +106,7 @@ export default function DigitalFrequencyPrintPage() {
           </div>
 
           {/* Estabelecimento */}
-          <div className="mb-2 border border-black">
+          <div className="mb-1 border border-black">
             <div className="bg-gray-100 text-[10px] font-bold px-2 py-0.5 border-b border-black uppercase">Identificação do Estabelecimento de Saúde Executante</div>
             <div className="flex">
               <div className="flex-1 p-0.5 border-r border-black">
@@ -121,7 +121,7 @@ export default function DigitalFrequencyPrintPage() {
           </div>
 
           {/* Profissional */}
-          <div className="mb-2 border border-black">
+          <div className="mb-1 border border-black">
             <div className="bg-gray-100 text-[10px] font-bold px-2 py-0.5 border-b border-black uppercase">Identificação do Profissional</div>
             <div className="flex border-b border-black">
               <div className="w-1/3 p-0.5 border-r border-black">
@@ -150,7 +150,7 @@ export default function DigitalFrequencyPrintPage() {
           </div>
 
           {/* Paciente */}
-          <div className="mb-2 border border-black">
+          <div className="mb-1 border border-black">
             <div className="bg-gray-100 text-[10px] font-bold px-2 py-0.5 border-b border-black uppercase">Identificação do Paciente</div>
             <div className="flex border-b border-black">
               <div className="flex-1 p-0.5 border-r border-black">
@@ -224,7 +224,7 @@ export default function DigitalFrequencyPrintPage() {
           </div>
 
           {/* Procedimento */}
-          <div className="mb-2 border border-black">
+          <div className="mb-1 border border-black">
             <div className="bg-gray-100 text-[10px] font-bold px-2 py-0.5 border-b border-black uppercase">Procedimento Realizado</div>
             <div className="flex border-b border-black">
               <div className="w-1/4 p-0.5 border-r border-black">
@@ -297,7 +297,7 @@ export default function DigitalFrequencyPrintPage() {
                   {Array.from({ length: 15 }).map((_, i) => {
                     const session = sessions[i];
                     return (
-                      <tr key={i} className="border-b border-black h-[17px]">
+                      <tr key={i} className="border-b border-black h-[16px]">
                         <td className="border-r border-black text-center text-[10px]">{i + 1}</td>
                         <td className="border-r border-black text-center text-[10px]">{session ? formatDate(session.session_date).substring(0, 5) : ''}</td>
                         <td className="border-r border-black text-center text-[10px]">{session?.start_time || ''}</td>
@@ -313,7 +313,7 @@ export default function DigitalFrequencyPrintPage() {
             </div>
 
             {/* Resumo Mensal Direita */}
-            <div className="w-[200px] flex flex-col pt-8">
+            <div className="w-[200px] flex flex-col pt-4">
               <div className="text-center font-bold text-[10px] uppercase mb-1">Resumo Mensal</div>
               <div className="border border-black">
                 <div className="flex border-b border-black h-6">
