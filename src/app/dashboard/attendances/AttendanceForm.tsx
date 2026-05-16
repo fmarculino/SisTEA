@@ -346,8 +346,16 @@ export function AttendanceForm({
       ? (initialData as any).procedure
       : procedures.find(p => p.id === formData.procedure_id);
 
+    const sessionsWithAudit = formData.sessions.map((s: any) => {
+      if ((s.status === 'Realizada' || s.status === 'Glosado') && !s.validated_at) {
+        return { ...s, validated_at: new Date().toISOString() };
+      }
+      return s;
+    });
+
     const fullData = {
       ...formData,
+      sessions: sessionsWithAudit,
       clinic_name: clinic?.name || 'COMUNICARE CENTRO MULTIDISCIPLINAR DE SERVIÇOS DE SAÚDE',
       cnes: clinic?.cnes || '4352440',
       professional_name: professional?.name,
