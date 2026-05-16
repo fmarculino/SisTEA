@@ -831,7 +831,22 @@ export function AttendanceForm({
                 {userRole === 'SMS_ADMIN' ? (
                   <div className="relative group/audit">
                     <select
-                      {...register(`sessions.${index}.status` as const)}
+                      {...register(`sessions.${index}.status` as const, {
+                        onChange: (e) => {
+                          if (userRole === 'SMS_ADMIN') {
+                            if (e.target.value === 'Realizada') {
+                              const currentValidatedAt = watch(`sessions.${index}.validated_at` as any);
+                              if (!currentValidatedAt) {
+                                setValue(`sessions.${index}.validated_at` as any, new Date().toISOString());
+                              }
+                            } else if (e.target.value !== 'Realizada') {
+                              // Se o administrador mudar o status de volta, removemos o timestamp de validação
+                              // a menos que seja uma assinatura digital (mas admins não devem reverter assinaturas digitais levianamente)
+                              setValue(`sessions.${index}.validated_at` as any, null);
+                            }
+                          }
+                        }
+                      })}
                       disabled={isCompetenceLocked}
                       className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
                         watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' : 

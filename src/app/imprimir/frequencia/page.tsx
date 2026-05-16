@@ -67,7 +67,41 @@ export default function DigitalFrequencyPrintPage() {
   const authQty = Number(data.authorized_quantity) || 0;
 
   const SESSIONS_PER_PAGE = 25;
-  const totalPages = Math.max(1, Math.ceil(sessions.length / SESSIONS_PER_PAGE));
+  const getSignatureContent = (session: any) => {
+    if (!session) return '';
+    
+    if (session.status === 'Realizada') {
+      if (session.validated_at) {
+        try {
+          const date = new Date(session.validated_at);
+          const formatted = date.toLocaleString('pt-BR', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          });
+          
+          if (session.validation_ua || session.validation_ip) {
+            return `Assinado Digitalmente em ${formatted}`;
+          } else {
+            return `Autorizada Manualmente em ${formatted}`;
+          }
+        } catch (e) {
+          return 'Assinado Digitalmente';
+        }
+      }
+      return 'Assinado Digitalmente';
+    }
+    
+    if (session.status === 'Pendente') return 'Pendente';
+    if (session.status === 'Não Realizado') return 'Não Realizada';
+    if (session.status === 'Glosado') return 'FREQUÊNCIA GLOSADA';
+    
+    return '';
+  };
+
+  const totalPages = Math.ceil(Math.max(sessions.length, 1) / SESSIONS_PER_PAGE);
   const pages = Array.from({ length: totalPages }, (_, pageIdx) =>
     sessions.slice(pageIdx * SESSIONS_PER_PAGE, (pageIdx + 1) * SESSIONS_PER_PAGE)
   );
@@ -348,12 +382,15 @@ export default function DigitalFrequencyPrintPage() {
                           <td style={{ border: '1px solid black', textAlign: 'center' }}>
                             {session?.end_time || ''}
                           </td>
-                          <td style={{ border: '1px solid black', textAlign: 'center', fontWeight: 'bold', color: session?.status === 'Glosado' ? '#dc2626' : 'inherit' }}>
-                            {session?.status === 'Realizada'
-                              ? 'Assinado Digitalmente'
-                              : session?.status === 'Glosado'
-                              ? 'FREQUÊNCIA GLOSADA'
-                              : ''}
+                          <td style={{ 
+                            border: '1px solid black', 
+                            textAlign: 'center', 
+                            fontWeight: 'bold', 
+                            fontSize: session?.status === 'Realizada' ? '8px' : '9px', // Ajuste para texto longo
+                            color: session?.status === 'Glosado' ? '#dc2626' : 'inherit',
+                            padding: '0 4px'
+                          }}>
+                            {getSignatureContent(session)}
                           </td>
                         </tr>
                       );
