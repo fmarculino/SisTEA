@@ -23,7 +23,8 @@ export const patientSchema = z.object({
   state: z.string().length(2, 'UF deve ter 2 caracteres').optional().nullable(),
   medical_record_number: z.string().optional().nullable(),
   active: z.boolean().default(true),
-  clinic_id: z.string().uuid('Vínculo com Clínica é obrigatório'),
+  clinic_id: z.string().uuid().optional().nullable().or(z.literal('')),
+  clinic_ids: z.array(z.string().uuid()).min(1, 'Pelo menos um vínculo com Clínica é obrigatório'),
 }).refine((data) => {
   if (data.cpf && data.cpf.length > 0) {
     return validateCPF(data.cpf)

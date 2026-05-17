@@ -118,14 +118,42 @@ export async function updateProfessionalAction(id: string, data: ProfessionalFor
     return { error: profError.message }
   }
 
-  // Sync clinic associations
-  await supabase.from('professional_clinics').delete().eq('professional_id', id)
-  if (clinic_ids && clinic_ids.length > 0) {
-    const associations = clinic_ids.map(clinic_id => ({
+  // Sync clinic associations preserving active status
+  const { data: existingClinics, error: fetchError } = await supabase
+    .from('professional_clinics')
+    .select('clinic_id')
+    .eq('professional_id', id)
+
+  if (fetchError) return { error: fetchError.message }
+
+  const existingIds = existingClinics?.map(ec => ec.clinic_id) || []
+  
+  // Clinics to add (in clinic_ids but not in database)
+  const toAdd = (clinic_ids || []).filter(cid => !existingIds.includes(cid))
+  
+  // Clinics to remove (in database but not in clinic_ids)
+  const toRemove = existingIds.filter(cid => !(clinic_ids || []).includes(cid))
+
+  if (toRemove.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('professional_clinics')
+      .delete()
+      .eq('professional_id', id)
+      .in('clinic_id', toRemove)
+    
+    if (deleteError) return { error: deleteError.message }
+  }
+
+  if (toAdd.length > 0) {
+    const associations = toAdd.map(clinic_id => ({
       professional_id: id,
-      clinic_id
+      clinic_id,
+      active: true
     }))
-    const { error: assocError } = await supabase.from('professional_clinics').insert(associations)
+    const { error: assocError } = await supabase
+      .from('professional_clinics')
+      .insert(associations)
+    
     if (assocError) return { error: assocError.message }
   }
 
@@ -170,6 +198,35 @@ export async function deleteProfessionalAction(id: string) {
     table_name: 'professionals',
     record_id: id,
     description: `Excluiu o registro do profissional ID: ${id}.`
+  })
+
+  return { success: true }
+}
+
+export async function toggleProfessionalClinicStatusAction(professionalId: string, clinicId: string, active: boolean) {
+  const profile = await getUserProfile()
+  if (profile?.role !== 'SMS_ADMIN') {
+    return { error: 'Acesso negado. Apenas administradores podem gerenciar status de vínculo.' }
+  }
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('professional_clinics')
+    .update({ active: active })
+    .eq('professional_id', professionalId)
+    .eq('clinic_id', clinicId)
+
+  if (error) return { error: error.message }
+  
+  revalidatePath('/dashboard/professionals')
+  revalidatePath(`/dashboard/professionals/${professionalId}`)
+
+  // Log audit
+  await logAudit({
+    action: 'UPDATE',
+    table_name: 'professional_clinics',
+    record_id: `${professionalId}_${clinicId}`,
+    new_data: { active },
+    description: `${active ? 'Ativou' : 'Desativou'} o vínculo do profissional ID: ${professionalId} com a clínica ID: ${clinicId}.`
   })
 
   return { success: true }

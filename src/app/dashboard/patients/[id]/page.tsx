@@ -42,6 +42,11 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
     patient.active = currentLink.active;
   }
 
+  const patientData = {
+    ...patient,
+    clinic_ids: linkedClinics.map(lc => lc.clinic_id)
+  };
+
   return (
     <div className="space-y-10">
       <div>
@@ -54,7 +59,7 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
       </div>
       <PatientForm 
         id={patient.id}
-        initialData={patient}
+        initialData={patientData}
         clinics={clinics} 
         userRole={profile.role} 
         userClinicId={profile.clinic_id}

@@ -11,10 +11,10 @@ export default async function EditProfessionalPage({ params }: { params: Promise
   const supabase = await createClient()
   const { id } = await params
   
-  let selectQuery = '*, professional_clinics(clinic_id), professional_specialties(specialty_id)'
+  let selectQuery = '*, professional_clinics(clinic_id, active), professional_specialties(specialty_id)'
   
   if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    selectQuery = '*, professional_clinics!inner(clinic_id), professional_specialties(specialty_id)'
+    selectQuery = '*, professional_clinics!inner(clinic_id, active), professional_specialties(specialty_id)'
   }
 
   let query = supabase
@@ -30,10 +30,16 @@ export default async function EditProfessionalPage({ params }: { params: Promise
     
   if (!profData) notFound()
 
+  const linkedClinics = (profData as any).professional_clinics?.map((pc: any) => ({
+    clinic_id: pc.clinic_id,
+    active: pc.active ?? true
+  })) || []
+
   const prof = {
     ...(profData as any),
     clinic_ids: (profData as any).professional_clinics?.map((pc: any) => pc.clinic_id) || [],
-    specialty_ids: (profData as any).professional_specialties?.map((ps: any) => ps.specialty_id) || []
+    specialty_ids: (profData as any).professional_specialties?.map((ps: any) => ps.specialty_id) || [],
+    linkedClinics
   }
 
   const { data: specialtiesData } = await supabase.from('specialties').select('id, name, cbo').order('name')

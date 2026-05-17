@@ -20,6 +20,7 @@ interface MultiSearchSelectProps {
   disabled?: boolean;
   className?: string;
   label?: string;
+  renderTags?: boolean;
 }
 
 export function MultiSearchSelect({
@@ -30,7 +31,8 @@ export function MultiSearchSelect({
   emptyMessage = "Nenhum resultado encontrado",
   disabled = false,
   className = "",
-  label
+  label,
+  renderTags = true
 }: MultiSearchSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -144,29 +146,31 @@ export function MultiSearchSelect({
       </div>
 
       {/* Tags Selecionadas */}
-      <div className="flex flex-wrap gap-2">
-        {selectedOptions.map((option) => (
-          <div 
-            key={option.id}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/20 px-3 py-2 text-xs font-bold text-primary animate-in fade-in slide-in-from-top-1 duration-200"
-          >
-            <span className="max-w-[200px] truncate">
-              {(option.code || option.cbo) && `[${option.code || option.cbo}] `}
-              {option.name}
-            </span>
-            <button
-              type="button"
-              onClick={() => handleRemove(option.id)}
-              className="rounded-full p-0.5 hover:bg-primary/20 transition-colors"
+      {renderTags && (
+        <div className="flex flex-wrap gap-2">
+          {selectedOptions.map((option) => (
+            <div 
+              key={option.id}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary/5 border border-primary/20 px-3 py-2 text-xs font-bold text-primary animate-in fade-in slide-in-from-top-1 duration-200"
             >
-              <X className="h-3 w-3 stroke-[3]" />
-            </button>
-          </div>
-        ))}
-        {selectedOptions.length === 0 && !isOpen && (
-          <p className="text-[10px] text-muted-foreground italic px-1">Nenhum item selecionado.</p>
-        )}
-      </div>
+              <span className="max-w-[200px] truncate">
+                {(option.code || option.cbo) && `[${option.code || option.cbo}] `}
+                {option.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleRemove(option.id)}
+                className="rounded-full p-0.5 hover:bg-primary/20 transition-colors"
+              >
+                <X className="h-3 w-3 stroke-[3]" />
+              </button>
+            </div>
+          ))}
+          {selectedOptions.length === 0 && !isOpen && (
+            <p className="text-[10px] text-muted-foreground italic px-1">Nenhum item selecionado.</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

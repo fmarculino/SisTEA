@@ -78,7 +78,8 @@ export async function createPatientAction(data: PatientFormData) {
   const validatedFields = patientSchema.safeParse(data)
   if (!validatedFields.success) return { error: 'Validação falhou' }
 
-  const { clinic_id, ...patientData } = validatedFields.data
+  const { clinic_ids, clinic_id: formClinicId, ...patientData } = validatedFields.data
+  const primaryClinicId = clinic_ids[0]
 
   // Generate a unique 6-digit token for the patient
   let authToken = generateToken()
@@ -101,6 +102,7 @@ export async function createPatientAction(data: PatientFormData) {
     .insert({
       ...patientData,
       cpf: patientData.cpf || null, // Ensure empty string becomes null
+      clinic_id: primaryClinicId,
       auth_token: authToken,
       token_updated_at: new Date().toISOString(),
     })
@@ -115,13 +117,15 @@ export async function createPatientAction(data: PatientFormData) {
   }
 
   // 2. Insert into patient_clinics
+  const links = clinic_ids.map(cid => ({
+    patient_id: newPatient.id,
+    clinic_id: cid,
+    active: data.active // Use the active status from the form
+  }))
+
   const { error: linkError } = await supabase
     .from('patient_clinics')
-    .insert({ 
-      patient_id: newPatient.id, 
-      clinic_id: clinic_id,
-      active: data.active // Use the active status from the form
-    })
+    .insert(links)
 
   if (linkError) return { error: linkError.message }
 
@@ -132,7 +136,7 @@ export async function createPatientAction(data: PatientFormData) {
     action: 'CREATE',
     table_name: 'patients',
     record_id: newPatient.id,
-    new_data: { ...patientData, clinic_id },
+    new_data: { ...patientData, clinic_id: primaryClinicId, clinic_ids },
     description: `Cadastrou o paciente: ${data.name} (CNS: ${data.cns_patient}).`
   })
 
@@ -145,8 +149,9 @@ export async function updatePatientAction(id: string, data: PatientFormData) {
   const validatedFields = patientSchema.safeParse(data)
   if (!validatedFields.success) return { error: 'Validação falhou' }
 
-  const { active, clinic_id, ...patientData } = validatedFields.data
+  const { active, clinic_ids, clinic_id: formClinicId, ...patientData } = validatedFields.data
   const patientId = id
+  const primaryClinicId = clinic_ids[0]
 
   // 1. Update basic patient data
   const { error: patientError } = await supabase
@@ -154,23 +159,46 @@ export async function updatePatientAction(id: string, data: PatientFormData) {
     .update({
       ...patientData,
       cpf: patientData.cpf || null, // Ensure empty string becomes null
-      clinic_id: clinic_id, // Sync legacy clinic_id
+      clinic_id: primaryClinicId, // Sync legacy clinic_id
     })
     .eq('id', patientId)
 
   if (patientError) return { error: patientError.message }
 
-  // 2. Update status in the junction table for the current clinic
-  if (clinic_id) {
+  // 2. Sincronismo inteligente de clínicas no patient_clinics
+  const { data: existingLinks } = await supabase
+    .from('patient_clinics')
+    .select('clinic_id, active')
+    .eq('patient_id', patientId)
+
+  const existingMap = new Map(existingLinks?.map(el => [el.clinic_id, el.active]) || [])
+
+  // Inserir ou atualizar clínicas que estão no clinic_ids
+  for (const cid of clinic_ids) {
+    const isNew = !existingMap.has(cid)
+    const isActive = isNew ? true : (cid === primaryClinicId ? active : (existingMap.get(cid) ?? true))
+
     const { error: linkError } = await supabase
       .from('patient_clinics')
       .upsert({ 
         patient_id: patientId, 
-        clinic_id: clinic_id,
-        active: active 
+        clinic_id: cid,
+        active: isActive 
       }, { onConflict: 'patient_id,clinic_id' })
     
     if (linkError) return { error: linkError.message }
+  }
+
+  // Remover clínicas que não estão mais no clinic_ids
+  const idsToRemove = Array.from(existingMap.keys()).filter(cid => !clinic_ids.includes(cid))
+  if (idsToRemove.length > 0) {
+    const { error: removeError } = await supabase
+      .from('patient_clinics')
+      .delete()
+      .eq('patient_id', patientId)
+      .in('clinic_id', idsToRemove)
+
+    if (removeError) return { error: removeError.message }
   }
 
   revalidatePath('/dashboard/patients')
@@ -180,7 +208,7 @@ export async function updatePatientAction(id: string, data: PatientFormData) {
     action: 'UPDATE',
     table_name: 'patients',
     record_id: patientId,
-    new_data: { ...patientData, active, clinic_id },
+    new_data: { ...patientData, active, clinic_id: primaryClinicId, clinic_ids },
     description: `Atualizou dados do paciente: ${data.name}.`
   })
 

@@ -3,11 +3,11 @@
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { professionalSchema, type ProfessionalFormData } from './schema'
-import { createProfessionalAction, updateProfessionalAction } from './actions'
-import { useState } from 'react'
+import { createProfessionalAction, updateProfessionalAction, toggleProfessionalClinicStatusAction } from './actions'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { StatusModal } from '@/components/ui/StatusModal'
-import { User, Mail, Building, Briefcase, CheckCircle } from 'lucide-react'
+import { User, Mail, Building, Briefcase, CheckCircle, X } from 'lucide-react'
 import { MultiSearchSelect } from '@/components/ui/MultiSearchSelect'
 
 type ClinicOption = { id: string; name: string }
@@ -31,6 +31,9 @@ export function ProfessionalForm({
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
+  const [localLinkedClinics, setLocalLinkedClinics] = useState<{ clinic_id: string; name: string; active: boolean }[]>(
+    (initialData as any)?.linkedClinics || []
+  )
 
   // Funções de máscara aprimoradas (Live Masking)
   const maskCPF = (value: string) => {
@@ -70,6 +73,50 @@ export function ProfessionalForm({
       clinic_ids: initialData?.clinic_ids || (userClinicId ? [userClinicId] : []),
     },
   })
+
+  const clinicIds = watch('clinic_ids') || []
+
+  useEffect(() => {
+    // Sincroniza localLinkedClinics com clinicIds do formulário
+    setLocalLinkedClinics(prev => {
+      // Cria um mapa dos estados ativos atuais para preservá-los
+      const activeMap = new Map(prev.map(lc => [lc.clinic_id, lc.active]))
+      
+      return clinicIds.map(cid => {
+        const clinicInfo = clinics.find(c => c.id === cid)
+        return {
+          clinic_id: cid,
+          name: clinicInfo?.name || 'Clínica desconhecida',
+          active: activeMap.has(cid) ? (activeMap.get(cid) ?? true) : true
+        }
+      })
+    })
+  }, [clinicIds, clinics])
+
+  const handleToggleClinic = async (clinicId: string, currentStatus: boolean) => {
+    const newStatus = !currentStatus
+
+    // Optimistic update
+    setLocalLinkedClinics(prev => prev.map(lc => 
+      lc.clinic_id === clinicId ? { ...lc, active: newStatus } : lc
+    ))
+
+    if (id) {
+      const res = await toggleProfessionalClinicStatusAction(id, clinicId, newStatus)
+      if (res && 'error' in res && res.error) {
+        setErrorMsg(res.error)
+        // Revert on error
+        setLocalLinkedClinics(prev => prev.map(lc => 
+          lc.clinic_id === clinicId ? { ...lc, active: currentStatus } : lc
+        ))
+      }
+    }
+  }
+
+  const handleRemoveClinic = (clinicId: string) => {
+    const updatedIds = clinicIds.filter(cid => cid !== clinicId)
+    setValue('clinic_ids', updatedIds)
+  }
 
   const onSubmit = async (data: ProfessionalFormData) => {
     setIsPending(true)
@@ -229,10 +276,72 @@ export function ProfessionalForm({
                     placeholder="Pesquisar por nome da clínica..."
                     emptyMessage="Clínica não encontrada"
                     disabled={userRole !== 'SMS_ADMIN'}
+                    renderTags={false}
                   />
                 )}
               />
               {errors.clinic_ids && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.clinic_ids.message}</p>}
+              
+              {/* Exibição de clínicas vinculadas com toggle individual */}
+              <div className="mt-6 space-y-4">
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block border-b border-border/40 pb-2">Status por Unidade:</span>
+                <div className="grid grid-cols-1 gap-3">
+                  {localLinkedClinics.length > 0 ? (
+                    localLinkedClinics.map((lc) => (
+                      <div
+                        key={lc.clinic_id}
+                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${lc.active
+                            ? 'bg-primary/[0.03] border-primary/20 shadow-sm'
+                            : 'bg-muted/30 border-border/40 opacity-80'
+                          }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-xl ${lc.active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                            <Building className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className={`text-[11px] font-black uppercase tracking-tight ${lc.active ? 'text-primary' : 'text-muted-foreground'}`}>
+                              {lc.name}
+                            </span>
+                            <span className="text-[10px] font-medium text-muted-foreground">
+                              {lc.active ? 'Atendimento Habilitado' : 'Atendimento Suspenso nesta unidade'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleClinic(lc.clinic_id, lc.active)}
+                            className="relative inline-flex items-center cursor-pointer group"
+                            disabled={userRole !== 'SMS_ADMIN'}
+                          >
+                            <div className={`w-10 h-5 rounded-full transition-colors duration-200 ease-in-out ${lc.active ? 'bg-primary' : 'bg-muted-foreground/30'} ${userRole !== 'SMS_ADMIN' ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                              <div className={`absolute top-[2px] left-[2px] bg-white w-4 h-4 rounded-full shadow-sm transition-transform duration-200 ease-in-out ${lc.active ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </div>
+                          </button>
+
+                          {userRole === 'SMS_ADMIN' && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveClinic(lc.clinic_id)}
+                              className="p-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors"
+                              title="Remover Vínculo"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center p-6 border-2 border-dashed border-border/40 rounded-2xl">
+                      <p className="text-xs text-muted-foreground font-medium italic">Nenhuma unidade vinculada encontrada.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {userRole !== 'SMS_ADMIN' && (
                 <p className="mt-3 text-[10px] text-muted-foreground italic font-medium px-2">
                   Como usuário de clínica, seu vínculo é fixo com sua unidade de origem.

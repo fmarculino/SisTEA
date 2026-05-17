@@ -1,13 +1,14 @@
 'use client'
 
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { patientSchema, type PatientFormData } from './schema'
 import { createPatientAction, updatePatientAction, resetPatientTokenAction, checkPatientByCNSAction, linkPatientToClinicAction, togglePatientClinicStatusAction } from './actions'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw, Building } from 'lucide-react'
+import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw, Building, X } from 'lucide-react'
 import { StatusModal } from '@/components/ui/StatusModal'
+import { MultiSearchSelect } from '@/components/ui/MultiSearchSelect'
 
 type ClinicOption = { id: string; name: string }
 
@@ -79,6 +80,7 @@ export function PatientForm({
 
   const {
     register,
+    control,
     handleSubmit,
     setValue,
     watch,
@@ -107,22 +109,40 @@ export function PatientForm({
       medical_record_number: initialData?.medical_record_number || '',
       active: initialData?.active ?? true,
       clinic_id: userRole === 'SMS_ADMIN' ? (initialData?.clinic_id || '') : (userClinicId || ''),
+      clinic_ids: initialData?.clinic_ids || (userClinicId ? [userClinicId] : []),
     },
   })
 
-  // Para Admin: Quando trocar a clínica no dropdown, atualizar o toggle de Ativo 
-  // com o status que o paciente tem naquela clínica específica.
-  const selectedClinicId = watch('clinic_id')
+  const clinicIds = watch('clinic_ids') || []
+
+  // Sincroniza localLinkedClinics com clinicIds do formulário se o usuário for SMS_ADMIN
   useEffect(() => {
-    if (userRole === 'SMS_ADMIN' && id && selectedClinicId) {
-      const link = linkedClinics.find(lc => lc.clinic_id === selectedClinicId)
-      if (link) {
-        setValue('active', link.active)
-      } else {
-        setValue('active', true) // Novo vínculo, padrão ativo
-      }
+    if (userRole === 'SMS_ADMIN') {
+      setLocalLinkedClinics(prev => {
+        const activeMap = new Map(prev.map(lc => [lc.clinic_id, lc.active]))
+        
+        return clinicIds.map(cid => {
+          const clinicInfo = clinics.find(c => c.id === cid)
+          return {
+            clinic_id: cid,
+            name: clinicInfo?.name || 'Clínica desconhecida',
+            active: activeMap.has(cid) ? (activeMap.get(cid) ?? true) : true
+          }
+        })
+      })
     }
-  }, [selectedClinicId, userRole, id, linkedClinics, setValue])
+  }, [clinicIds, clinics, userRole])
+
+  // Mantém clinic_id legado sincronizado com a primeira clínica selecionada
+  useEffect(() => {
+    const primary = clinicIds[0] || ''
+    setValue('clinic_id', primary)
+  }, [clinicIds, setValue])
+
+  const handleRemoveClinic = (clinicId: string) => {
+    const updatedIds = clinicIds.filter(cid => cid !== clinicId)
+    setValue('clinic_ids', updatedIds)
+  }
 
   const cnsValue = watch('cns_patient')
   const rawCNS = cnsValue?.replace(/\D/g, '')
@@ -166,14 +186,14 @@ export function PatientForm({
   }
 
   const handleToggleClinic = async (clinicId: string, currentStatus: boolean) => {
-    if (!id) return;
-
     const newStatus = !currentStatus;
 
     // Optimistic update
     setLocalLinkedClinics(prev => prev.map(lc =>
       lc.clinic_id === clinicId ? { ...lc, active: newStatus } : lc
     ));
+
+    if (!id) return;
 
     // Sync with form state if the toggled clinic is the currently selected one
     const currentSelectedClinic = watch('clinic_id');
@@ -476,49 +496,51 @@ export function PatientForm({
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
             {userRole === 'SMS_ADMIN' ? (
               <div className="sm:col-span-6">
-                <label className="block text-xs font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Unidade/Clínica de Atendimento *</label>
-                <div className="relative group/select">
-                  <select
-                    {...register('clinic_id')}
-                    className="block w-full rounded-2xl border-border/60 bg-background/50 px-5 py-3.5 text-sm font-bold transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary border appearance-none hover:border-primary/40 focus:bg-background pr-10 shadow-sm"
-                  >
-                    <option value="">Selecione a clínica...</option>
-                    {clinics.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
-                </div>
-                {errors.clinic_id && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.clinic_id.message}</p>}
+                <Controller
+                  name="clinic_ids"
+                  control={control}
+                  render={({ field }) => (
+                    <MultiSearchSelect
+                      label="Unidade/Clínica de Atendimento *"
+                      options={clinics}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Pesquisar por nome da clínica..."
+                      emptyMessage="Clínica não encontrada"
+                      renderTags={false}
+                    />
+                  )}
+                />
+                {errors.clinic_ids && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.clinic_ids.message}</p>}
 
                 {/* Exibição de clínicas vinculadas com toggle individual */}
-                {id && (
-                  <div className="mt-6 space-y-4">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block border-b border-border/40 pb-2">Status por Unidade:</span>
-                    <div className="grid grid-cols-1 gap-3">
-                      {localLinkedClinics.length > 0 ? (
-                        localLinkedClinics.map((lc) => (
-                          <div
-                            key={lc.clinic_id}
-                            className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${lc.active
-                                ? 'bg-primary/[0.03] border-primary/20 shadow-sm'
-                                : 'bg-muted/30 border-border/40 opacity-80'
-                              }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-xl ${lc.active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                                <Building className="w-4 h-4" />
-                              </div>
-                              <div className="flex flex-col">
-                                <span className={`text-[11px] font-black uppercase tracking-tight ${lc.active ? 'text-primary' : 'text-muted-foreground'}`}>
-                                  {lc.name}
-                                </span>
-                                <span className="text-[10px] font-medium text-muted-foreground">
-                                  {lc.active ? 'Atendimento Habilitado' : 'Atendimento Suspenso nesta unidade'}
-                                </span>
-                              </div>
+                <div className="mt-6 space-y-4">
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block border-b border-border/40 pb-2">Status por Unidade:</span>
+                  <div className="grid grid-cols-1 gap-3">
+                    {localLinkedClinics.length > 0 ? (
+                      localLinkedClinics.map((lc) => (
+                        <div
+                          key={lc.clinic_id}
+                          className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${lc.active
+                              ? 'bg-primary/[0.03] border-primary/20 shadow-sm'
+                              : 'bg-muted/30 border-border/40 opacity-80'
+                            }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-xl ${lc.active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                              <Building className="w-4 h-4" />
                             </div>
+                            <div className="flex flex-col">
+                              <span className={`text-[11px] font-black uppercase tracking-tight ${lc.active ? 'text-primary' : 'text-muted-foreground'}`}>
+                                {lc.name}
+                              </span>
+                              <span className="text-[10px] font-medium text-muted-foreground">
+                                {lc.active ? 'Atendimento Habilitado' : 'Atendimento Suspenso nesta unidade'}
+                              </span>
+                            </div>
+                          </div>
 
+                          <div className="flex items-center gap-3">
                             <button
                               type="button"
                               onClick={() => handleToggleClinic(lc.clinic_id, lc.active)}
@@ -528,16 +550,25 @@ export function PatientForm({
                                 <div className={`absolute top-[2px] left-[2px] bg-white w-4 h-4 rounded-full shadow-sm transition-transform duration-200 ease-in-out ${lc.active ? 'translate-x-5' : 'translate-x-0'}`} />
                               </div>
                             </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveClinic(lc.clinic_id)}
+                              className="p-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors"
+                              title="Remover Vínculo"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-center p-6 border-2 border-dashed border-border/40 rounded-2xl">
-                          <p className="text-xs text-muted-foreground font-medium italic">Nenhuma unidade vinculada encontrada.</p>
                         </div>
-                      )}
-                    </div>
+                      ))
+                    ) : (
+                      <div className="text-center p-6 border-2 border-dashed border-border/40 rounded-2xl">
+                        <p className="text-xs text-muted-foreground font-medium italic">Nenhuma unidade vinculada encontrada.</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             ) : (
               <div className="sm:col-span-6 space-y-4">
