@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Printer, ChevronLeft, Calendar, Building2, User, FileText, Activity } from 'lucide-react'
 import { formatCurrency } from '@/utils/format'
 
@@ -28,7 +28,12 @@ export default function PrintReportClient({
   mode
 }: PrintReportClientProps) {
   
+  const [authId, setAuthId] = useState('')
+
   useEffect(() => {
+    // Generate authenticity ID on mount (client-side only) to prevent SSR hydration mismatch
+    setAuthId(Math.random().toString(36).substring(2, 15).toUpperCase())
+
     // Wait for content to render and trigger print
     const timer = setTimeout(() => {
       window.print()
@@ -264,7 +269,7 @@ export default function PrintReportClient({
         <div className="text-[10px] print:text-[6pt] font-medium text-slate-500">
           <p>SisTEA - Sistema de Gestão e Inteligência Terapêutica</p>
           <p>Este relatório é um documento oficial gerado para fins de conferência e auditoria.</p>
-          <p className="mt-1 font-black">ID de Autenticidade: {Math.random().toString(36).substring(2, 15).toUpperCase()}</p>
+          <p className="mt-1 font-black">ID de Autenticidade: {authId}</p>
         </div>
         <div className="flex flex-col items-center gap-2 print:gap-1">
           <div className="w-64 print:w-40 border-b border-slate-900"></div>
