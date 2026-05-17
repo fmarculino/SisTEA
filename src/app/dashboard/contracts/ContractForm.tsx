@@ -1,21 +1,21 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveContractBulkAction, type ContractFormData } from './actions'
 
-export function ContractForm({ 
-  initialData, 
-  clinics, 
-  procedures 
-}: { 
+export function ContractForm({
+  initialData,
+  clinics,
+  procedures
+}: {
   initialData?: any,
   clinics: any[],
   procedures: any[]
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  
+
   // States for header
   const [clinicId, setClinicId] = useState(initialData?.clinic_id || '')
   const [contractNumber, setContractNumber] = useState(initialData?.contract_number || '')
@@ -70,13 +70,13 @@ export function ContractForm({
         newItems[index].valid_to = validTo
       }
     }
-    
+
     setItems(newItems)
   }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    
+
     // Filtramos apenas os que tem valores preenchidos se o usuario marcar active, 
     // mas na verdade vamos mandar todos como um array
     const data: ContractFormData = {
@@ -159,30 +159,27 @@ export function ContractForm({
       <div className="space-y-4">
         <h3 className="text-lg font-black text-foreground">Tabela de Procedimentos</h3>
         <p className="text-sm text-muted-foreground">Ative os procedimentos cobertos por este contrato e ajuste os valores se necessário.</p>
-        
+
         <div className="overflow-x-auto border border-border/40 rounded-2xl">
-          <table className="min-w-full divide-y divide-border/30">
+          <table className="min-w-[1050px] w-full divide-y divide-border/30">
             <thead className="bg-muted/50">
               <tr>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-16">
+                <th scope="col" className="px-4 py-4 text-center text-[11px] font-black text-muted-foreground uppercase tracking-widest w-20">
                   Ativo
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest">
-                  Procedimento
-                </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-40">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[180px]">
                   Valor SUS (R$)
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-40">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[180px]">
                   Valor RP (R$)
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-44">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[220px]">
                   Validade Início (Item)
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-44">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[220px]">
                   Validade Fim (Item)
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-32">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[170px]">
                   Total (R$)
                 </th>
               </tr>
@@ -190,27 +187,34 @@ export function ContractForm({
             <tbody className="divide-y divide-border/20 bg-card">
               {items.map((item, index) => {
                 const total = Number(item.valor_sus || 0) + Number(item.valor_rp || 0)
+                const isItemActive = item.active
                 return (
-                  <tr key={item.procedure_id} className={`transition-colors ${!item.active ? 'opacity-60 bg-muted/10' : 'bg-background'}`}>
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
-                      <input
-                        type="checkbox"
-                        checked={item.active}
-                        onChange={(e) => handleItemChange(index, 'active', e.target.checked)}
-                        className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-foreground">{item.code}</span>
-                        <span className="text-[11px] text-muted-foreground font-medium uppercase truncate max-w-xs" title={item.description}>
-                          {item.description}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="relative">
-                        <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black ${item.active ? 'text-primary/50' : 'text-muted-foreground'}`}>R$</span>
+                  <Fragment key={item.procedure_id}>
+                    {/* Linha 1: Checkbox e Identificação do Procedimento */}
+                    <tr className={`transition-colors border-t border-border/30 ${!isItemActive ? 'opacity-50 bg-background/40' : 'bg-muted/15 hover:bg-muted/25'}`}>
+                      <td rowSpan={2} className={`px-4 py-3 whitespace-nowrap text-center align-middle border-r border-border/20 w-20 transition-colors ${!isItemActive ? 'bg-background/20' : 'bg-muted/25'}`}>
+                        <input
+                          type="checkbox"
+                          checked={item.active}
+                          onChange={(e) => handleItemChange(index, 'active', e.target.checked)}
+                          className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                        />
+                      </td>
+                      <td colSpan={5} className="px-4 py-3 align-middle">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-background text-foreground border border-border/30 font-mono shadow-sm">
+                            {item.code}
+                          </span>
+                          <span className="text-sm font-bold text-foreground leading-relaxed">
+                            {item.description}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Linha 2: Inputs de Preço e Vigência individuais */}
+                    <tr className={`transition-colors border-b-4 border-border/15 ${!isItemActive ? 'opacity-50 bg-background/40' : 'bg-muted/15 hover:bg-muted/25'}`}>
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[180px]">
                         <input
                           type="number"
                           step="0.01"
@@ -219,13 +223,11 @@ export function ContractForm({
                           value={item.valor_sus}
                           onChange={(e) => handleItemChange(index, 'valor_sus', e.target.value)}
                           onBlur={(e) => handleItemChange(index, 'valor_sus', Number(e.target.value || 0).toFixed(2))}
-                          className="w-full h-10 rounded-xl border border-input bg-background pl-9 pr-3 py-1 text-sm font-black text-foreground focus:text-primary focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all"
+                          placeholder="0.00"
+                          className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-black text-foreground focus:text-primary focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all shadow-sm"
                         />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="relative">
-                        <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black ${item.active ? 'text-primary/50' : 'text-muted-foreground'}`}>R$</span>
+                      </td>
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[180px]">
                         <input
                           type="number"
                           step="0.01"
@@ -234,34 +236,35 @@ export function ContractForm({
                           value={item.valor_rp}
                           onChange={(e) => handleItemChange(index, 'valor_rp', e.target.value)}
                           onBlur={(e) => handleItemChange(index, 'valor_rp', Number(e.target.value || 0).toFixed(2))}
-                          className="w-full h-10 rounded-xl border border-input bg-background pl-9 pr-3 py-1 text-sm font-black text-foreground focus:text-primary focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all"
+                          placeholder="0.00"
+                          className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-black text-foreground focus:text-primary focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all shadow-sm"
                         />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <input
-                        type="date"
-                        disabled={!item.active}
-                        value={item.valid_from || ''}
-                        onChange={(e) => handleItemChange(index, 'valid_from', e.target.value)}
-                        className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-bold text-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all"
-                      />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <input
-                        type="date"
-                        disabled={!item.active}
-                        value={item.valid_to || ''}
-                        onChange={(e) => handleItemChange(index, 'valid_to', e.target.value)}
-                        className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-bold text-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all"
-                      />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-sm font-black text-primary">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}
-                      </span>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[220px]">
+                        <input
+                          type="date"
+                          disabled={!item.active}
+                          value={item.valid_from || ''}
+                          onChange={(e) => handleItemChange(index, 'valid_from', e.target.value)}
+                          className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-bold text-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all shadow-sm"
+                        />
+                      </td>
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[220px]">
+                        <input
+                          type="date"
+                          disabled={!item.active}
+                          value={item.valid_to || ''}
+                          onChange={(e) => handleItemChange(index, 'valid_to', e.target.value)}
+                          className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-bold text-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all shadow-sm"
+                        />
+                      </td>
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap align-middle w-[170px]">
+                        <span className="text-sm font-black text-primary block py-2">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}
+                        </span>
+                      </td>
+                    </tr>
+                  </Fragment>
                 )
               })}
             </tbody>

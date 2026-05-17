@@ -11,6 +11,12 @@ Esta versão introduz a flexibilidade de **Vigências Individuais e Granulares p
   - Adicionadas as colunas **"Validade Início (Item)"** e **"Validade Fim (Item)"** diretamente na grade de procedimentos do formulário de contratos.
   - **Reatividade de UI inteligente:** Ao ativar um procedimento, o sistema herda automaticamente as datas globalmente informadas no cabeçalho do contrato, acelerando o cadastro padrão.
   - **Edição Livre:** Os inputs do tipo `date` permanecem abertos para digitação personalizada caso o procedimento possua vigência customizada por aditivo específico.
+  - **Reorganização de Layout e Otimização Espacial (Modelo Híbrido de Duas Linhas):**
+    - Evolução da estrutura da tabela de procedimentos para um layout híbrido de duas linhas por item:
+      - **Linha 1:** Ocupada pelo checkbox de ativação (com `rowSpan={2}`) e a identificação completa do procedimento (`code` e `description` por extenso) com `colSpan={5}`. Isso dá espaço horizontal ilimitado para leitura das descrições de exames/terapias do SUS sem truncagem.
+      - **Linha 2:** Acomoda confortavelmente os campos de entrada de dados de forma extremamente ampla e espaçada, perfeitamente alinhados com as colunas do cabeçalho da tabela.
+    - Definição de largura mínima de tabela (`min-w-[1050px]`) com scroll horizontal para manter a perfeita simetria matemática e alinhamento visual de todas as colunas.
+    - Remoção definitiva do prefixo `"R$"` flutuante e do padding esquerdo rígido (`pl-9`) nos inputs de **Valor SUS** e **Valor RP**, liberando a área total de digitação para os operadores.
 - **Validação Cirúrgica por Procedimento (`actions.ts`):**
   - A Server Action `saveContractBulkAction` agora executa a detecção de colisões temporais a nível de cada procedimento específico de forma isolada, em vez de bloquear o cabeçalho de vigência de forma agressiva.
   - Se houver sobreposição ativa de preços para o mesmo procedimento na mesma clínica em contratos ou aditivos distintos, o sistema emite um alerta forense detalhando o período de bloqueio e o número do contrato conflitante.

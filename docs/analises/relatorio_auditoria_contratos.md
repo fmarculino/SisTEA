@@ -190,6 +190,12 @@ Para solucionar definitivamente o bug de duplicação e aplicar a nova trava cir
 1. **Frontend Altamente Flexível (`ContractForm.tsx`):**
    * Exposição de inputs individuais de vigência na tabela de procedimentos, ativados condicionalmente com o checkbox "Ativo".
    * Reatividade perfeita: ao ativar o item, os inputs de data daquela linha herdam automaticamente o valor do cabeçalho global, mantendo a facilidade e rapidez no cadastro básico.
+   * **Reorganização de Layout Dinâmico e Otimização de Espaço (Modelo Híbrido de Duas Linhas):**
+     * Evolução da estrutura da tabela de procedimentos para um layout híbrido de duas linhas por item:
+       * **Linha 1:** Ocupada pelo checkbox de ativação (com `rowSpan={2}`) e a identificação completa do procedimento (`code` e `description` por extenso) com `colSpan={5}`. Isso dá espaço horizontal ilimitado para leitura das descrições de exames/terapias do SUS sem truncagem.
+       * **Linha 2:** Acomoda confortavelmente os campos de entrada de dados (Valor SUS, Valor RP, Vigências e Total) de forma extremamente ampla e espaçada, perfeitamente alinhados com as colunas do cabeçalho da tabela.
+     * Definição de uma largura de segurança de tabela (`min-w-[1050px]`) integrada ao scroll horizontal nativo da interface. Isso evita que os campos sejam "esmagados" em qualquer resolução de tela ou monitor.
+     * Remoção do prefixo flutuante `"R$"` absoluto e redução do padding interno esquerdo dos inputs de **Valor SUS** e **Valor RP** de `pl-9` para `px-3`. Isso liberou a área total de digitação para os operadores.
 2. **Backend com Trava Cirúrgica (`actions.ts`):**
    * Validação a nível de procedimento: o backend detecta sobreposições de períodos de preços usando as datas individuais de cada item (caindo de volta nas globais se ausentes).
    * A limpeza do banco nas reedições foi mantida sem duplicar nenhum contrato graças à higienização de nomes antigos.
