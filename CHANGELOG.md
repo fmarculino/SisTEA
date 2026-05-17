@@ -25,17 +25,19 @@ Esta versão introduz a flexibilidade de **Vigências Individuais e Granulares p
 
 ### 📂 Filtros e Paginação na Gestão de Competências (`page.tsx` & `CompetencesFilterPanel.tsx`):
 - **Painel de Filtros Reativo Avançado:**
-  - Implementado o componente de cliente **`CompetencesFilterPanel.tsx`** integrando busca textual dinâmica, filtros de clínica (exclusivo para SMS_ADMIN) e a inovadora **chave switch iOS-Style** para exibição de competências encerradas.
+  - Implementado o componente de cliente **`CompetencesFilterPanel.tsx`** integrando busca textual dinâmica, filtros de clínica (exclusivo para SMS_ADMIN) e a inovadora **chave switch iOS-Style** rotulada como **"Visualizar Enviadas"** para exibição de competências transmitidas ao Ministério da Saúde.
   - O painel adota debounce de 400ms na pesquisa textual de clínicas e períodos e reatividade instantânea via `useTransition` para evitar travamentos de interface no Next.js App Router.
-- **Padrão de Exibição de Competências Abertas:**
-  - Por padrão, a página oculta competências nos status `FECHADA` e `ENVIADA_MS`, listando estritamente competências `ABERTA` para agilizar as operações rotineiras.
-  - Ao ligar a chave de toggle, a lista é expandida dinamicamente para revelar as competências encerradas de forma imediata.
+- **Padrão de Exibição Inteligente de Competências em Aberto e Fechadas:**
+  - **Lógica de Fluxo Protegido:** Por padrão, a página oculta **apenas** competências com status **`ENVIADA_MS`** (que possuem o Hard Lock definitivo após a transmissão ao Ministério da Saúde).
+  - Competências com status **`ABERTA`** e **`FECHADA`** (que já foram encerradas pela clínica mas ainda não foram transmitidas ao MS) **permanecem visíveis por padrão**. Isso evita a estranheza do sumiço imediato e garante que a clínica possa baixar e exportar o arquivo BPA de faturamento livremente na tela.
+  - Ao ligar a chave switch de toggle, a lista é expandida dinamicamente para revelar as competências enviadas (`ENVIADA_MS`) de forma imediata.
 - **Paginação Server-Side Integrada em Memória:**
   - Integração nativa com o componente **`Pagination.tsx`** no rodapé do bloco de exibições (tabela de Admin e grade de cards da Clínica).
 - **Padronização Visual da Visão de Clínica:**
   - Substituição da antiga grade de cards por uma **tabela ultra-premium e limpa**, perfeitamente alinhada e coerente com a visão de administrador.
   - Omissão cirúrgica de colunas redundantes (como "Clínica", já que o gestor opera estritamente no escopo da sua unidade), exibindo colunas de **Mês/Ano**, **Status** com selos coloridos inteligentes e a coluna de **Ações** alinhada de forma moderna à direita.
   - Preservação integral das lógicas de Hard Lock para competências enviadas ao Ministério da Saúde e do botão reativo de exportação BPA.
+  - Refinamento semiótico e alinhamento conceitual do rótulo do botão de ação principal, alterado de **`"ENCERRAR MÊS"`** para **`"ENCERRAR COMPETÊNCIA"`**.
 
 ---
 

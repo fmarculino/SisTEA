@@ -26,8 +26,8 @@ Motor de validação global que impede que um profissional realize atendimentos 
 ### 💼 Vigências Granulares e Aditivos por Procedimento
 Governança refinada de preços e contratos com suporte a datas de validade (`valid_from` e `valid_to`) individuais para cada procedimento cadastrado. Permite a emissão de aditivos qualitativos (inclusão de novos serviços) e quantitativos (reajuste de preços de itens específicos) sem alterar o cabeçalho global do contrato, protegendo o histórico financeiro de competências passadas.
 
-### 📂 Painel de Competências Reativo com Switch iOS-Style
-A tela de **Gestão de Competências** oculta faturamentos fechados por padrão, listando apenas os meses com status `ABERTA` para agilizar a operação diária. Através de um painel elegante de filtros reativos com debounce, busca textual e uma **chave switch iOS-style** (com transição suave de cores e animação), o operador pode visualizar competências fechadas e enviadas ao Ministério da Saúde (Hard Lock). A tabela de exibição é unificada, simétrica e 100% paginada na memória do servidor Next.js para alta velocidade de processamento.
+### 📂 Painel de Competências Reativo com Switch iOS-Style ("Visualizar Enviadas")
+A tela de **Gestão de Competências** oculta por padrão **apenas** as competências que já foram transmitidas de fato ao Ministério da Saúde (status `ENVIADA_MS`), as quais possuem o Hard Lock definitivo. As competências `ABERTA` e `FECHADA` (encerradas pela clínica mas ainda não enviadas ao MS) permanecem visíveis por padrão. Isso garante que os gestores de clínicas possam exportar e baixar os arquivos BPA de faturamento livremente na tela. Através de um painel de filtros reativos com debounce, busca textual e uma **chave switch iOS-style** rotulada como **"Visualizar Enviadas"**, o operador pode reexibir as competências transmitidas ao MS instantaneamente. A tabela de exibição é unificada, simétrica e 100% paginada na memória do servidor Next.js para alta velocidade de processamento.
 
 ---
 

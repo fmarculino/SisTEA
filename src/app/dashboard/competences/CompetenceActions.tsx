@@ -30,7 +30,7 @@ export function CloseCompetenceButton({ clinicId, month, year, isAdminView }: { 
       title="Encerrar Competência"
     >
       <Lock className="h-4 w-4 stroke-[2.5]" />
-      {!isAdminView && (isPending ? 'Encerrando...' : 'Encerrar Mês')}
+      {!isAdminView && (isPending ? 'Encerrando...' : 'Encerrar Competência')}
     </button>
   )
 }

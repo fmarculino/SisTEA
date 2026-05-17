@@ -107,13 +107,12 @@ export default async function CompetencesPage({
       return a.clinic.name.localeCompare(b.clinic.name)
     })
 
-    // --- Aplicar Filtros (Admin) ---
     let filteredList = closedCompetences
 
-    // 1. Chave de Toggle: mostrar_encerradas (por padrão, exibe apenas ABERTAS)
+    // 1. Chave de Toggle: mostrar_enviadas (por padrão, oculta apenas ENVIADA_MS)
     const showClosed = queryParams.show_closed === 'true'
     if (!showClosed) {
-      filteredList = filteredList.filter(c => c.status === 'ABERTA')
+      filteredList = filteredList.filter(c => c.status !== 'ENVIADA_MS')
     }
 
     // 2. Filtro por clínica
@@ -186,12 +185,12 @@ export default async function CompetencesPage({
     // --- Aplicar Filtros (Clínica) ---
     let filteredMonths = months
 
-    // 1. Chave de Toggle: mostrar_encerradas (por padrão, exibe apenas ABERTAS)
+    // 1. Chave de Toggle: mostrar_enviadas (por padrão, oculta apenas as enviadas ao MS)
     const showClosed = queryParams.show_closed === 'true'
     if (!showClosed) {
       filteredMonths = filteredMonths.filter(m => {
-        const isClosed = closedCompetences.find(c => c.month === m.month && c.year === m.year && (c.status === 'FECHADA' || c.status === 'ENVIADA_MS'))
-        return !isClosed
+        const isSent = closedCompetences.find(c => c.month === m.month && c.year === m.year && c.status === 'ENVIADA_MS')
+        return !isSent
       })
     }
 

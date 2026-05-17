@@ -110,10 +110,10 @@ export function CompetencesFilterPanel({ isAdmin, clinicsList }: CompetencesFilt
       <div className="flex items-center justify-between sm:justify-start gap-4 border-t lg:border-t-0 pt-4 lg:pt-0 border-border/20">
         <div className="flex flex-col">
           <span className="text-xs font-black uppercase text-foreground tracking-wider leading-none">
-            Visualizar Encerradas
+            Visualizar Enviadas
           </span>
           <span className="text-[10px] text-muted-foreground font-semibold mt-1">
-            Exibe competências com status Fechada/Enviada
+            Exibe competências enviadas ao Ministério da Saúde
           </span>
         </div>
 
