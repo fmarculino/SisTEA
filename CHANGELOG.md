@@ -2,6 +2,25 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.11.0-beta] - 2026-05-17
+
+Esta versão marca um salto na experiência de uso do sistema com a introdução do suporte completo ao **PWA (Progressive Web App)**, permitindo que o SisTEA seja instalado nativamente como um aplicativo de desktop no Windows, além de trazer correções críticas no fluxo de criação de guias, governança de competências administrativas e documentação arquitetural.
+
+### 🖥️ Suporte a PWA (Instalação Desktop Nativa)
+- **Instalador Inteligente na Sidebar:** Lógica integrada ao menu lateral (`sidebar.tsx`) que escuta os eventos do navegador (`beforeinstallprompt`) e renderiza dinamicamente um botão premium com degradê verde esmeralda e micro-animação de bounce para instalação do aplicativo com um clique.
+- **Identidade Visual de Alta Definição:** Criação de ícone vetorial (`icon.svg`) em curvas contendo a borboleta da neurodiversidade fundida ao coração médico, e geração de imagens rasterizadas de alta resolução (`icon-192x192.png` e `icon-512x512.png`) na pasta `public` para a barra de tarefas do Windows.
+- **Manifesto de Aplicativo:** Configuração do manifesto do PWA (`manifest.json`) detalhando orientações, cores do tema (`#059669`) e execução no modo `standalone` sem barras de navegação externas.
+- **Service Worker Stateless:** Registro automático de um Service Worker (`sw.js`) no layout raiz do Next.js para atender aos requisitos de conformidade de PWA do Chrome/Edge sem impactar o cache do Next.js ou Server Actions em produção.
+
+### 🛡️ Governança Administrativa & Bug Fixes
+- **Correção no Status Inicial de Atendimentos:** Resolução do bug no fluxo de criação onde a primeira sessão de uma guia nova criada por clínicas salvava com o status incorreto de "Pendente". As sessões iniciais agora começam corretamente como "Não Realizado", preservando o fluxo de validação digital.
+- **Acompanhamento de Competências Abertas:** Refatoração do módulo de competências de modo que administradores (`SMS_ADMIN`) visualizem em tempo real todas as competências abertas no grid de controle, habilitando ações rápidas para encerramento e auditoria.
+
+### 📝 Documentação e Arquitetura do Sistema
+- **Mapa Tecnológico do SisTEA:** Criação do documento oficial `docs/ARQUITETURA_E_TECNOLOGIAS.md` detalhando as linguagens, frameworks, ferramentas de build, banco de dados (PostgreSQL/Supabase), segurança (BR-010) e suporte ao PWA.
+
+---
+
 ## [0.10.0-beta] - 2026-05-16
 
 Esta versão introduz o módulo avançado de **Relatórios & BI (Business Intelligence)**, fornecendo uma infraestrutura robusta para análise estratégica, conferência de faturamento e auditoria de produtividade.
