@@ -38,7 +38,9 @@ export function ContractForm({
           description: p.description,
           valor_sus: Number(existing.valor_sus || 0).toFixed(2),
           valor_rp: Number(existing.valor_rp || 0).toFixed(2),
-          active: existing.active
+          active: existing.active,
+          valid_from: existing.valid_from || '',
+          valid_to: existing.valid_to || ''
         }
       }
       return {
@@ -47,7 +49,9 @@ export function ContractForm({
         description: p.description,
         valor_sus: Number(p.valor_sus || 0).toFixed(2),
         valor_rp: Number(p.valor_rp || 0).toFixed(2),
-        active: false // default to inactive unless they explicitly include it
+        active: false, // default to inactive unless they explicitly include it
+        valid_from: '',
+        valid_to: ''
       }
     })
     setItems(loadedItems)
@@ -56,6 +60,17 @@ export function ContractForm({
   const handleItemChange = (index: number, field: string, value: any) => {
     const newItems = [...items]
     newItems[index][field] = value
+
+    // Comportamento reativo: ao ativar um item, inicializa datas com as globais se as individuais estiverem em branco
+    if (field === 'active' && value === true) {
+      if (!newItems[index].valid_from) {
+        newItems[index].valid_from = validFrom
+      }
+      if (!newItems[index].valid_to) {
+        newItems[index].valid_to = validTo
+      }
+    }
+    
     setItems(newItems)
   }
 
@@ -73,8 +88,12 @@ export function ContractForm({
         procedure_id: i.procedure_id,
         valor_sus: Number(i.valor_sus),
         valor_rp: Number(i.valor_rp),
-        active: Boolean(i.active)
-      }))
+        active: Boolean(i.active),
+        valid_from: i.active && i.valid_from ? i.valid_from : undefined,
+        valid_to: i.active && i.valid_to ? i.valid_to : undefined
+      })),
+      original_clinic_id: initialData?.clinic_id || undefined,
+      original_contract_number: initialData?.contract_number || undefined
     }
 
     startTransition(async () => {
@@ -157,6 +176,12 @@ export function ContractForm({
                 <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-40">
                   Valor RP (R$)
                 </th>
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-44">
+                  Validade Início (Item)
+                </th>
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-44">
+                  Validade Fim (Item)
+                </th>
                 <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-32">
                   Total (R$)
                 </th>
@@ -212,6 +237,24 @@ export function ContractForm({
                           className="w-full h-10 rounded-xl border border-input bg-background pl-9 pr-3 py-1 text-sm font-black text-foreground focus:text-primary focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all"
                         />
                       </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <input
+                        type="date"
+                        disabled={!item.active}
+                        value={item.valid_from || ''}
+                        onChange={(e) => handleItemChange(index, 'valid_from', e.target.value)}
+                        className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-bold text-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all"
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <input
+                        type="date"
+                        disabled={!item.active}
+                        value={item.valid_to || ''}
+                        onChange={(e) => handleItemChange(index, 'valid_to', e.target.value)}
+                        className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-bold text-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all"
+                      />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-sm font-black text-primary">

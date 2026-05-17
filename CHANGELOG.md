@@ -2,6 +2,23 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.12.1-beta] - 2026-05-17
+
+Esta versão introduz a flexibilidade de **Vigências Individuais e Granulares por Item de Procedimento** na gestão de contratos clínicos, permitindo a governança de aditivos qualitativos (inclusão de novos procedimentos) e aditivos quantitativos (reajuste pontual de valores) sem comprometer o histórico financeiro e faturamentos de competências passadas.
+
+### 💼 Flexibilidade Granular em Contratos (Aditivos por Procedimento)
+- **Tabela de Procedimentos Editável (`ContractForm.tsx`):**
+  - Adicionadas as colunas **"Validade Início (Item)"** e **"Validade Fim (Item)"** diretamente na grade de procedimentos do formulário de contratos.
+  - **Reatividade de UI inteligente:** Ao ativar um procedimento, o sistema herda automaticamente as datas globalmente informadas no cabeçalho do contrato, acelerando o cadastro padrão.
+  - **Edição Livre:** Os inputs do tipo `date` permanecem abertos para digitação personalizada caso o procedimento possua vigência customizada por aditivo específico.
+- **Validação Cirúrgica por Procedimento (`actions.ts`):**
+  - A Server Action `saveContractBulkAction` agora executa a detecção de colisões temporais a nível de cada procedimento específico de forma isolada, em vez de bloquear o cabeçalho de vigência de forma agressiva.
+  - Se houver sobreposição ativa de preços para o mesmo procedimento na mesma clínica em contratos ou aditivos distintos, o sistema emite um alerta forense detalhando o período de bloqueio e o número do contrato conflitante.
+- **Governança Forense de Banco de Dados:**
+  - Mapeamento direto de `valid_from` e `valid_to` individuais de cada linha no insert da tabela `clinic_procedure_prices`, mantendo a integridade sem alterar o schema do Supabase.
+
+---
+
 ## [0.12.0-beta] - 2026-05-17
 
 Esta versão consolida e padroniza toda a infraestrutura documental de governança técnica do SisTEA, estruturando subdiretórios dedicados e integrando planos e relatórios correlatos para simplificar a auditoria e as tomadas de decisões técnicas.
