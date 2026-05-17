@@ -44,7 +44,8 @@ Este documento descreve as regras de integridade e validação implementadas no 
 ---
 
 ## 4. Fluxo de Trabalho e Configurações de Tempo
-**BR-007: Prioridade de Validação**
+
+### BR-007: Prioridade de Validação
 *   **Regra**: Validações de integridade de dados (conflitos de horário e sobreposição) devem ser processadas e exibidas ANTES de validações de regras de negócio (como bloqueio de datas futuras).
 *   **Objetivo**: Evitar mensagens de erro confusas quando o usuário comete um erro operacional de preenchimento.
 
@@ -90,9 +91,5 @@ Este documento descreve as regras de integridade e validação implementadas no 
 *   **Objetivo**: Permitir correções de classificação técnica sem invalidar o fluxo de assinaturas e presenças já coletadas.
 
 ### BR-014: Blindagem de Unidade de Saúde (Clínica)
-*   **Regra**: O campo de Unidade de Saúde (Clínica) é estritamente imutável em qualquer registro de atendimento já existente (Modo de Edição), independente do status das sessões ou nível de acesso do usuário.
+*   **Regra**: O campo de Unidade de Saúde (Clínica) é estritamente imutável in qualquer registro de atendimento já existente (Modo de Edição), independente do status das sessões ou nível de acesso do usuário.
 *   **Objetivo**: Impedir a transferência indevida de produção entre clínicas diferentes, evitando fraudes de cota ou erros graves de alocação orçamentária.
-
----
-
-*Última atualização: 16/05/2026*

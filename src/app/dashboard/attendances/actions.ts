@@ -166,11 +166,17 @@ export async function createAttendanceAction(data: AttendanceFormData) {
     .limit(1)
     .maybeSingle()
 
+  if (!contractPrice && !rawAttendanceData.is_historical_import) {
+    return {
+      error: 'Bloqueio Contratual: A clínica selecionada não possui contrato ativo/vigente para executar este procedimento na data informada.'
+    }
+  }
+
   let baseValue = 0
   if (contractPrice) {
     baseValue = Number(contractPrice.valor_total)
   } else {
-    // Fallback to global procedure price if no specific contract is found
+    // Fallback to global procedure price if no specific contract is found (historical only)
     const { data: proc } = await supabase.from('procedures').select('valor_total').eq('id', rawAttendanceData.procedure_id).single()
     baseValue = Number(proc?.valor_total) || 0
   }
@@ -403,19 +409,23 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     .limit(1)
     .maybeSingle()
 
+  if (!contractPrice && !rawAttendanceData.is_historical_import) {
+    return {
+      error: 'Bloqueio Contratual: A clínica selecionada não possui contrato ativo/vigente para executar este procedimento na data informada.'
+    }
+  }
+
   let baseValue = 0
   if (contractPrice) {
     baseValue = Number(contractPrice.valor_total)
   } else {
-    // Fallback to global procedure price if no specific contract is found
+    // Fallback to global procedure price if no specific contract is found (historical only)
     const { data: proc } = await supabase.from('procedures').select('valor_total').eq('id', rawAttendanceData.procedure_id).single()
     baseValue = Number(proc?.valor_total) || 0
   }
 
   const realizedSessions = sessions?.filter(s => s.status === 'Realizada').length || 0
   const finalValue = realizedSessions * baseValue
-
-
 
   const [year, month] = rawAttendanceData.attendance_date.split('-')
   const month_year = `${month}/${year}`

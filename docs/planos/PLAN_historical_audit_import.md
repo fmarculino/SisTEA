@@ -7,6 +7,14 @@
 
 ---
 
+## 📅 Histórico de Evolução Técnica
+*   **Fase 1 (Mapeamento Inicial & Regras de Negócio):** Levantamento das necessidades de auditoria retroativa (2 a 3 anos de planilhas legadas) e definição do motor de staging.
+*   **Fase 2 (Desenho do Fluxo de Upload & Matching):** Criação das regras de reconciliação de pacientes e profissionais baseados em CNS/CPF e nomes (busca fuzzy).
+*   **Fase 3 (Sub-plano de Competências Retroativas):** Análise e implementação da flexibilidade de injetar atendimentos em competências de faturamento distintas da data do atendimento físico (mitigando faturamentos retroativos consumados).
+*   **Fase 4 (Motor de Validação & Relatórios):** Desenvolvimento das rotinas SQL (RPC) de cruzamento em lote e modelagem de layout A4 para exportação de auditoria.
+
+---
+
 ## 1. Contexto e Justificativa
 
 O município de Marabá possui aproximadamente **2 a 3 anos de histórico de atendimentos** registrados em planilhas Excel. Esses dados foram produzidos antes da existência do SisTEA e, portanto, **não passaram por nenhuma das regras de validação** implementadas no sistema (BR-001 a BR-010).
@@ -79,10 +87,10 @@ O administrador deve mapear as colunas da planilha para os campos do SisTEA:
 ### 4.2 Resolução de Entidades (Matching)
 Antes de gravar, o sistema precisa vincular os nomes da planilha aos UUIDs do banco:
 
-1. **Pacientes:** Busca por `cns_patient` (exato) → fallback por `name` (fuzzy, score > 0.8).
-2. **Profissionais:** Busca por `cns` ou `cpf` (exato) → fallback por `name` (fuzzy).
-3. **Clínicas:** Busca por `name` (fuzzy, score > 0.9).
-4. **Procedimentos:** Busca por `code` (SIGTAP exato) → fallback por `description` (fuzzy).
+1.  **Pacientes:** Busca por `cns_patient` (exato) → fallback por `name` (fuzzy, score > 0.8).
+2.  **Profissionais:** Busca por `cns` ou `cpf` (exato) → fallback por `name` (fuzzy).
+3.  **Clínicas:** Busca por `name` (fuzzy, score > 0.9).
+4.  **Procedimentos:** Busca por `code` (SIGTAP exato) → fallback por `description` (fuzzy).
 
 **Casos não resolvidos** são armazenados em uma tabela temporária (`import_unmatched`) para revisão manual pelo administrador.
 
@@ -157,12 +165,10 @@ CREATE TABLE public.import_batches (
 - Tela mostra progresso: "450/500 registros resolvidos automaticamente."
 - Lista de registros com `match_status = 'unmatched'` ou `'partial'`.
 - **Cadastro Rápido Ex-Officio (Na Hora):**
-  - Caso o paciente ou profissional não conste no cadastro do SisTEA, o sistema exibirá o botão **[+ Cadastrar Rápido]** diretamente na linha correspondente da inconsistência.
-  - Isso abrirá um **Modal de Cadastro Ex-Officio** com os dados pré-preenchidos a partir da planilha (ex: Nome, CNS e CPF detectados).
-  - Ao salvar o formulário rápido de cadastro, o banco persistirá o novo registro, e o matching daquela linha de importação será resolvido instantaneamente para `resolved` com o novo UUID associado, sem que o auditor precise abandonar a importação ou reprocessar o arquivo.
-  - O administrador também tem as opções clássicas de:
-    - Selecionar manualmente o paciente/profissional correto de uma lista.
-    - Marcar como "Ignorar" (não importar essa linha).
+    - Caso o paciente ou profissional não conste no cadastro do SisTEA, o sistema exibirá o botão **[+ Cadastrar Rápido]** diretamente na linha correspondente da inconsistência.
+    - Isso abrirá um **Modal de Cadastro Ex-Officio** com os dados pré-preenchidos a partir da planilha (ex: Nome, CNS e CPF detectados).
+    - Ao salvar o formulário rápido de cadastro, o banco persistirá o novo registro, e o matching daquela linha de importação será resolvido instantaneamente para `resolved` com o novo UUID associado.
+    - O administrador também tem as opções clássicas de selecionar manualmente o paciente/profissional de uma lista ou marcar como "Ignorar" (não importar essa linha).
 
 ---
 
@@ -186,27 +192,26 @@ Após todos os registros serem resolvidos, o sistema executa a validação em lo
 ### 5.2 Lógica de Arbitragem e Glosas Automáticas
 O sistema adota uma abordagem híbrida de auditoria para lidar com conflitos e inconsistências históricas:
 
-1. **Glosas Automáticas de Ofício ("Hard Rules"):**
-   * Aplicadas a violações claras, objetivas e intransponíveis de regras do faturamento SUS que não exigem discernimento humano.
-   * **Exemplos:**
-     * **BR-010 (Sobreposição profissional multi-clínica):** Mesma data e horário registrado para o mesmo profissional em clínicas geograficamente separadas.
-     * **Duração Nula:** Sessões com horário de início igual ao de término (duração zero).
-     * **Procedimento/CBO Inválido:** Ex: Fonoaudiólogo realizando procedimento médico exclusivo.
-   * **Ação do Sistema:** Glosa automática imediata da linha conflitante na área de staging. O registro é marcado como `validation_status = 'glossed'` com o código da regra violada e a justificativa técnica gerada pelo sistema.
-   * **Critério Temporal para Duplicidades:** Se houver duas sessões idênticas dentro da planilha para o mesmo paciente/horário, a registrada em linha anterior (`row_number` menor) é aprovada de ofício, e a posterior é glosada automaticamente para evitar faturamento duplicado.
+1.  **Glosas Automáticas de Ofício ("Hard Rules"):**
+    *   Aplicadas a violações claras, objetivas e intransponíveis de regras do faturamento SUS que não exigem discernimento humano.
+    *   **Exemplos:**
+        *   **BR-010 (Sobreposição profissional multi-clínica):** Mesma data e horário registrado para o mesmo profissional em clínicas geograficamente separadas.
+        *   **Duração Nula:** Sessões com duração zero (início = término).
+        *   **Procedimento/CBO Inválido:** Ex: Fonoaudiólogo realizando procedimento médico exclusivo.
+    *   **Ação do Sistema:** Glosa automática imediata da linha conflitante na área de staging. O registro é marcado como `validation_status = 'glossed'` com o código da regra violada e a justificativa técnica gerada pelo sistema.
+    *   **Critério Temporal para Duplicidades:** Se houver duas sessões idênticas dentro da planilha para o mesmo paciente/horário, a registrada em linha anterior (`row_number` menor) é aprovada de ofício, e a posterior é glosada automaticamente para evitar faturamento duplicado.
 
-2. **Arbitragem e Moderação Humana ("Soft Rules"):**
-   * Aplicada a casos ambíguos ou passíveis de justificativa operacional (como sessões sobrepostas do mesmo paciente na mesma clínica devido a atendimentos sequenciais ou terapias multidisciplinares integradas).
-   * **Ação do Sistema:** O SisTEA sinaliza o conflito em tela e oferece botões de ação rápida para arbitragem direta do auditor:
-     * **[Aprovar com Justificativa]:** O auditor opta por chancelar a sessão, informando uma nota administrativa (ex: "Terapia integrada justificada").
-     * **[Glosar Manualmente]:** O auditor rejeita o registro informando o motivo.
-   * A persistência definitiva só é autorizada após o auditor tomar uma decisão sobre todos os registros sob arbitragem.
+2.  **Arbitragem e Moderação Humana ("Soft Rules"):**
+    *   Aplicada a casos ambíguos ou passíveis de justificativa operacional (como sessões sobrepostas do mesmo paciente na mesma clínica devido a atendimentos sequenciais ou terapias multidisciplinares integradas).
+    *   **Ação do Sistema:** O SisTEA sinaliza o conflito em tela e oferece botões de ação rápida para arbitragem direta do auditor:
+        *   **[Aprovar com Justificativa]:** O auditor opta por chancelar a sessão, informando uma nota administrativa (ex: "Terapia integrada justificada").
+        *   **[Glosar Manualmente]:** O auditor rejeita o registro informando o motivo.
+    *   A persistência definitiva só é autorizada após o auditor tomar uma decisão sobre todos os registros sob arbitragem.
 
-### 5.3 Implementação Técnica
+### 5.3 Implementação Técnica (RPC)
 A validação será executada via **RPC PostgreSQL** (Server-Side) para performance:
 
 ```sql
--- Pseudocódigo da função de validação em lote
 CREATE OR REPLACE FUNCTION validate_import_batch(p_batch_id UUID)
 RETURNS TABLE(total INT, approved INT, glossed INT, errors INT)
 AS $$
@@ -234,9 +239,6 @@ BEGIN
     )
   WHERE ...;
 
-  -- 3. Checar BR-010: Profissional em duas clínicas
-  -- (mesma lógica aplicada ao professional_id)
-
   -- 4. Marcar aprovados
   UPDATE import_historical_records SET validation_status = 'approved'
   WHERE import_batch_id = p_batch_id AND validation_status = 'not_validated';
@@ -249,9 +251,9 @@ $$;
 ### 5.4 Interface de Validação e Arbitragem
 - Dashboard com **progresso em tempo real** da auditoria de regras.
 - Resumo visual interativo dividindo os registros em:
-  - 🟢 **Aprovados de Ofício:** Validados pelo sistema sem qualquer conflito.
-  - 🔴 **Glosados Automaticamente:** Registros cuja inconsistência técnica é clara (ex: BR-010).
-  - 🟡 **Sob Arbitragem (Ações Exigidas):** Registros em conflito passíveis de julgamento humano (com botões de **[Aprovar]** ou **[Glosar]** ativos na própria linha).
+    - 🟢 **Aprovados de Ofício:** Validados pelo sistema sem qualquer conflito.
+    - 🔴 **Glosados Automaticamente:** Registros cuja inconsistência técnica é clara (ex: BR-010).
+    - 🟡 **Sob Arbitragem (Ações Exigidas):** Registros em conflito passíveis de julgamento humano (com botões de **[Aprovar]** ou **[Glosar]** ativos na própria linha).
 - Tabela de inconsistências detalhada, contendo links dinâmicos para auditoria profunda de conflito (drill-down exibindo exatamente quais registros causaram a sobreposição de horários ou clínicas).
 - **Botão "Confirmar e Persistir":** Habilitado somente após a resolução de todas as arbitragens pendentes. Insere os registros oficiais como `'Realizada'` ou `'Glosada'` de acordo com o resultado final da validação física do lote.
 
@@ -260,7 +262,6 @@ $$;
 ## 6. FASE 4 — Relatórios de Auditoria Histórica
 
 ### 6.1 Filtros Disponíveis
-O módulo de relatórios oferece filtragem completa:
 
 | Filtro                | Tipo             | Exemplo                        |
 |------------------------|------------------|---------------------------------|
@@ -274,8 +275,6 @@ O módulo de relatórios oferece filtragem completa:
 ### 6.2 Visões do Relatório
 
 #### 6.2.1 Visão Consolidada (Resumo Executivo)
-Ideal para gestores e prestação de contas:
-
 ```
 ╔══════════════════════════════════════════════════════════════════╗
 ║  RELATÓRIO DE AUDITORIA HISTÓRICA — Jan/2024 a Dez/2025        ║
@@ -299,8 +298,6 @@ Ideal para gestores e prestação de contas:
 ```
 
 #### 6.2.2 Visão Detalhada por Profissional
-Para investigação de irregularidades individuais:
-
 | Profissional    | Clínica       | Sessões | Aprovadas | Glosadas | % Glosa | Regras Violadas       |
 |-----------------|---------------|---------|-----------|----------|---------|------------------------|
 | Dr. João Silva  | Clínica A     | 320     | 280       | 40       | 12,5%   | BR-010 (35), BR-001 (5)|
@@ -310,13 +307,10 @@ Para investigação de irregularidades individuais:
 > 🚨 **Alerta automático:** Profissionais com taxa de glosa > 15% são destacados em vermelho.
 
 #### 6.2.3 Visão Detalhada por Sessão (Drill-down)
-Quando o gestor clica em um profissional, vê as sessões individuais:
-
 | Data       | Horário       | Paciente         | Procedimento          | Status   | Regra  | Conflito com                      |
 |------------|---------------|------------------|-----------------------|----------|--------|-----------------------------------|
 | 15/03/2024 | 08:00 - 09:00 | Ana Beatriz     | Fonoaudiologia        | ✅ Aprovada |  —   | —                                 |
 | 15/03/2024 | 08:30 - 09:30 | Carlos Eduardo  | Psicologia            | 🔴 Glosada | BR-010| Conflito: Ana Beatriz, Clínica A  |
-| 16/03/2024 | 14:00 - 15:00 | Luísa Fernanda  | Terapia Ocupacional   | ✅ Aprovada |  —   | —                                 |
 
 ### 6.3 Exportação
 - **PDF:** Relatório formal com cabeçalho institucional, ideal para auditoria do SUS.
@@ -362,12 +356,11 @@ Quando o gestor clica em um profissional, vê as sessões individuais:
 | Nomes de profissionais/pacientes com variações   |  Alto   | Busca fuzzy (Fuse.js) + revisão manual obrigatória      |
 | Volume massivo de dados (>50.000 linhas)         |  Médio  | Processar em batches de 1.000; usar RPCs server-side    |
 | Falsos positivos de glosa                        |  Alto   | Interface de revisão manual ANTES da persistência       |
-| Dados importados conflitando com dados já no SisTEA|  Alto | Checar conflitos cruzados (staging × produção)         |
+| Dados importados conflitando com dados no SisTEA |  Alto   | Checar conflitos cruzados (staging × produção)         |
 
 ---
 
 ## 10. Dependências Técnicas
-
 - **SheetJS (xlsx):** Parsing de Excel — já compatível com o ecossistema Next.js.
 - **Fuse.js:** Busca fuzzy — **já instalado** no projeto.
 - **PDF-Lib:** Geração de relatórios — **já instalado** no projeto.
@@ -378,70 +371,96 @@ Quando o gestor clica em um profissional, vê as sessões individuais:
 ## 11. Diagrama de Fluxo Completo
 
 ```
-    Administrador
-        │
-        ▼
-  ┌─────────────┐
-  │  Upload XLSX │
-  └──────┬──────┘
-         │
-         ▼
-  ┌──────────────┐     ┌───────────────┐
-  │ Pré-          │     │ Template de   │
-  │ visualização  │◀───│ Mapeamento    │
-  └──────┬───────┘     └───────────────┘
-         │
-         ▼
-  ┌──────────────┐
-  │ Matching     │──── Automático (CNS/CPF exato)
-  │ de Entidades │──── Fuzzy (nome, score > 0.8)
-  └──────┬───────┘──── Manual (admin resolve ambíguos)
-         │
-         ▼
-  ┌──────────────┐
-  │ Validação    │──── BR-001: Paciente sobreposto?
-  │ de Regras    │──── BR-002: Profissional sobreposto?
-  │ (em lote)    │──── BR-003: Duplicata interna?
-  └──────┬───────┘──── BR-010: Fantasma multi-clínica?
-         │
-         ├──── 🟢 Aprovada → Persistir no SisTEA
-         │                    (status: 'Realizada')
-         │
-         └──── 🔴 Glosada  → Persistir no SisTEA
-                              (status: 'Glosado',
-                               justification: auto)
-         │
-         ▼
-  ┌──────────────────────┐
-  │ RELATÓRIOS           │
-  │ ├─ Resumo Executivo  │
-  │ ├─ Por Profissional  │
-  │ ├─ Por Clínica       │
-  │ ├─ Por Paciente      │
-  │ └─ Drill-down Sessão │
-  └──────────────────────┘
-         │
-         ▼
-   PDF / CSV / Impressão
+      Administrador
+          │
+          ▼
+    ┌─────────────┐
+    │  Upload XLSX │
+    └──────┬──────┘
+           │
+           ▼
+    ┌──────────────┐     ┌───────────────┐
+    │ Pré-          │     │ Template de   │
+    │ visualização  │◀───│ Mapeamento    │
+    └──────┬───────┘     └───────────────┘
+           │
+           ▼
+    ┌──────────────┐
+    │ Matching     │──── Automático (CNS/CPF exato)
+    │ de Entidades │──── Fuzzy (nome, score > 0.8)
+    └──────┬───────┘──── Manual (admin resolve ambíguos)
+           │
+           ▼
+    ┌──────────────┐
+    │ Validação    │──── BR-001: Paciente sobreposto?
+    │ de Regras    │──── BR-002: Profissional sobreposto?
+    │ (em lote)    │──── BR-003: Duplicata interna?
+    └──────┬───────┘──── BR-010: Fantasma multi-clínica?
+           │
+           ├──── 🟢 Aprovada → Persistir no SisTEA (status: 'Realizada')
+           │
+           └──── 🔴 Glosada  → Persistir no SisTEA (status: 'Glosado')
+           │
+           ▼
+    ┌──────────────────────┐
+    │ RELATÓRIOS           │
+    └──────────────────────┘
 ```
 
 ---
 
-## 12. Notas Finais
+## 12. Notas Finais e Governança de BPA/Competências
 
-1. **Dados importados devem ser claramente identificáveis.** Adicionada uma flag `is_historical_import BOOLEAN DEFAULT FALSE` na tabela `attendances` para diferenciar dados importados de dados nativos do SisTEA nos relatórios gerenciais e de auditoria interna.
-
-2. **A importação NÃO dispara triggers de auditoria.** Os dados históricos não devem poluir a timeline de auditoria operacional do dia a dia. O módulo de auditoria histórica opera sob seu próprio rastro de logs no banco.
-
-3. **Reversibilidade:** Deve ser possível desfazer uma importação inteira (por `batch_id`), removendo todos os registros importados daquele lote de uma só vez com um clique em caso de erro no upload original.
-
-4. **Governança de BPA e Competências Históricas:**
-   * **Bloqueio de Exportação BPA:** Como estes atendimentos recuperados correspondem a competências passadas cujo envio, validação e repasse financeiro do SUS já foram consolidados no passado, **o arquivo `.bpa` destas competências NUNCA deve ser gerado ou exportado**.
-   * Ao selecionar uma competência identificada como histórica na área de exportação/faturamento do SisTEA, o sistema exibirá um banner vermelho de governança rígida:
-     > **⚠️ Competência Histórica Recuperada:** O faturamento junto ao Ministério da Saúde (BPA-SUS) já foi consumado no passado. A geração e download do arquivo físico magnético está bloqueada para mitigar riscos de cobranças duplicadas ou inconsistências junto ao órgão fiscalizador.
-   * **Marcação de Competências no Banco:** A tabela de competências (`competences`) ganha uma flag `is_historical BOOLEAN DEFAULT FALSE`.
-   * **Identidade Visual Premium:** Na listagem de competências do sistema, todas as competências marcadas como históricas serão indicadas pelo sufixo **"Histórica (Manual)"** em uma cor premium de destaque (como roxo/índigo HSL), diferenciando-as claramente das competências operacionais ativas ou encerradas no SisTEA.
+1.  **Dados importados devem ser claramente identificáveis.** Adicionada uma flag `is_historical_import BOOLEAN DEFAULT FALSE` na tabela `attendances` para diferenciar dados importados de dados nativos do SisTEA nos relatórios gerenciais e de auditoria interna.
+2.  **A importação NÃO dispara triggers de auditoria.** Os dados históricos não devem poluir a timeline de auditoria operacional do dia a dia. O módulo de auditoria histórica opera sob seu próprio rastro de logs no banco.
+3.  **Reversibilidade:** Deve ser possível desfazer uma importação inteira (por `batch_id`), removendo todos os registros importados daquele lote de uma só vez com um clique em caso de erro no upload original.
+4.  **Governança de BPA e Competências Históricas:**
+    *   **Bloqueio de Exportação BPA:** Como estes atendimentos recuperados correspondem a competências passadas cujo envio, validação e repasse financeiro do SUS já foram consolidados no passado, **o arquivo `.bpa` destas competências NUNCA deve ser gerado ou exportado**.
+    *   Ao selecionar uma competência identificada como histórica na área de exportação/faturamento do SisTEA, o sistema exibirá um banner vermelho de governança rígida:
+        > **⚠️ Competência Histórica Recuperada:** O faturamento junto ao Ministério da Saúde (BPA-SUS) já foi consumado no passado. A geração e download do arquivo físico magnético está bloqueada para mitigar riscos de cobranças duplicadas ou inconsistências junto ao órgão fiscalizador.
+    *   **Marcação de Competências no Banco:** A tabela de competências (`competences`) ganha uma flag `is_historical BOOLEAN DEFAULT FALSE`.
+    *   **Identidade Visual Premium:** Na listagem de competências do sistema, todas as competências marcadas como históricas serão indicadas pelo sufixo **"Histórica (Manual)"** em uma cor premium de destaque (como roxo/índigo HSL), diferenciando-as claramente das competências operacionais ativas ou encerradas no SisTEA.
 
 ---
 
-*Documento de referência para implementação futura. Não implementar sem aprovação formal.*
+## 🛠️ 13. Sub-Plano de Ajuste: Competência Retroativa na Importação
+
+Este sub-plano descreve a engenharia e implementação necessárias para permitir a especificação de uma **Competência de Destino** personalizada no fluxo de **Importação Histórica** de atendimentos legados. Isso resolve o problema de registros que foram faturados retroativamente em competências posteriores à data real do atendimento físico.
+
+### A. Análise da Situação
+No faturamento do SUS via **BPA (Boletim de Produção Ambulatorial)**, é comum que procedimentos realizados em um determinado mês sejam faturados e consolidados em competências (meses) subsequentes devido a atrasos administrativos no envio ou glosas temporárias corrigidas.
+
+Como a importação histórica serve para restaurar dados **já consumados, pagos e auditados perante o Ministério da Saúde**, a competência associada à produção (`month_year` na tabela `attendances`) deve bater **exatamente** com a do processamento oficial do BPA legado, e não ser inferida puramente a partir da data em que o atendimento físico ocorreu.
+
+### B. Arquitetura da Solução e Banco de Dados
+1.  **Migration de Banco de Dados (DDL)**: Adicionamos a coluna `target_competence` na tabela `import_batches` para registrar a competência selecionada para o lote.
+    ```sql
+    ALTER TABLE public.import_batches 
+    ADD COLUMN IF NOT EXISTS target_competence VARCHAR(7); -- Formato: MM/YYYY
+    ```
+2.  **Atualização da Stored Procedure `finalize_historical_import`**: Modificamos a procedure que consolida a importação para que utilize a competência do lote (`target_competence`), caindo de volta (fallback) na data do atendimento caso nenhuma tenha sido selecionada.
+    ```sql
+    CREATE OR REPLACE FUNCTION public.finalize_historical_import(p_batch_id uuid)
+     RETURNS jsonb
+     LANGUAGE plpgsql
+     SECURITY DEFINER
+    AS $function$
+    DECLARE
+        v_record RECORD;
+        v_attendance_id UUID;
+        v_imported_count INTEGER := 0;
+        v_target_competence VARCHAR(7);
+    END;
+    ...
+    ```
+
+### C. Alterações na Interface (Front-end)
+No arquivo `src/app/dashboard/historical-audit/page.tsx`:
+1.  **Estado do Formulário:** Adicionamos o estado `selectedCompetence` (iniciando vazio `''`).
+2.  **Seletor de Competência Dinâmico:**
+    *   Adicionamos abaixo da "Clínica de Destino" um novo seletor visual: **"Competência de Faturamento (BPA)"**.
+    *   Geramos dinamicamente as opções no formato `Mês/Ano` (ex: os últimos 12 meses a partir da data atual) e também carregamos as competências oficiais registradas no banco (`public.competences`) para a clínica selecionada.
+    *   *Opção Padrão:* `"Usar data do atendimento (Automático)"` (Mantém comportamento antigo como fallback).
+    *   *Opções dinâmicas sugeridas:* `"Maio de 2026"`, `"Abril de 2026"`, etc.
+3.  **Payload da Criação do Lote (`handleProcessImport`):** Incluímos o campo `target_competence: selectedCompetence || null` no insert de `import_batches`.
+4.  **Visualização do Status:** Na barra de status do matching/validação, exibiremos qual competência foi escolhida para aquele lote, dando maior controle e visibilidade para o operador.

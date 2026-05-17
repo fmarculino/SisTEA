@@ -2,6 +2,24 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.12.0-beta] - 2026-05-17
+
+Esta versão consolida e padroniza toda a infraestrutura documental de governança técnica do SisTEA, estruturando subdiretórios dedicados e integrando planos e relatórios correlatos para simplificar a auditoria e as tomadas de decisões técnicas.
+
+### 📂 Reorganização Arquitetural da Documentação (`/docs`)
+- **Separação Estrutural:** Criação das subpastas `/docs/planos` (checklists de implantação e especificações de código) e `/docs/analises` (auditorias, diagnósticos, regras e propostas estratégicas).
+- **Consolidação Mestre de Vínculos e Contratos (Grupo A):**
+    - Fusão técnica dos checklists de multi-vínculos e do walkthrough arquitetural em um plano mestre unificado: [plano_padronizacao_vinculos.md](file:///c:/Users/Cliente/Projetos/SisTEA/docs/planos/plano_padronizacao_vinculos.md).
+    - Fusão das análises de contratos e precificação retroativa no relatório forense consolidado: [relatorio_auditoria_contratos.md](file:///c:/Users/Cliente/Projetos/SisTEA/docs/analises/relatorio_auditoria_contratos.md).
+- **Consolidação Mestre de Importação Histórica (Grupo B):**
+    - Integração do plano de competências retroativas com o mestre [PLAN_historical_audit_import.md](file:///c:/Users/Cliente/Projetos/SisTEA/docs/planos/PLAN_historical_audit_import.md), detalhando a modelagem DDL (tabela `import_batches`), fallback dinâmico na stored procedure e inserção do seletor visual de competências retroativas para conciliação física de faturamento legado.
+- **Consolidação Mestre de Assinaturas Digitais (Grupo C):**
+    - Fusão das sugestões de evolução de auditoria e painel forense no relatório mestre [propostas_assinatura_digital.md](file:///c:/Users/Cliente/Projetos/SisTEA/docs/analises/propostas_assinatura_digital.md), definindo o roadmap para monitoramento em tempo real, Geofencing (raio GPS e mapa de calor) e autenticação forte sem papel.
+- **Higienização Geral:** Exclusão física definitiva de 20 arquivos de atalho e redirecionadores redundantes nas pastas raiz e subpastas de `/docs`, saneando 100% da base documental.
+- **Atualização do README Geral:** Reescrita completa do [README.md](file:///c:/Users/Cliente/Projetos/SisTEA/docs/README.md) apontando apenas para as referências dos arquivos físicos reais e consolidados.
+
+---
+
 ## [0.11.2-beta] - 2026-05-17
 
 Versão focada na correção lógica e conceitual do Relatório de Produtividade & Absenteísmo, além de melhorias de validação na quantidade de sessões autorizadas de guias.

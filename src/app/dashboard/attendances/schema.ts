@@ -35,6 +35,7 @@ export const attendanceSchema = z.object({
   value_applied: z.coerce.number().min(0, 'Valor não pode ser negativo'),
   professional_cbo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  is_historical_import: z.boolean().optional().default(false),
   
   sessions: z.array(attendanceSessionSchema).default([]),
 })

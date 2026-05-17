@@ -876,6 +876,16 @@ export default function HistoricalAuditPage() {
                   </div>
                 </div>
 
+                <div className="p-4 mb-6 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">Aviso Crítico de Governança Contratual</p>
+                    <p className="text-[11px] text-amber-700/80 dark:text-amber-500 font-medium leading-relaxed">
+                      Para garantir a integridade da auditoria, as clínicas e seus respectivos <b>contratos de serviços vigentes</b> (incluindo pactuações retroativas de competências passadas, como de 2024) <b>precisam estar previamente cadastrados</b> no sistema antes de iniciar esta importação histórica.
+                    </p>
+                  </div>
+                </div>
+
                 <select
                   value={selectedClinicId}
                   onChange={(e) => setSelectedClinicId(e.target.value)}

@@ -94,7 +94,7 @@ Reduzir o cabeçalho para ocupar menos espaço vertical na versão impressa usan
 <div className="flex justify-between items-start border-b pb-2 mb-3 print:pb-1 print:mb-2">
 ```
 
-Logo e título devem ter tamanho reduzido na impressão:
+Logo e título devem tel tamanho reduzido na impressão:
 - Logo: `h-10 w-10` → `print:h-6 print:w-6`
 - Título H1: `text-2xl` → `print:text-base`
 - Título H2: `text-xl` → `print:text-sm`

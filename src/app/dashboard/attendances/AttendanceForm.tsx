@@ -22,7 +22,8 @@ export function AttendanceForm({
   userRole,
   clinics,
   systemTimezone,
-  competenceStatus
+  competenceStatus,
+  clinicProcedurePrices = []
 }: { 
   initialData?: Partial<AttendanceFormData>; 
   id?: string;
@@ -34,6 +35,7 @@ export function AttendanceForm({
   clinics?: any[];
   systemTimezone: string;
   competenceStatus?: string;
+  clinicProcedurePrices?: any[];
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
@@ -132,9 +134,16 @@ export function AttendanceForm({
     return age
   })()
 
-  // Filter procedures based on professional specialties AND patient age
+  // Obter clínica e data vigentes para filtragem e cálculo de valores por contrato
+  const selectedClinicId = watch('clinic_id')
+  const selectedAttendanceDate = watch('attendance_date')
+
+  // Filter procedures based on professional specialties AND patient age AND clinic contract
   const filteredProcedures = selectedProfessionalId 
     ? procedures.filter(proc => {
+        // Permitir sempre o procedimento original do atendimento (para fins de visualização na edição de legados)
+        if (initialData?.procedure_id === proc.id) return true
+
         const professional = professionals.find(p => p.id === selectedProfessionalId)
         if (!professional || !professional.specialty_ids) return false
         
@@ -150,6 +159,28 @@ export function AttendanceForm({
         if (patientAge !== null) {
           if (proc.min_age !== null && proc.min_age !== undefined && patientAge < proc.min_age) return false
           if (proc.max_age !== null && proc.max_age !== undefined && patientAge > proc.max_age) return false
+        }
+
+        // 3. Contract Filter (Governança de Vínculos Contratuais de Clínicas)
+        if (selectedClinicId) {
+          const hasContract = clinicProcedurePrices.some(price => {
+            if (price.clinic_id !== selectedClinicId || price.procedure_id !== proc.id || !price.active) return false
+            
+            // Se houver datas de vigência, validar contra a data do atendimento
+            if (selectedAttendanceDate) {
+              const attDate = new Date(selectedAttendanceDate)
+              const fromDate = new Date(price.valid_from)
+              if (attDate < fromDate) return false
+              
+              if (price.valid_to) {
+                const toDate = new Date(price.valid_to)
+                if (attDate > toDate) return false
+              }
+            }
+            return true
+          })
+          
+          if (!hasContract) return false
         }
 
         return true
@@ -196,7 +227,7 @@ export function AttendanceForm({
     }
   }, [selectedProcedureId, filteredCids, filteredDatasus, setValue, getValues])
 
-  // Calculate value and quantity based on realized sessions
+  // Calculate value and quantity based on realized sessions with strict contract pricing
   useEffect(() => {
     if (sessions) {
       const realizedCount = sessions.filter(s => s.status === 'Realizada').length
@@ -205,12 +236,32 @@ export function AttendanceForm({
       if (selectedProcedureId) {
         const proc = procedures.find((p) => p.id === selectedProcedureId)
         if (proc) {
-          const totalValue = realizedCount * Number(proc.valor_total || 0)
+          // Procurar contrato correspondente para precificação
+          let unitPrice = Number(proc.valor_total || 0)
+          if (selectedClinicId) {
+            const contract = clinicProcedurePrices.find(price => {
+              if (price.clinic_id !== selectedClinicId || price.procedure_id !== selectedProcedureId || !price.active) return false
+              if (selectedAttendanceDate) {
+                const attDate = new Date(selectedAttendanceDate)
+                const fromDate = new Date(price.valid_from)
+                if (attDate < fromDate) return false
+                if (price.valid_to) {
+                  const toDate = new Date(price.valid_to)
+                  if (attDate > toDate) return false
+                }
+              }
+              return true
+            })
+            if (contract) {
+              unitPrice = Number(contract.valor_total || 0)
+            }
+          }
+          const totalValue = realizedCount * unitPrice
           setValue('value_applied', totalValue)
         }
       }
     }
-  }, [selectedProcedureId, sessions, procedures, setValue])
+  }, [selectedProcedureId, sessions, procedures, setValue, selectedClinicId, selectedAttendanceDate, clinicProcedurePrices])
 
   // AUTO-POPULATE CBO based on Procedure Specialty Intersection
   useEffect(() => {
@@ -300,7 +351,6 @@ export function AttendanceForm({
   }, [errors]);
 
   // Filter patients and professionals by selected clinic if SMS_ADMIN
-  const selectedClinicId = watch('clinic_id')
   const filteredPatients = userRole === 'SMS_ADMIN' && selectedClinicId
     ? patients.filter(p => 
         p.clinic_id === selectedClinicId || 
@@ -582,11 +632,33 @@ export function AttendanceForm({
             render={({ field }) => (
               <div className="relative">
                 <SearchableSelect
-                  options={filteredProcedures.map(p => ({
-                    id: p.id,
-                    code: p.code,
-                    name: `${p.code ? p.code + ' — ' : ''}${p.name} (Valor: ${formatCurrency(p.valor_total)} / sessão)`
-                  }))}
+                  options={filteredProcedures.map(p => {
+                    // Tentar achar contrato correspondente para exibição do valor unitário real
+                    let displayValue = p.valor_total
+                    if (selectedClinicId) {
+                      const contract = clinicProcedurePrices.find(price => {
+                        if (price.clinic_id !== selectedClinicId || price.procedure_id !== p.id || !price.active) return false
+                        if (selectedAttendanceDate) {
+                          const attDate = new Date(selectedAttendanceDate)
+                          const fromDate = new Date(price.valid_from)
+                          if (attDate < fromDate) return false
+                          if (price.valid_to) {
+                            const toDate = new Date(price.valid_to)
+                            if (attDate > toDate) return false
+                          }
+                        }
+                        return true
+                      })
+                      if (contract) {
+                        displayValue = contract.valor_total
+                      }
+                    }
+                    return {
+                      id: p.id,
+                      code: p.code,
+                      name: `${p.code ? p.code + ' — ' : ''}${p.name} (Valor: ${formatCurrency(displayValue)} / sessão)`
+                    }
+                  })}
                   value={field.value}
                   onChange={field.onChange}
                   disabled={isHeaderLocked || !selectedProfessionalId}

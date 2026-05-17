@@ -60,7 +60,7 @@ O ecossistema do **SisTEA** é composto pelas seguintes camadas tecnológicas:
 *   **Supabase (BaaS):** Plataforma de backend baseada em **PostgreSQL**.
 *   **PostgreSQL:** Banco de dados relacional que hospeda os registros do SisTEA, com tabelas normalizadas para clínicas, profissionais, pacientes, procedimentos, atendimentos e sessões.
 *   **Row-Level Security (RLS):** Mecanismo de segurança do PostgreSQL que garante que um usuário de uma clínica específica (`CLINIC_USER`) nunca consiga visualizar, criar ou alterar registros de outra clínica.
-*   **HMAC Security (Criptografia):** Lógica criptográfica aplicada nas assinaturas digitais via QR Code utilizando chaves secretas definidas em variáveis de ambiente, prevenindo fraudes na validação de atendimentos presenciais.
+*   **HMAC Security (Criptografia):** Lógica criptográfica aplicada nas assinaturas digitais via QR Code utilizando chaves secretas definidas em variáveis de ambiente, prevenindo fraudes na validação de atendimentos presença.
 
 ---
 
@@ -114,4 +114,3 @@ O **SisTEA** possui suporte nativo à tecnologia **PWA (Progressive Web App)**, 
 *   **Service Worker Dinâmico (`sw.js`):** Um service worker registrado automaticamente que intercepta e valida requisições, atendendo de forma impecável aos critérios de elegibilidade de PWA dos navegadores modernos (Chrome e Edge) sem interferir nos builds ou Server Actions do Next.js.
 *   **Ícone Vetorial (`icon.svg`):** Desenvolvido em SVG para garantir resolução infinita (alta definição em qualquer tamanho de monitor) representando a fusão da borboleta da neurodiversidade com um coração médico sobre um gradiente circular esmeralda.
 *   **Botão de Instalação no Menu Lateral (`sidebar.tsx`):** Lógica que escuta o evento global `beforeinstallprompt` do navegador e renderiza um botão inteligente em gradiente esmeralda com uma micro-animação de bounce no ícone de Download apenas se a instalação estiver disponível para o usuário.
-

@@ -62,6 +62,3 @@ O projeto seguiu um cronograma de entrega agressivo e focado em qualidade:
 
 ## 6. Conclusão para a Diretoria
 O SisTEA não é apenas um software de gestão; é uma ferramenta de **Governança e Compliance**. Ele transforma a operação clínica em dados auditáveis, eliminando o risco de glosas e garantindo que a gestão municipal tenha controle total sobre a produtividade e a aplicação dos recursos na área de TEA/TDAH.
-
----
-*Documento gerado para suporte à apresentação executiva via NotebookLM.*
