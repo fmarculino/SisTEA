@@ -32,7 +32,10 @@ Esta versão introduz a flexibilidade de **Vigências Individuais e Granulares p
   - Ao ligar a chave de toggle, a lista é expandida dinamicamente para revelar as competências encerradas de forma imediata.
 - **Paginação Server-Side Integrada em Memória:**
   - Integração nativa com o componente **`Pagination.tsx`** no rodapé do bloco de exibições (tabela de Admin e grade de cards da Clínica).
-  - Cálculo cirúrgico e de alta performance de paginação e filtragem em memória diretamente no servidor Next.js, mantendo a responsividade do sistema sem onerar o banco com consultas complexas a competências virtuais (abertas) geradas dinamicamente.
+- **Padronização Visual da Visão de Clínica:**
+  - Substituição da antiga grade de cards por uma **tabela ultra-premium e limpa**, perfeitamente alinhada e coerente com a visão de administrador.
+  - Omissão cirúrgica de colunas redundantes (como "Clínica", já que o gestor opera estritamente no escopo da sua unidade), exibindo colunas de **Mês/Ano**, **Status** com selos coloridos inteligentes e a coluna de **Ações** alinhada de forma moderna à direita.
+  - Preservação integral das lógicas de Hard Lock para competências enviadas ao Ministério da Saúde e do botão reativo de exportação BPA.
 
 ---
 

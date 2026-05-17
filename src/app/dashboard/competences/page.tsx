@@ -224,55 +224,94 @@ export default async function CompetencesPage({
 
       {/* Exibição */}
       {!isAdmin ? (
-        <div className="space-y-6">
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {paginatedMonths.map((m) => {
-              const isClosed = closedCompetences.find(c => c.month === m.month && c.year === m.year && (c.status === 'FECHADA' || c.status === 'ENVIADA_MS'))
-              const isHistorical = isClosed?.is_historical || false
-              
-              return (
-                <div key={`${m.year}-${m.month}`} className={`bg-card border p-6 rounded-[2rem] shadow-sm flex flex-col justify-between transition-all hover:shadow-md hover:border-border/60 ${isHistorical ? 'border-purple-500/30 bg-purple-500/[0.01]' : 'border-border/40'}`}>
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-black capitalize text-foreground">{m.label}</h3>
-                      {isHistorical ? (
-                        <p className="text-xs font-black bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded-md uppercase tracking-wider inline-block">
-                          Histórica (Manual)
-                        </p>
-                      ) : (
-                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Faturamento</p>
-                      )}
-                    </div>
-                    <div className={`p-3 rounded-2xl ${isClosed ? (isHistorical ? 'bg-purple-500/10 text-purple-500' : isClosed.status === 'ENVIADA_MS' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-red-500/10 text-red-500') : 'bg-emerald-500/10 text-emerald-500'}`}>
-                      {isClosed ? (isHistorical ? <CalendarIcon className="w-5 h-5 stroke-[2.5]" /> : <Lock className="w-5 h-5 stroke-[2.5]" />) : <CheckCircle className="w-5 h-5 stroke-[2.5]" />}
-                    </div>
-                  </div>
-
-                  {!isClosed ? (
-                    <div className="mt-8">
-                      <CloseCompetenceButton clinicId={profile.clinic_id} month={m.month} year={m.year} />
-                    </div>
-                  ) : (
-                    <div className="mt-4 pt-4 border-t border-border/40">
-                      <div className="flex flex-col gap-2">
-                        <BpaExportButton clinicId={profile.clinic_id} month={m.month} year={m.year} isHistorical={isHistorical} />
-                        {isClosed.status === 'ENVIADA_MS' && (
-                          <span className="text-[10px] text-center font-bold text-indigo-500 uppercase tracking-widest mt-2">
-                            HARD LOCK - ENVIADA AO MS
+        <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-border/30">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th scope="col" className="py-5 pl-8 pr-3 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                    Mês/Ano
+                  </th>
+                  <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                    Status
+                  </th>
+                  <th scope="col" className="relative py-5 pl-3 pr-8 text-right">
+                    <span className="sr-only">Ações</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {paginatedMonths.map((m) => {
+                  const isClosed = closedCompetences.find(c => c.month === m.month && c.year === m.year && (c.status === 'FECHADA' || c.status === 'ENVIADA_MS'))
+                  const isHistorical = isClosed?.is_historical || false
+                  
+                  return (
+                    <tr key={`${m.year}-${m.month}`} className={`transition-colors group/row hover:bg-muted/30 ${isHistorical ? 'bg-purple-500/[0.01]' : ''}`}>
+                      <td className="whitespace-nowrap py-6 pl-8 pr-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-foreground capitalize">
+                            {m.label}
+                          </span>
+                          {isHistorical && (
+                            <span className="text-[9px] font-black text-purple-600 uppercase tracking-widest mt-1">
+                              Histórica (Manual)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-6">
+                        {isClosed ? (
+                          isHistorical ? (
+                            <span className="inline-flex items-center rounded-xl bg-purple-500/10 px-3 py-1.5 text-[10px] font-black text-purple-600 border border-purple-500/20 uppercase tracking-widest leading-none">
+                              <CalendarIcon className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Histórica
+                            </span>
+                          ) : isClosed.status === 'ENVIADA_MS' ? (
+                            <span className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black text-indigo-500 border border-indigo-500/20 uppercase tracking-widest leading-none">
+                              <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Enviada (Hard Lock)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-xl bg-red-500/10 px-3 py-1.5 text-[10px] font-black text-red-500 border border-red-500/20 uppercase tracking-widest leading-none">
+                              <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Fechada
+                            </span>
+                          )
+                        ) : (
+                          <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                            <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Aberta
                           </span>
                         )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                      </td>
+                      <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          {!isClosed ? (
+                            <CloseCompetenceButton clinicId={profile.clinic_id} month={m.month} year={m.year} />
+                          ) : (
+                            <>
+                              <BpaExportButton clinicId={profile.clinic_id} month={m.month} year={m.year} isHistorical={isHistorical} />
+                              {isClosed.status === 'ENVIADA_MS' && (
+                                <span className="text-[10px] font-black text-indigo-500 border border-indigo-500/10 bg-indigo-500/[0.03] px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                                  Bloqueada
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+                {paginatedMonths.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="py-20 text-center">
+                      <p className="text-sm text-muted-foreground font-medium">Nenhuma competência encontrada com os filtros atuais.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-
+          
           {/* Paginação da Clínica */}
-          <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
-            <Pagination totalItems={totalItems} itemsPerPage={limit} currentPage={page} />
-          </div>
+          <Pagination totalItems={totalItems} itemsPerPage={limit} currentPage={page} />
         </div>
       ) : (
         <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">

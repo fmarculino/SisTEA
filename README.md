@@ -1,5 +1,5 @@
 # SisTEA - Sistema Inteligente de Gestão Integrada
-![Version](https://img.shields.io/badge/version-0.9.3--beta-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.12.1--beta-blue.svg?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-active-success.svg?style=for-the-badge)
 
 > **SisTEA** é uma plataforma enterprise de alta densidade projetada para a gestão especializada de acompanhamento multiprofissional em casos de **Autismo (TEA)** e **TDAH**. O sistema foca em três pilares fundamentais: **Transparência Forense**, **Eficiência Operacional** e **Segurança Jurídica**.
@@ -22,6 +22,12 @@ Geração automatizada de fichas de frequência e documentos oficiais do SUS em 
 
 ### 🚫 Anti-Fraude e Governança (BR-010)
 Motor de validação global que impede que um profissional realize atendimentos em horários sobrepostos em clínicas diferentes, garantindo a integridade dos repasses e o cumprimento das agendas individuais.
+
+### 💼 Vigências Granulares e Aditivos por Procedimento
+Governança refinada de preços e contratos com suporte a datas de validade (`valid_from` e `valid_to`) individuais para cada procedimento cadastrado. Permite a emissão de aditivos qualitativos (inclusão de novos serviços) e quantitativos (reajuste de preços de itens específicos) sem alterar o cabeçalho global do contrato, protegendo o histórico financeiro de competências passadas.
+
+### 📂 Painel de Competências Reativo com Switch iOS-Style
+A tela de **Gestão de Competências** oculta faturamentos fechados por padrão, listando apenas os meses com status `ABERTA` para agilizar a operação diária. Através de um painel elegante de filtros reativos com debounce, busca textual e uma **chave switch iOS-style** (com transição suave de cores e animação), o operador pode visualizar competências fechadas e enviadas ao Ministério da Saúde (Hard Lock). A tabela de exibição é unificada, simétrica e 100% paginada na memória do servidor Next.js para alta velocidade de processamento.
 
 ---
 
