@@ -2,6 +2,15 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.11.1-beta] - 2026-05-17
+
+Versão de hotfix crítico para resolver a exibição do instalador do PWA em produção, ajustando o comportamento do middleware do Next.js e Supabase.
+
+### 🐛 Ajustes no Middleware (Hotfix PWA)
+- **Desbloqueio de Arquivos Estáticos:** Inclusão de `/manifest.json` e `/sw.js` na lista de rotas públicas (`publicRoutes`) e regras de exclusão do matcher do Next.js (`src/proxy.ts`), prevenindo redirecionamentos (302) para `/login` que causavam erros de sintaxe e impediam a inicialização do instalador do PWA.
+
+---
+
 ## [0.11.0-beta] - 2026-05-17
 
 Esta versão marca um salto na experiência de uso do sistema com a introdução do suporte completo ao **PWA (Progressive Web App)**, permitindo que o SisTEA seja instalado nativamente como um aplicativo de desktop no Windows, além de trazer correções críticas no fluxo de criação de guias, governança de competências administrativas e documentação arquitetural.
