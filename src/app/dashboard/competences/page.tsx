@@ -5,30 +5,61 @@ import { CheckCircle, Lock, Calendar as CalendarIcon } from 'lucide-react'
 import { CloseCompetenceButton, ReopenCompetenceButton } from './CompetenceActions'
 import { BpaExportButton } from './BpaExportButton'
 import SendToMSButton from './SendToMSButton'
+import { CompetencesFilterPanel } from './CompetencesFilterPanel'
+import { Pagination } from '@/components/ui/Pagination'
 
-export default async function CompetencesPage() {
+export default async function CompetencesPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; clinic?: string; show_closed?: string; page?: string; limit?: string }
+}) {
+  const queryParams = await searchParams
   const profile = await getUserProfile()
   if (!profile) redirect('/')
 
   const supabase = await createClient()
   const isAdmin = profile.role === 'SMS_ADMIN'
 
-  // Fetch closed competences
-  let closedCompetences = []
-  let clinics = []
-  let months: { month: number, year: number, label: string }[] = []
+  // Paginação e filtros padrão
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 20
+  const from = (page - 1) * limit
+  const to = from + limit
+
+  // Listas de dados para filtros e exibições
+  let closedCompetences: any[] = []
+  let clinicsList: { id: string; name: string }[] = []
+  let months: { month: number; year: number; label: string }[] = []
+  let totalItems = 0
+  
+  // Lista filtrada e paginada definitiva
+  let paginatedCompetences: any[] = []
+  let paginatedMonths: any[] = []
 
   if (isAdmin) {
-    const { data: comp } = await supabase.from('competences').select('*, clinic:clinics(name)').order('year', { ascending: false }).order('month', { ascending: false })
+    // Buscar todas as competências fechadas
+    const { data: comp } = await supabase
+      .from('competences')
+      .select('*, clinic:clinics(name)')
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
     const closed = comp || []
 
-    const { data: clinicsData } = await supabase.from('clinics').select('id, name, competence_end_day').eq('active', true)
-    
-    // Buscar todos os meses com atendimento
-    const { data: attendances } = await supabase.from('attendances').select('clinic_id, attendance_date')
+    // Buscar todas as clínicas para popular o filtro e calcular abertas
+    const { data: clinicsData } = await supabase
+      .from('clinics')
+      .select('id, name, competence_end_day')
+      .eq('active', true)
+      .order('name')
+    clinicsList = clinicsData || []
+
+    // Buscar todos os meses com atendimento para calcular competências que continuam ABERTAS
+    const { data: attendances } = await supabase
+      .from('attendances')
+      .select('clinic_id, attendance_date')
 
     const clinicsMap = new Map()
-    clinicsData?.forEach(c => clinicsMap.set(c.id, c))
+    clinicsList.forEach(c => clinicsMap.set(c.id, c))
 
     const openCompetencesMap = new Map<string, any>()
 
@@ -52,7 +83,7 @@ export default async function CompetencesPage() {
       
       const key = `${a.clinic_id}_${year}_${month}`
       
-      // se já está fechada para esta clínica, ignora
+      // Se já está fechada para esta clínica, ignora
       if (closed.some(c => c.clinic_id === a.clinic_id && c.year === year && c.month === month)) {
         return
       }
@@ -75,14 +106,42 @@ export default async function CompetencesPage() {
       if (a.month !== b.month) return b.month - a.month
       return a.clinic.name.localeCompare(b.clinic.name)
     })
+
+    // --- Aplicar Filtros (Admin) ---
+    let filteredList = closedCompetences
+
+    // 1. Chave de Toggle: mostrar_encerradas (por padrão, exibe apenas ABERTAS)
+    const showClosed = queryParams.show_closed === 'true'
+    if (!showClosed) {
+      filteredList = filteredList.filter(c => c.status === 'ABERTA')
+    }
+
+    // 2. Filtro por clínica
+    if (queryParams.clinic && queryParams.clinic !== 'all') {
+      filteredList = filteredList.filter(c => c.clinic_id === queryParams.clinic)
+    }
+
+    // 3. Filtro por termo de busca q (busca por nome da clínica ou competência formatada)
+    if (queryParams.q) {
+      const cleanQ = queryParams.q.toLowerCase()
+      filteredList = filteredList.filter(c => {
+        const clinicName = (c.clinic as any)?.name?.toLowerCase() || ''
+        const monthYear = `${String(c.month).padStart(2, '0')}/${c.year}`
+        return clinicName.includes(cleanQ) || monthYear.includes(cleanQ)
+      })
+    }
+
+    totalItems = filteredList.length
+    paginatedCompetences = filteredList.slice(from, to)
   } else {
+    // Visão da Clínica
     const { data: comp } = await supabase.from('competences').select('*').eq('clinic_id', profile.clinic_id)
     closedCompetences = comp || []
 
     const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', profile.clinic_id).single()
     const endDay = clinicConfig?.competence_end_day || 31
 
-    // Fetch distinct attendance months for this clinic
+    // Buscar meses distintos com atendimentos
     const { data: attendances } = await supabase
       .from('attendances')
       .select('attendance_date')
@@ -90,7 +149,6 @@ export default async function CompetencesPage() {
 
     const uniqueMonths = new Set<string>()
     
-    // Add months from existing attendances
     attendances?.forEach(a => {
       const dateParts = a.attendance_date.split('-')
       const day = parseInt(dateParts[2], 10)
@@ -107,7 +165,7 @@ export default async function CompetencesPage() {
       uniqueMonths.add(`${year}-${month}`)
     })
 
-    // Add months that are already closed (even if they have no attendances for some reason)
+    // Adiciona meses que já estão fechados
     closedCompetences.forEach(c => {
       uniqueMonths.add(`${c.year}-${c.month}`)
     })
@@ -124,10 +182,32 @@ export default async function CompetencesPage() {
       if (a.year !== b.year) return b.year - a.year
       return b.month - a.month
     })
+
+    // --- Aplicar Filtros (Clínica) ---
+    let filteredMonths = months
+
+    // 1. Chave de Toggle: mostrar_encerradas (por padrão, exibe apenas ABERTAS)
+    const showClosed = queryParams.show_closed === 'true'
+    if (!showClosed) {
+      filteredMonths = filteredMonths.filter(m => {
+        const isClosed = closedCompetences.find(c => c.month === m.month && c.year === m.year && (c.status === 'FECHADA' || c.status === 'ENVIADA_MS'))
+        return !isClosed
+      })
+    }
+
+    // 2. Filtro por termo de busca q (busca pelo rótulo do mês)
+    if (queryParams.q) {
+      const cleanQ = queryParams.q.toLowerCase()
+      filteredMonths = filteredMonths.filter(m => m.label.toLowerCase().includes(cleanQ))
+    }
+
+    totalItems = filteredMonths.length
+    paginatedMonths = filteredMonths.slice(from, to)
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
+      {/* Cabeçalho */}
       <div>
         <h2 className="text-3xl font-black leading-tight text-foreground tracking-tight sm:text-4xl">
           Gestão de <span className="text-primary tracking-tighter">Competências</span>
@@ -139,128 +219,144 @@ export default async function CompetencesPage() {
         </p>
       </div>
 
-      {!isAdmin ? (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {months.map((m) => {
-            const isClosed = closedCompetences.find(c => c.month === m.month && c.year === m.year && (c.status === 'FECHADA' || c.status === 'ENVIADA_MS'))
-            const isHistorical = isClosed?.is_historical || false
-            
-            return (
-              <div key={`${m.year}-${m.month}`} className={`bg-card border p-6 rounded-[2rem] shadow-sm flex flex-col justify-between transition-all ${isHistorical ? 'border-purple-500/30 bg-purple-500/[0.01]' : 'border-border/40'}`}>
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-black capitalize text-foreground">{m.label}</h3>
-                    {isHistorical ? (
-                      <p className="text-xs font-black bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded-md uppercase tracking-wider inline-block">
-                        Histórica (Manual)
-                      </p>
-                    ) : (
-                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Faturamento</p>
-                    )}
-                  </div>
-                  <div className={`p-3 rounded-2xl ${isClosed ? (isHistorical ? 'bg-purple-500/10 text-purple-500' : isClosed.status === 'ENVIADA_MS' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-red-500/10 text-red-500') : 'bg-emerald-500/10 text-emerald-500'}`}>
-                    {isClosed ? (isHistorical ? <CalendarIcon className="w-5 h-5 stroke-[2.5]" /> : <Lock className="w-5 h-5 stroke-[2.5]" />) : <CheckCircle className="w-5 h-5 stroke-[2.5]" />}
-                  </div>
-                </div>
+      {/* Painel de Filtros e Busca Reativo */}
+      <CompetencesFilterPanel isAdmin={isAdmin} clinicsList={clinicsList} />
 
-                {!isClosed ? (
-                  <div className="mt-8">
-                    <CloseCompetenceButton clinicId={profile.clinic_id} month={m.month} year={m.year} />
-                  </div>
-                ) : (
-                  <div className="mt-4 pt-4 border-t border-border/40">
-                    <div className="flex flex-col gap-2">
-                      <BpaExportButton clinicId={profile.clinic_id} month={m.month} year={m.year} isHistorical={isHistorical} />
-                      {isClosed.status === 'ENVIADA_MS' && (
-                        <span className="text-[10px] text-center font-bold text-indigo-500 uppercase tracking-widest mt-2">
-                          HARD LOCK - ENVIADA AO MS
-                        </span>
+      {/* Exibição */}
+      {!isAdmin ? (
+        <div className="space-y-6">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {paginatedMonths.map((m) => {
+              const isClosed = closedCompetences.find(c => c.month === m.month && c.year === m.year && (c.status === 'FECHADA' || c.status === 'ENVIADA_MS'))
+              const isHistorical = isClosed?.is_historical || false
+              
+              return (
+                <div key={`${m.year}-${m.month}`} className={`bg-card border p-6 rounded-[2rem] shadow-sm flex flex-col justify-between transition-all hover:shadow-md hover:border-border/60 ${isHistorical ? 'border-purple-500/30 bg-purple-500/[0.01]' : 'border-border/40'}`}>
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-black capitalize text-foreground">{m.label}</h3>
+                      {isHistorical ? (
+                        <p className="text-xs font-black bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded-md uppercase tracking-wider inline-block">
+                          Histórica (Manual)
+                        </p>
+                      ) : (
+                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Faturamento</p>
                       )}
                     </div>
+                    <div className={`p-3 rounded-2xl ${isClosed ? (isHistorical ? 'bg-purple-500/10 text-purple-500' : isClosed.status === 'ENVIADA_MS' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-red-500/10 text-red-500') : 'bg-emerald-500/10 text-emerald-500'}`}>
+                      {isClosed ? (isHistorical ? <CalendarIcon className="w-5 h-5 stroke-[2.5]" /> : <Lock className="w-5 h-5 stroke-[2.5]" />) : <CheckCircle className="w-5 h-5 stroke-[2.5]" />}
+                    </div>
                   </div>
-                )}
-              </div>
-            )
-          })}
+
+                  {!isClosed ? (
+                    <div className="mt-8">
+                      <CloseCompetenceButton clinicId={profile.clinic_id} month={m.month} year={m.year} />
+                    </div>
+                  ) : (
+                    <div className="mt-4 pt-4 border-t border-border/40">
+                      <div className="flex flex-col gap-2">
+                        <BpaExportButton clinicId={profile.clinic_id} month={m.month} year={m.year} isHistorical={isHistorical} />
+                        {isClosed.status === 'ENVIADA_MS' && (
+                          <span className="text-[10px] text-center font-bold text-indigo-500 uppercase tracking-widest mt-2">
+                            HARD LOCK - ENVIADA AO MS
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Paginação da Clínica */}
+          <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
+            <Pagination totalItems={totalItems} itemsPerPage={limit} currentPage={page} />
+          </div>
         </div>
       ) : (
         <div className="overflow-hidden bg-card border border-border/40 rounded-[2rem] shadow-xl">
-          <table className="min-w-full divide-y divide-border/30">
-            <thead className="bg-muted/50">
-              <tr>
-                <th scope="col" className="py-5 pl-8 pr-3 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-                  Clínica
-                </th>
-                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-                  Mês/Ano
-                </th>
-                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-                  Status
-                </th>
-                <th scope="col" className="relative py-5 pl-3 pr-8 text-right">
-                  <span className="sr-only">Ações</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/20">
-              {closedCompetences?.map((comp) => (
-                <tr key={comp.id} className="transition-colors group/row hover:bg-muted/30">
-                  <td className="whitespace-nowrap py-6 pl-8 pr-3">
-                    <span className="text-sm font-bold text-foreground">
-                      {(comp.clinic as any)?.name}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-6">
-                    <span className="text-sm font-bold text-foreground">
-                      {String(comp.month).padStart(2, '0')}/{comp.year}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-6">
-                    {comp.is_historical ? (
-                      <span className="inline-flex items-center rounded-xl bg-purple-500/10 px-3 py-1.5 text-[10px] font-black text-purple-600 border border-purple-500/20 uppercase tracking-widest leading-none">
-                        <CalendarIcon className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Histórica (Manual)
-                      </span>
-                    ) : comp.status === 'ENVIADA_MS' ? (
-                      <span className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black text-indigo-500 border border-indigo-500/20 uppercase tracking-widest leading-none">
-                        <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Enviada (Hard Lock)
-                      </span>
-                    ) : comp.status === 'FECHADA' ? (
-                      <span className="inline-flex items-center rounded-xl bg-red-500/10 px-3 py-1.5 text-[10px] font-black text-red-500 border border-red-500/20 uppercase tracking-widest leading-none">
-                        <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Fechada
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase tracking-widest leading-none">
-                        <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Aberta
-                      </span>
-                    )}
-                  </td>
-                  <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      {comp.status !== 'ABERTA' && (
-                        <BpaExportButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} isHistorical={comp.is_historical} />
-                      )}
-                      {comp.status === 'FECHADA' && (
-                        <>
-                          <ReopenCompetenceButton id={comp.id} />
-                          <SendToMSButton id={comp.id} />
-                        </>
-                      )}
-                      {comp.status === 'ABERTA' && (
-                        <CloseCompetenceButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {closedCompetences.length === 0 && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-border/30">
+              <thead className="bg-muted/50">
                 <tr>
-                  <td colSpan={4} className="py-20 text-center">
-                    <p className="text-sm text-muted-foreground font-medium">Nenhuma competência fechada no momento.</p>
-                  </td>
+                  <th scope="col" className="py-5 pl-8 pr-3 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                    Clínica
+                  </th>
+                  <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                    Mês/Ano
+                  </th>
+                  <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                    Status
+                  </th>
+                  <th scope="col" className="relative py-5 pl-3 pr-8 text-right">
+                    <span className="sr-only">Ações</span>
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {paginatedCompetences.map((comp) => (
+                  <tr key={comp.id} className="transition-colors group/row hover:bg-muted/30">
+                    <td className="whitespace-nowrap py-6 pl-8 pr-3">
+                      <span className="text-sm font-bold text-foreground">
+                        {(comp.clinic as any)?.name}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-6">
+                      <span className="text-sm font-bold text-foreground">
+                        {String(comp.month).padStart(2, '0')}/{comp.year}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-6">
+                      {comp.is_historical ? (
+                        <span className="inline-flex items-center rounded-xl bg-purple-500/10 px-3 py-1.5 text-[10px] font-black text-purple-600 border border-purple-500/20 uppercase tracking-widest leading-none">
+                          <CalendarIcon className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Histórica (Manual)
+                        </span>
+                      ) : comp.status === 'ENVIADA_MS' ? (
+                        <span className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black text-indigo-500 border border-indigo-500/20 uppercase tracking-widest leading-none">
+                          <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Enviada (Hard Lock)
+                        </span>
+                      ) : comp.status === 'FECHADA' ? (
+                        <span className="inline-flex items-center rounded-xl bg-red-500/10 px-3 py-1.5 text-[10px] font-black text-red-500 border border-red-500/20 uppercase tracking-widest leading-none">
+                          <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Fechada
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                          <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Aberta
+                        </span>
+                      )}
+                    </td>
+                    <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        {comp.status !== 'ABERTA' && (
+                          <BpaExportButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} isHistorical={comp.is_historical} />
+                        )}
+                        {comp.status === 'FECHADA' && (
+                          <>
+                            <ReopenCompetenceButton id={comp.id} />
+                            <SendToMSButton id={comp.id} />
+                          </>
+                        )}
+                        {comp.status === 'ABERTA' && (
+                          <CloseCompetenceButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {paginatedCompetences.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-20 text-center">
+                      <p className="text-sm text-muted-foreground font-medium">Nenhuma competência encontrada com os filtros atuais.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Paginação do Admin */}
+          <Pagination totalItems={totalItems} itemsPerPage={limit} currentPage={page} />
         </div>
       )}
     </div>

@@ -23,6 +23,17 @@ Esta versão introduz a flexibilidade de **Vigências Individuais e Granulares p
 - **Governança Forense de Banco de Dados:**
   - Mapeamento direto de `valid_from` e `valid_to` individuais de cada linha no insert da tabela `clinic_procedure_prices`, mantendo a integridade sem alterar o schema do Supabase.
 
+### 📂 Filtros e Paginação na Gestão de Competências (`page.tsx` & `CompetencesFilterPanel.tsx`):
+- **Painel de Filtros Reativo Avançado:**
+  - Implementado o componente de cliente **`CompetencesFilterPanel.tsx`** integrando busca textual dinâmica, filtros de clínica (exclusivo para SMS_ADMIN) e a inovadora **chave switch iOS-Style** para exibição de competências encerradas.
+  - O painel adota debounce de 400ms na pesquisa textual de clínicas e períodos e reatividade instantânea via `useTransition` para evitar travamentos de interface no Next.js App Router.
+- **Padrão de Exibição de Competências Abertas:**
+  - Por padrão, a página oculta competências nos status `FECHADA` e `ENVIADA_MS`, listando estritamente competências `ABERTA` para agilizar as operações rotineiras.
+  - Ao ligar a chave de toggle, a lista é expandida dinamicamente para revelar as competências encerradas de forma imediata.
+- **Paginação Server-Side Integrada em Memória:**
+  - Integração nativa com o componente **`Pagination.tsx`** no rodapé do bloco de exibições (tabela de Admin e grade de cards da Clínica).
+  - Cálculo cirúrgico e de alta performance de paginação e filtragem em memória diretamente no servidor Next.js, mantendo a responsividade do sistema sem onerar o banco com consultas complexas a competências virtuais (abertas) geradas dinamicamente.
+
 ---
 
 ## [0.12.0-beta] - 2026-05-17
