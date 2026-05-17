@@ -145,6 +145,7 @@ export default function PrintReportClient({
               <tr className="bg-slate-100">
                 <th className="border border-slate-200 p-3 text-[10px] font-black uppercase text-slate-600 text-left">Profissional / Clínica</th>
                 <th className="border border-slate-200 p-3 text-[10px] font-black uppercase text-slate-600 text-center">Realizados</th>
+                <th className="border border-slate-200 p-3 text-[10px] font-black uppercase text-slate-600 text-center">Não Realizado</th>
                 <th className="border border-slate-200 p-3 text-[10px] font-black uppercase text-slate-600 text-center">Glosadas</th>
                 <th className="border border-slate-200 p-3 text-[10px] font-black uppercase text-slate-600 text-center">Pendentes</th>
                 <th className="border border-slate-200 p-3 text-[10px] font-black uppercase text-slate-600 text-center">Taxa de Glosa</th>
@@ -152,25 +153,32 @@ export default function PrintReportClient({
               </tr>
             </thead>
             <tbody>
-              {data.map((row, i) => (
-                <tr key={i}>
-                  <td className="border border-slate-200 p-3 text-xs font-bold">
-                    {row.professional_name}<br/>
-                    <span className="text-[9px] font-normal text-slate-500 uppercase">{row.clinic_name}</span>
-                  </td>
-                  <td className="border border-slate-200 p-3 text-xs text-center">{row.completed_sessions}</td>
-                  <td className="border border-slate-200 p-3 text-xs text-center">{row.missed_sessions}</td>
-                  <td className="border border-slate-200 p-3 text-xs text-center">{row.pending_sessions}</td>
-                  <td className="border border-slate-200 p-3 text-xs text-center font-bold">{row.absenteeism_rate}%</td>
-                  <td className="border border-slate-200 p-3 text-xs text-right font-bold">{formatCurrency(row.total_value)}</td>
-                </tr>
-              ))}
+              {data.map((row, i) => {
+                const totalSessions = (row.completed_sessions || 0) + (row.missed_sessions || 0) + (row.pending_sessions || 0) + (row.denied_sessions || 0)
+                const deniedRate = totalSessions > 0 ? ((row.denied_sessions || 0) / totalSessions * 100).toFixed(1) : '0'
+                
+                return (
+                  <tr key={i}>
+                    <td className="border border-slate-200 p-3 text-xs font-bold">
+                      {row.professional_name}<br/>
+                      <span className="text-[9px] font-normal text-slate-500 uppercase">{row.clinic_name}</span>
+                    </td>
+                    <td className="border border-slate-200 p-3 text-xs text-center">{row.completed_sessions || 0}</td>
+                    <td className="border border-slate-200 p-3 text-xs text-center">{row.missed_sessions || 0}</td>
+                    <td className="border border-slate-200 p-3 text-xs text-center">{row.denied_sessions || 0}</td>
+                    <td className="border border-slate-200 p-3 text-xs text-center">{row.pending_sessions || 0}</td>
+                    <td className="border border-slate-200 p-3 text-xs text-center font-bold">{deniedRate}%</td>
+                    <td className="border border-slate-200 p-3 text-xs text-right font-bold">{formatCurrency(row.total_value)}</td>
+                  </tr>
+                )
+              })}
             </tbody>
             <tfoot className="bg-slate-50">
               <tr className="font-bold border-t-2 border-slate-900">
                 <td className="border border-slate-200 p-3 text-xs uppercase tracking-tighter">Totais Consolidados</td>
                 <td className="border border-slate-200 p-3 text-xs text-center">{totals.completed}</td>
                 <td className="border border-slate-200 p-3 text-xs text-center">{totals.missed}</td>
+                <td className="border border-slate-200 p-3 text-xs text-center">{data.reduce((acc, row) => acc + (row.denied_sessions || 0), 0)}</td>
                 <td className="border border-slate-200 p-3 text-xs text-center">{totals.pending}</td>
                 <td className="border border-slate-200 p-3 text-xs text-center">-</td>
                 <td className="border border-slate-200 p-3 text-xs text-right text-primary font-black">{formatCurrency(totals.performanceValue)}</td>

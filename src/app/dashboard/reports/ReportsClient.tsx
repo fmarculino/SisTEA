@@ -137,6 +137,7 @@ export default function ReportsClient({
                 <tr className="border-b border-border/50 bg-muted/30">
                   <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Clínica / Profissional</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Realizados</th>
+                  <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Não Realizado</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Glosadas</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Pendentes</th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Taxa de Glosa</th>
@@ -144,47 +145,58 @@ export default function ReportsClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
-                {initialData.map((row, i) => (
-                  <tr key={i} className="hover:bg-muted/20 transition-colors group">
-                    <td className="p-6">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{row.professional_name}</span>
-                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{row.clinic_name}</span>
-                      </div>
-                    </td>
-                    <td className="p-6 text-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-500 uppercase">
-                        {row.completed_sessions}
-                      </span>
-                    </td>
-                    <td className="p-6 text-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500/10 text-rose-500 uppercase">
-                        {row.missed_sessions}
-                      </span>
-                    </td>
-                    <td className="p-6 text-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-500 uppercase">
-                        {row.pending_sessions}
-                      </span>
-                    </td>
-                    <td className="p-6 text-center">
-                      <span className={`text-xs font-black ${row.absenteeism_rate > 20 ? 'text-rose-500' : 'text-foreground'}`}>
-                        {row.absenteeism_rate}%
-                      </span>
-                    </td>
-                    <td className="p-6 text-right">
-                      <span className="text-sm font-black text-foreground">
-                        {formatCurrency(row.total_value)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {initialData.map((row, i) => {
+                  const totalSessions = (row.completed_sessions || 0) + (row.missed_sessions || 0) + (row.pending_sessions || 0) + (row.denied_sessions || 0)
+                  const deniedRate = totalSessions > 0 ? ((row.denied_sessions || 0) / totalSessions * 100).toFixed(1) : '0'
+                  
+                  return (
+                    <tr key={i} className="hover:bg-muted/20 transition-colors group">
+                      <td className="p-6">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{row.professional_name}</span>
+                          <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">{row.clinic_name}</span>
+                        </div>
+                      </td>
+                      <td className="p-6 text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-500 uppercase">
+                          {row.completed_sessions || 0}
+                        </span>
+                      </td>
+                      <td className="p-6 text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-500/10 text-slate-500 uppercase">
+                          {row.missed_sessions || 0}
+                        </span>
+                      </td>
+                      <td className="p-6 text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500/10 text-rose-500 uppercase">
+                          {row.denied_sessions || 0}
+                        </span>
+                      </td>
+                      <td className="p-6 text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-500 uppercase">
+                          {row.pending_sessions || 0}
+                        </span>
+                      </td>
+                      <td className="p-6 text-center">
+                        <span className={`text-xs font-black ${Number(deniedRate) > 20 ? 'text-rose-500' : 'text-foreground'}`}>
+                          {deniedRate}%
+                        </span>
+                      </td>
+                      <td className="p-6 text-right">
+                        <span className="text-sm font-black text-foreground">
+                          {formatCurrency(row.total_value)}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
               <tfoot className="bg-muted/30 font-black border-t-2 border-border/50">
                 <tr>
                   <td className="p-6 text-[10px] uppercase tracking-widest text-muted-foreground">Totais Consolidados</td>
                   <td className="p-6 text-center text-sm">{initialData.reduce((acc, row) => acc + (row.completed_sessions || 0), 0)}</td>
                   <td className="p-6 text-center text-sm">{initialData.reduce((acc, row) => acc + (row.missed_sessions || 0), 0)}</td>
+                  <td className="p-6 text-center text-sm">{initialData.reduce((acc, row) => acc + (row.denied_sessions || 0), 0)}</td>
                   <td className="p-6 text-center text-sm">{initialData.reduce((acc, row) => acc + (row.pending_sessions || 0), 0)}</td>
                   <td className="p-6 text-center text-sm">-</td>
                   <td className="p-6 text-right text-sm text-primary font-black">

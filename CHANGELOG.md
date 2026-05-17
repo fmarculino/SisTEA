@@ -2,6 +2,22 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.11.2-beta] - 2026-05-17
+
+Versão focada na correção lógica e conceitual do Relatório de Produtividade & Absenteísmo, além de melhorias de validação na quantidade de sessões autorizadas de guias.
+
+### 📊 Correção no Relatório de Produtividade (Faltas vs Glosas)
+- **Separação de Conceitos:** Adicionada a coluna **Não Realizado** para renderizar exclusivamente `{row.missed_sessions}` (sessões com status `'Não Realizado'`).
+- **Precisão nas Glosas:** A coluna **Glosadas** foi ajustada para renderizar exclusivamente as sessões de fato glosadas pelo município (`{row.denied_sessions}`).
+- **Taxa de Glosa Real:** Implementado o cálculo real da Taxa de Glosa no frontend (`(denied_sessions / total_sessions) * 100`) em substituição à antiga taxa que mostrava o absenteísmo, evitando falsos positivos de glosa para sessões comuns não realizadas por falta do paciente.
+- **Sincronização Física:** Replicadas e validadas as mesmas regras de formatação e consolidação de totais na tabela de impressão/PDF (`PrintReportClient.tsx`).
+
+### 🛡️ Validação de Guias (Qtd. Autorizada)
+- **Proteção Contra Valores Inválidos:** Implementado o atributo `min="1"` no input HTML da Quantidade Autorizada (`authorized_quantity`) do [AttendanceForm.tsx](file:///c:/Users/Cliente/Projetos/SisTEA/src/app/dashboard/attendances/AttendanceForm.tsx#L717-L726).
+- **Tratamento de Exibição de Erros:** Adicionada a renderização de erros de validação do Zod abaixo do campo na tela, impedindo que o usuário digite ou envie valores negativos ou zero de forma transparente e amigável.
+
+---
+
 ## [0.11.1-beta] - 2026-05-17
 
 Versão de hotfix crítico para resolver a exibição do instalador do PWA em produção, ajustando o comportamento do middleware do Next.js e Supabase.

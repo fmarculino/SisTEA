@@ -717,10 +717,12 @@ export function AttendanceForm({
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Qtd. Autorizada</label>
           <input
             type="number"
+            min="1"
             {...register('authorized_quantity', { valueAsNumber: true })}
             readOnly={isMetadataLocked}
             className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
           />
+          {errors.authorized_quantity && <p className="mt-1 text-sm text-rose-500">{errors.authorized_quantity.message}</p>}
         </div>
 
 
