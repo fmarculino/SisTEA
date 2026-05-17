@@ -143,15 +143,23 @@ export default async function CompetencesPage() {
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {months.map((m) => {
             const isClosed = closedCompetences.find(c => c.month === m.month && c.year === m.year && (c.status === 'FECHADA' || c.status === 'ENVIADA_MS'))
+            const isHistorical = isClosed?.is_historical || false
+            
             return (
-              <div key={`${m.year}-${m.month}`} className="bg-card border border-border/40 p-6 rounded-[2rem] shadow-sm flex flex-col justify-between">
+              <div key={`${m.year}-${m.month}`} className={`bg-card border p-6 rounded-[2rem] shadow-sm flex flex-col justify-between transition-all ${isHistorical ? 'border-purple-500/30 bg-purple-500/[0.01]' : 'border-border/40'}`}>
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
                     <h3 className="text-lg font-black capitalize text-foreground">{m.label}</h3>
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Faturamento</p>
+                    {isHistorical ? (
+                      <p className="text-xs font-black bg-purple-500/10 text-purple-600 px-2 py-0.5 rounded-md uppercase tracking-wider inline-block">
+                        Histórica (Manual)
+                      </p>
+                    ) : (
+                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Faturamento</p>
+                    )}
                   </div>
-                  <div className={`p-3 rounded-2xl ${isClosed ? (isClosed.status === 'ENVIADA_MS' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-red-500/10 text-red-500') : 'bg-emerald-500/10 text-emerald-500'}`}>
-                    {isClosed ? <Lock className="w-5 h-5 stroke-[2.5]" /> : <CheckCircle className="w-5 h-5 stroke-[2.5]" />}
+                  <div className={`p-3 rounded-2xl ${isClosed ? (isHistorical ? 'bg-purple-500/10 text-purple-500' : isClosed.status === 'ENVIADA_MS' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-red-500/10 text-red-500') : 'bg-emerald-500/10 text-emerald-500'}`}>
+                    {isClosed ? (isHistorical ? <CalendarIcon className="w-5 h-5 stroke-[2.5]" /> : <Lock className="w-5 h-5 stroke-[2.5]" />) : <CheckCircle className="w-5 h-5 stroke-[2.5]" />}
                   </div>
                 </div>
 
@@ -162,7 +170,7 @@ export default async function CompetencesPage() {
                 ) : (
                   <div className="mt-4 pt-4 border-t border-border/40">
                     <div className="flex flex-col gap-2">
-                      <BpaExportButton clinicId={profile.clinic_id} month={m.month} year={m.year} />
+                      <BpaExportButton clinicId={profile.clinic_id} month={m.month} year={m.year} isHistorical={isHistorical} />
                       {isClosed.status === 'ENVIADA_MS' && (
                         <span className="text-[10px] text-center font-bold text-indigo-500 uppercase tracking-widest mt-2">
                           HARD LOCK - ENVIADA AO MS
@@ -208,7 +216,11 @@ export default async function CompetencesPage() {
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-6">
-                    {comp.status === 'ENVIADA_MS' ? (
+                    {comp.is_historical ? (
+                      <span className="inline-flex items-center rounded-xl bg-purple-500/10 px-3 py-1.5 text-[10px] font-black text-purple-600 border border-purple-500/20 uppercase tracking-widest leading-none">
+                        <CalendarIcon className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Histórica (Manual)
+                      </span>
+                    ) : comp.status === 'ENVIADA_MS' ? (
                       <span className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black text-indigo-500 border border-indigo-500/20 uppercase tracking-widest leading-none">
                         <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Enviada (Hard Lock)
                       </span>
@@ -225,7 +237,7 @@ export default async function CompetencesPage() {
                   <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right">
                     <div className="flex items-center justify-end gap-3">
                       {comp.status !== 'ABERTA' && (
-                        <BpaExportButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} />
+                        <BpaExportButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} isHistorical={comp.is_historical} />
                       )}
                       {comp.status === 'FECHADA' && (
                         <>

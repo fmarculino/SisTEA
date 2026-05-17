@@ -19,7 +19,9 @@ import {
   XCircle,
   AlertTriangle,
   Download,
-  X
+  Calendar,
+  X,
+  Plus
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
@@ -39,6 +41,33 @@ export default function HistoricalAuditPage() {
   const [googleUrl, setGoogleUrl] = useState('')
   const [clinics, setClinics] = useState<any[]>([])
   const [selectedClinicId, setSelectedClinicId] = useState<string>('')
+  const [selectedCompetence, setSelectedCompetence] = useState<string>('')
+  const [isCompetenceValid, setIsCompetenceValid] = useState<boolean>(true)
+
+  // Função para formatar com máscara MM/AAAA e validar em tempo real
+  const handleCompetenceChange = (val: string) => {
+    const clean = val.replace(/\D/g, '')
+    
+    let formatted = ''
+    if (clean.length > 0) {
+      const digits = clean.slice(0, 6)
+      
+      if (digits.length <= 2) {
+        formatted = digits
+      } else {
+        formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`
+      }
+    }
+    
+    setSelectedCompetence(formatted)
+    
+    if (formatted === '') {
+      setIsCompetenceValid(true)
+    } else {
+      const regex = /^(0[1-9]|1[0-2])\/\d{4}$/
+      setIsCompetenceValid(regex.test(formatted))
+    }
+  }
   
   // Mapeamento de colunas
   const [mappings, setMappings] = useState<Record<string, string>>({})
@@ -66,6 +95,25 @@ export default function HistoricalAuditPage() {
     auth_number: '',
     quantity: 1
   })
+
+  // Estados para o Cadastro Rápido Ex-Officio (Fase 2)
+  const [quickCreateType, setQuickCreateType] = useState<'patient' | 'professional' | null>(null)
+  const [quickPatientData, setQuickPatientData] = useState({
+    name: '',
+    cns: '',
+    birthDate: '',
+    gender: 'N'
+  })
+  const [quickProfessionalData, setQuickProfessionalData] = useState({
+    name: '',
+    cns: '',
+    cbo: ''
+  })
+
+  // Estados para Arbitragem Humana (Fase 3)
+  const [arbitrationRecord, setArbitrationRecord] = useState<any | null>(null)
+  const [arbitrationJustification, setArbitrationJustification] = useState('')
+  const [isArbitrationModalOpen, setIsArbitrationModalOpen] = useState(false)
 
   const [options, setOptions] = useState<{
     patients: any[],
@@ -354,7 +402,8 @@ export default function HistoricalAuditPage() {
         .insert({
           file_name: file?.name || 'import_historico.xlsx',
           total_rows: fullData.length - 1,
-          status: 'mapping'
+          status: 'mapping',
+          target_competence: selectedCompetence || null
         })
         .select()
         .single()
@@ -417,9 +466,231 @@ export default function HistoricalAuditPage() {
 
       if (rpcError) throw rpcError
       
+      // Criar/Marcar a competência correspondente na tabela `competences` como histórica!
+      if (selectedCompetence && selectedClinicId) {
+        const [monthStr, yearStr] = selectedCompetence.split('/')
+        const compMonth = parseInt(monthStr, 10)
+        const compYear = parseInt(yearStr, 10)
+        
+        const { error: competenceError } = await supabase
+          .from('competences')
+          .upsert({
+            clinic_id: selectedClinicId,
+            month: compMonth,
+            year: compYear,
+            status: 'FECHADA',
+            is_historical: true,
+            closed_at: new Date().toISOString()
+          }, {
+            onConflict: 'clinic_id,month,year'
+          })
+
+        if (competenceError) {
+          console.error('Erro ao marcar competência como histórica:', competenceError)
+        }
+      }
+
       setStep('completed')
     } catch (err: any) {
       setError(`Erro ao finalizar importação: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOpenQuickCreatePatient = () => {
+    setQuickPatientData({
+      name: editingRecord?.raw_patient_name || '',
+      cns: editingRecord?.raw_patient_cns || '',
+      birthDate: '',
+      gender: 'N'
+    })
+    setQuickCreateType('patient')
+  }
+
+  const handleOpenQuickCreateProfessional = () => {
+    setQuickProfessionalData({
+      name: editingRecord?.raw_professional_name || '',
+      cns: editingRecord?.raw_professional_cns || '',
+      cbo: ''
+    })
+    setQuickCreateType('professional')
+  }
+
+  const handleSaveQuickPatient = async () => {
+    if (!quickPatientData.name || !quickPatientData.cns || !quickPatientData.birthDate) {
+      alert('Nome, CNS e Data de Nascimento são obrigatórios para o cadastro rápido.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { data, error: insertError } = await supabase
+        .from('patients')
+        .insert({
+          name: quickPatientData.name.toUpperCase(),
+          cns_patient: quickPatientData.cns,
+          birth_date: quickPatientData.birthDate,
+          gender: quickPatientData.gender,
+          active: true,
+          clinic_id: selectedClinicId || null
+        })
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      // 1. Atualizar opções locais
+      setOptions(prev => ({
+        ...prev,
+        patients: [...prev.patients, { id: data.id, name: data.name }].sort((a, b) => a.name.localeCompare(b.name))
+      }))
+
+      // 2. Selecionar automaticamente no modal de resolução
+      setResolutionData(prev => ({ ...prev, patient_id: data.id }))
+
+      // 3. Fechar submodal
+      setQuickCreateType(null)
+      alert('Paciente cadastrado e vinculado com sucesso!')
+    } catch (err: any) {
+      console.error('Erro no cadastro rápido de paciente:', err)
+      alert(`Falha ao cadastrar paciente: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveQuickProfessional = async () => {
+    if (!quickProfessionalData.name) {
+      alert('O nome do profissional é obrigatório.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { data, error: insertError } = await supabase
+        .from('professionals')
+        .insert({
+          name: quickProfessionalData.name.toUpperCase(),
+          cns: quickProfessionalData.cns || null,
+          cbo: quickProfessionalData.cbo || null,
+          active: true
+        })
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      // Criar vínculo na tabela professional_clinics se clínica selecionada
+      if (selectedClinicId) {
+        await supabase.from('professional_clinics').insert({
+          professional_id: data.id,
+          clinic_id: selectedClinicId,
+          active: true
+        })
+      }
+
+      // 1. Atualizar opções locais
+      setOptions(prev => ({
+        ...prev,
+        professionals: [...prev.professionals, { id: data.id, name: data.name }].sort((a, b) => a.name.localeCompare(b.name))
+      }))
+
+      // 2. Selecionar automaticamente no modal de resolução
+      setResolutionData(prev => ({ ...prev, professional_id: data.id }))
+
+      // 3. Fechar submodal
+      setQuickCreateType(null)
+      alert('Profissional cadastrado e vinculado com sucesso!')
+    } catch (err: any) {
+      console.error('Erro no cadastro rápido de profissional:', err)
+      alert(`Falha ao cadastrar profissional: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOpenArbitration = (record: any) => {
+    setArbitrationRecord(record)
+    setArbitrationJustification('')
+    setIsArbitrationModalOpen(true)
+  }
+
+  const handleSaveArbitration = async () => {
+    if (!arbitrationRecord) return
+    if (!arbitrationJustification.trim()) {
+      alert('Por favor, informe a justificativa para a aprovação.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { error: updateError } = await supabase
+        .from('import_historical_records')
+        .update({
+          validation_status: 'approved',
+          match_notes: `Aprovação de Arbitragem Auditada: ${arbitrationJustification}`
+        })
+        .eq('id', arbitrationRecord.id)
+
+      if (updateError) throw updateError
+
+      // 1. Atualizar estado local
+      setUnresolvedRecords(prev => prev.filter(r => r.id !== arbitrationRecord.id))
+
+      // 2. Recalcular estatísticas reais
+      const { data: countData } = await supabase
+        .from('import_historical_records')
+        .select('validation_status')
+        .eq('import_batch_id', currentBatchId)
+
+      const validated = countData?.filter(r => r.validation_status === 'approved').length || 0
+      const errors = countData?.filter(r => r.validation_status === 'glossed').length || 0
+      setValidationStats({ validated, errors })
+
+      setIsArbitrationModalOpen(false)
+      setArbitrationRecord(null)
+      alert('Arbitragem registrada com sucesso!')
+    } catch (err: any) {
+      console.error('Erro ao salvar arbitragem:', err)
+      alert(`Erro ao registrar arbitragem: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleConfirmGlosaManual = async (record: any) => {
+    if (!window.confirm('Deseja confirmar a glosa deste atendimento de forma permanente? Ele não será importado ao banco.')) return
+
+    setLoading(true)
+    try {
+      const { error: updateError } = await supabase
+        .from('import_historical_records')
+        .update({
+          validation_status: 'glossed',
+          match_notes: 'Glosado manualmente pelo auditor de forma permanente.'
+        })
+        .eq('id', record.id)
+
+      if (updateError) throw updateError
+
+      // 1. Atualizar estado local
+      setUnresolvedRecords(prev => prev.filter(r => r.id !== record.id))
+
+      // 2. Recalcular estatísticas reais
+      const { data: countData } = await supabase
+        .from('import_historical_records')
+        .select('validation_status')
+        .eq('import_batch_id', currentBatchId)
+
+      const validated = countData?.filter(r => r.validation_status === 'approved').length || 0
+      const errors = countData?.filter(r => r.validation_status === 'glossed').length || 0
+      setValidationStats({ validated, errors })
+
+      alert('Glosa manual registrada com sucesso!')
+    } catch (err: any) {
+      console.error('Erro ao registrar glosa manual:', err)
+      alert(`Erro ao registrar glosa manual: ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -622,6 +893,41 @@ export default function HistoricalAuditPage() {
                     Seleção obrigatória para habilitar o upload
                   </div>
                 )}
+
+                {selectedClinicId && (
+                  <div className="pt-6 mt-6 border-t border-border/30 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                        <Calendar className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black uppercase tracking-widest">Competência de Faturamento</h3>
+                        <p className="text-[11px] text-muted-foreground font-medium">Digite a competência retroativa no formato MM/AAAA (ex: 05/2024).</p>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="MM/AAAA (ex: 05/2024)"
+                      maxLength={7}
+                      value={selectedCompetence}
+                      onChange={(e) => handleCompetenceChange(e.target.value)}
+                      className={`w-full bg-muted/50 border ${!isCompetenceValid ? 'border-destructive focus:ring-destructive/10' : 'border-border/50 focus:ring-primary/10'} rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 transition-all outline-none`}
+                    />
+
+                    {!isCompetenceValid && (
+                      <div className="mt-2 text-[10px] text-destructive font-bold uppercase tracking-wider">
+                        Formato inválido! Insira um mês válido (01 a 12) e um ano com 4 dígitos.
+                      </div>
+                    )}
+
+                    {isCompetenceValid && selectedCompetence === '' && (
+                      <div className="mt-2 text-[10px] text-muted-foreground font-semibold">
+                        Aviso: Em branco, o faturamento usará a data de atendimento de cada registro (Automático).
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex bg-muted/50 p-1 rounded-2xl mb-4 border border-border/50">
@@ -643,10 +949,10 @@ export default function HistoricalAuditPage() {
                 <div 
                   className={`
                     border-4 border-dashed rounded-[40px] p-12 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-6
-                    ${!selectedClinicId ? 'opacity-30 cursor-not-allowed grayscale' : ''}
+                    ${!selectedClinicId || !isCompetenceValid ? 'opacity-30 cursor-not-allowed grayscale' : ''}
                     ${file ? 'border-primary/50 bg-primary/5' : 'border-muted hover:border-primary/30 hover:bg-muted/30'}
                   `}
-                  onClick={() => selectedClinicId && document.getElementById('excel-upload')?.click()}
+                  onClick={() => selectedClinicId && isCompetenceValid && document.getElementById('excel-upload')?.click()}
                 >
                   <input 
                     id="excel-upload"
@@ -711,7 +1017,7 @@ export default function HistoricalAuditPage() {
 
                     <button 
                       onClick={handleGoogleSheetsImport}
-                      disabled={!googleUrl || loading || !selectedClinicId}
+                      disabled={!googleUrl || loading || !selectedClinicId || !isCompetenceValid}
                       className="w-full bg-emerald-500 text-white font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/20 hover:-translate-y-1 transition-all disabled:opacity-50"
                     >
                       {loading ? 'Buscando Dados...' : 'Conectar e Visualizar'}
@@ -915,11 +1221,22 @@ export default function HistoricalAuditPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-6">
               <div className="bg-card border border-border/50 rounded-3xl p-8 shadow-sm">
-                <div className="mb-6">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Clínica Selecionada</p>
-                  <div className="flex items-center gap-2 text-primary">
-                    <Building2 className="h-4 w-4" />
-                    <span className="text-sm font-bold">{clinics.find(c => c.id === selectedClinicId)?.name || 'Clínica não identificada'}</span>
+                <div className="mb-6 space-y-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Clínica Selecionada</p>
+                    <div className="flex items-center gap-2 text-primary">
+                      <Building2 className="h-4 w-4" />
+                      <span className="text-sm font-bold">{clinics.find(c => c.id === selectedClinicId)?.name || 'Clínica não identificada'}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Competência de Destino</p>
+                    <div className="flex items-center gap-2 text-primary">
+                      <Calendar className="h-4 w-4" />
+                      <span className="text-sm font-bold">
+                        {selectedCompetence ? `${selectedCompetence}` : 'Data do Atendimento (Automático)'}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
@@ -1091,9 +1408,17 @@ export default function HistoricalAuditPage() {
                 <AlertTriangle className="h-5 w-5 text-destructive" />
                 Relatório de Inconsistências
               </h2>
-              <div className="flex items-center gap-2 bg-background border border-border/50 px-4 py-2 rounded-xl">
-                <Building2 className="h-4 w-4 text-primary" />
-                <span className="text-xs font-bold text-muted-foreground">{clinics.find(c => c.id === selectedClinicId)?.name}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-background border border-border/50 px-4 py-2 rounded-xl">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-bold text-muted-foreground">{clinics.find(c => c.id === selectedClinicId)?.name}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-background border border-border/50 px-4 py-2 rounded-xl">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {selectedCompetence ? `${selectedCompetence}` : 'Auto (Data Atend.)'}
+                  </span>
+                </div>
               </div>
             </div>
             
@@ -1103,29 +1428,76 @@ export default function HistoricalAuditPage() {
                   <p className="text-sm font-bold text-muted-foreground">Validando regras de negócio...</p>
                 </div>
               ) : unresolvedRecords.length > 0 ? (
-                unresolvedRecords.map((record, i) => (
-                  <div key={i} className="p-6 hover:bg-destructive/[0.02] transition-colors">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black bg-destructive/10 text-destructive px-2 py-0.5 rounded uppercase">Linha {record.row_number}</span>
-                          <h4 className="text-sm font-bold">{record.raw_patient_name}</h4>
+                unresolvedRecords.map((record, i) => {
+                  // Verificar se é Glosa Automática de Ofício (Regras inativas ou conflito interno profissional)
+                  const hasAutoGloss = record.validation_rules_violated?.some((r: string) => 
+                    ['BR-001', 'BR-002', 'BR-003', 'BR-010-INT'].includes(r)
+                  );
+                  
+                  return (
+                    <div key={i} className="p-6 hover:bg-muted/10 transition-colors border-b border-border/20">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="space-y-3 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-black bg-muted px-2 py-0.5 rounded uppercase">Linha {record.row_number}</span>
+                            <h4 className="text-sm font-bold text-foreground truncate">{record.raw_patient_name}</h4>
+                            
+                            {hasAutoGloss ? (
+                              <span className="inline-flex items-center rounded-lg bg-red-500/10 px-2 py-0.5 text-[9px] font-black text-red-600 border border-red-500/20 uppercase tracking-widest leading-none">
+                                Glosa Automática de Ofício
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-lg bg-amber-500/10 px-2 py-0.5 text-[9px] font-black text-amber-600 border border-amber-500/20 uppercase tracking-widest leading-none">
+                                Arbitragem Pendente
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            {record.validation_details?.map((err: any, j: number) => (
+                              <div key={j} className="flex items-center gap-1.5 bg-red-500/5 text-red-600 dark:text-red-400 border border-red-500/10 px-3 py-1.5 rounded-lg text-xs">
+                                <span className="text-[10px] font-black bg-red-500/10 px-1 rounded">{err.code}</span>
+                                <span className="font-medium">{err.message}</span>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {record.match_notes && (
+                            <p className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 italic bg-purple-500/5 px-3 py-1.5 rounded-xl border border-purple-500/10 mt-2">
+                              {record.match_notes}
+                            </p>
+                          )}
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {record.validation_details?.map((err: any, j: number) => (
-                            <div key={j} className="flex items-center gap-1.5 bg-destructive/5 text-destructive border border-destructive/10 px-3 py-1.5 rounded-lg">
-                              <span className="text-[10px] font-black">{err.code}</span>
-                              <span className="text-xs font-medium">{err.message}</span>
-                            </div>
-                          ))}
+                        
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                          <button 
+                            className="bg-primary/10 text-primary hover:bg-primary hover:text-white px-4 py-2 rounded-xl text-xs font-black transition-all"
+                            onClick={() => handleOpenResolution(record)}
+                          >
+                            Corrigir Vínculos
+                          </button>
+                          
+                          {!hasAutoGloss && (
+                            <>
+                              <button 
+                                className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white px-4 py-2 rounded-xl text-xs font-black transition-all border border-emerald-500/20"
+                                onClick={() => handleOpenArbitration(record)}
+                              >
+                                Aprovar com Justificativa
+                              </button>
+                              <button 
+                                className="bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl text-xs font-black transition-all border border-red-500/20"
+                                onClick={() => handleConfirmGlosaManual(record)}
+                              >
+                                Confirmar Glosa
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
-                        Editar Registro
-                      </button>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="p-20 text-center flex flex-col items-center">
                   <div className="h-20 w-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 text-emerald-500">
@@ -1254,7 +1626,17 @@ export default function HistoricalAuditPage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Vincular Paciente Oficial</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Vincular Paciente Oficial</label>
+                      <button
+                        type="button"
+                        onClick={handleOpenQuickCreatePatient}
+                        className="text-[9px] font-black text-purple-600 hover:text-purple-700 hover:underline uppercase tracking-wider flex items-center gap-0.5"
+                      >
+                        <Plus className="w-2.5 h-2.5" />
+                        Cadastrar Rápido
+                      </button>
+                    </div>
                     <SearchableSelect 
                       options={options.patients}
                       value={resolutionData.patient_id}
@@ -1264,7 +1646,17 @@ export default function HistoricalAuditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Vincular Profissional Oficial</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-foreground">Vincular Profissional Oficial</label>
+                      <button
+                        type="button"
+                        onClick={handleOpenQuickCreateProfessional}
+                        className="text-[9px] font-black text-purple-600 hover:text-purple-700 hover:underline uppercase tracking-wider flex items-center gap-0.5"
+                      >
+                        <Plus className="w-2.5 h-2.5" />
+                        Cadastrar Rápido
+                      </button>
+                    </div>
                     <SearchableSelect 
                       options={options.professionals}
                       value={resolutionData.professional_id}
@@ -1361,6 +1753,165 @@ export default function HistoricalAuditPage() {
                 className="flex-[2] bg-primary text-primary-foreground font-black py-4 rounded-2xl shadow-lg shadow-primary/20 hover:-translate-y-1 transition-all disabled:opacity-50"
               >
                 {loading ? 'Salvando...' : 'Salvar Resolução'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Submodal de Cadastro Rápido Ex-Officio */}
+      {quickCreateType && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-xl animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-card border border-purple-500/20 rounded-[2rem] shadow-2xl p-6 relative animate-in zoom-in duration-200">
+            <h4 className="text-base font-black text-purple-600 dark:text-purple-400 mb-6 flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" />
+              {quickCreateType === 'patient' 
+                ? 'Cadastro Rápido de Paciente (Ex-Officio)' 
+                : 'Cadastro Rápido de Profissional (Ex-Officio)'}
+            </h4>
+
+            {quickCreateType === 'patient' ? (
+              <div className="space-y-4 text-left">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome Completo</label>
+                  <input
+                    type="text"
+                    value={quickPatientData.name}
+                    onChange={(e) => setQuickPatientData(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full bg-background border border-border/60 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-purple-500/20 outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CNS do Paciente</label>
+                  <input
+                    type="text"
+                    value={quickPatientData.cns}
+                    onChange={(e) => setQuickPatientData(prev => ({ ...prev, cns: e.target.value }))}
+                    maxLength={15}
+                    placeholder="15 dígitos"
+                    className="w-full bg-background border border-border/60 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-purple-500/20 outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Data Nascimento</label>
+                    <input
+                      type="date"
+                      value={quickPatientData.birthDate}
+                      onChange={(e) => setQuickPatientData(prev => ({ ...prev, birthDate: e.target.value }))}
+                      className="w-full bg-background border border-border/60 rounded-xl px-4 py-2.5 text-xs font-bold focus:ring-2 focus:ring-purple-500/20 outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Gênero</label>
+                    <select
+                      value={quickPatientData.gender}
+                      onChange={(e) => setQuickPatientData(prev => ({ ...prev, gender: e.target.value }))}
+                      className="w-full bg-background border border-border/60 rounded-xl px-4 py-2.5 text-xs font-bold focus:ring-2 focus:ring-purple-500/20 outline-none"
+                    >
+                      <option value="M">Masc (M)</option>
+                      <option value="F">Fem (F)</option>
+                      <option value="I">Indefinido (I)</option>
+                      <option value="N">Não Informado (N)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 text-left">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome do Profissional</label>
+                  <input
+                    type="text"
+                    value={quickProfessionalData.name}
+                    onChange={(e) => setQuickProfessionalData(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full bg-background border border-border/60 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-purple-500/20 outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CNS ou CPF</label>
+                  <input
+                    type="text"
+                    value={quickProfessionalData.cns}
+                    onChange={(e) => setQuickProfessionalData(prev => ({ ...prev, cns: e.target.value }))}
+                    className="w-full bg-background border border-border/60 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-purple-500/20 outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CBO (Especialidade)</label>
+                  <input
+                    type="text"
+                    value={quickProfessionalData.cbo}
+                    onChange={(e) => setQuickProfessionalData(prev => ({ ...prev, cbo: e.target.value }))}
+                    placeholder="Ex: 225112"
+                    className="w-full bg-background border border-border/60 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-purple-500/20 outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="mt-8 flex gap-4">
+              <button
+                type="button"
+                onClick={() => setQuickCreateType(null)}
+                className="flex-1 bg-muted text-foreground font-black py-3 rounded-xl text-xs hover:bg-muted/70 transition-all"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={quickCreateType === 'patient' ? handleSaveQuickPatient : handleSaveQuickProfessional}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black py-3 rounded-xl text-xs shadow-lg shadow-purple-600/20 transition-all"
+              >
+                Salvar e Vincular
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Arbitragem */}
+      {isArbitrationModalOpen && arbitrationRecord && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-xl animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-card border border-emerald-500/20 rounded-[2rem] shadow-2xl p-6 relative animate-in zoom-in duration-200">
+            <h4 className="text-base font-black text-emerald-600 dark:text-emerald-400 mb-4 flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" />
+              Arbitragem de Validação
+            </h4>
+            <p className="text-xs text-muted-foreground mb-6 font-medium leading-relaxed">
+              Você está aprovando manualmente o atendimento da linha <strong>{arbitrationRecord.row_number}</strong> para o paciente <strong>{arbitrationRecord.raw_patient_name}</strong>.
+              <br /><br />
+              Esta ação será auditada e gravada permanentemente. Por favor, forneça uma justificativa técnica clara para esta aprovação ex-officio:
+            </p>
+            
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Justificativa Técnica</label>
+              <textarea
+                value={arbitrationJustification}
+                onChange={(e) => setArbitrationJustification(e.target.value)}
+                placeholder="Ex: Paciente realizou terapias sequenciais legítimas em salas diferentes..."
+                rows={4}
+                className="w-full bg-background border border-border/60 rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none"
+              />
+            </div>
+
+            <div className="mt-8 flex gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsArbitrationModalOpen(false)
+                  setArbitrationRecord(null)
+                }}
+                className="flex-1 bg-muted text-foreground font-black py-3 rounded-xl text-xs hover:bg-muted/70 transition-all"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveArbitration}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 rounded-xl text-xs shadow-lg shadow-emerald-500/20 transition-all"
+              >
+                Aprovar e Salvar
               </button>
             </div>
           </div>

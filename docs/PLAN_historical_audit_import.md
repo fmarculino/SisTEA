@@ -1,9 +1,9 @@
 # Plano de Implementação — Módulo de Importação e Auditoria Histórica
 
-> **Status:** 📋 Planejado (não implementado)  
+> **Status:** 🟢 Concluído & Persistido  
 > **Prioridade:** Alta  
-> **Criado em:** 13/05/2026  
-> **Autor:** Equipe SisTEA  
+> **Atualizado em:** 17/05/2026  
+> **Autor:** Antigravity & SMS Marabá  
 
 ---
 
@@ -156,10 +156,13 @@ CREATE TABLE public.import_batches (
 ### 4.4 Fluxo de Matching (Interface)
 - Tela mostra progresso: "450/500 registros resolvidos automaticamente."
 - Lista de registros com `match_status = 'unmatched'` ou `'partial'`.
-- Para cada registro não resolvido, o admin pode:
-  - Selecionar manualmente o paciente/profissional correto de uma lista.
-  - Criar um novo registro (paciente/profissional que não existia no sistema).
-  - Marcar como "Ignorar" (não importar essa linha).
+- **Cadastro Rápido Ex-Officio (Na Hora):**
+  - Caso o paciente ou profissional não conste no cadastro do SisTEA, o sistema exibirá o botão **[+ Cadastrar Rápido]** diretamente na linha correspondente da inconsistência.
+  - Isso abrirá um **Modal de Cadastro Ex-Officio** com os dados pré-preenchidos a partir da planilha (ex: Nome, CNS e CPF detectados).
+  - Ao salvar o formulário rápido de cadastro, o banco persistirá o novo registro, e o matching daquela linha de importação será resolvido instantaneamente para `resolved` com o novo UUID associado, sem que o auditor precise abandonar a importação ou reprocessar o arquivo.
+  - O administrador também tem as opções clássicas de:
+    - Selecionar manualmente o paciente/profissional correto de uma lista.
+    - Marcar como "Ignorar" (não importar essa linha).
 
 ---
 
@@ -180,12 +183,24 @@ Após todos os registros serem resolvidos, o sistema executa a validação em lo
 | CUSTOM  | Profissional sem cadastro no sistema                | Bloquear importação          |
 | CUSTOM  | Paciente sem cadastro no sistema                    | Bloquear importação          |
 
-### 5.2 Lógica de Prioridade de Conflitos
-Quando duas sessões conflitam, o sistema precisa decidir **qual glosar**:
+### 5.2 Lógica de Arbitragem e Glosas Automáticas
+O sistema adota uma abordagem híbrida de auditoria para lidar com conflitos e inconsistências históricas:
 
-1. **Critério Temporal:** A sessão registrada **primeiro** na planilha (menor `row_number`) é mantida; a posterior é glosada.
-2. **Critério de Evidência:** Se uma sessão possui mais dados preenchidos (CID, APAC, horários completos), ela tem prioridade.
-3. **Revisão Manual:** Casos ambíguos são sinalizados para o admin decidir.
+1. **Glosas Automáticas de Ofício ("Hard Rules"):**
+   * Aplicadas a violações claras, objetivas e intransponíveis de regras do faturamento SUS que não exigem discernimento humano.
+   * **Exemplos:**
+     * **BR-010 (Sobreposição profissional multi-clínica):** Mesma data e horário registrado para o mesmo profissional em clínicas geograficamente separadas.
+     * **Duração Nula:** Sessões com horário de início igual ao de término (duração zero).
+     * **Procedimento/CBO Inválido:** Ex: Fonoaudiólogo realizando procedimento médico exclusivo.
+   * **Ação do Sistema:** Glosa automática imediata da linha conflitante na área de staging. O registro é marcado como `validation_status = 'glossed'` com o código da regra violada e a justificativa técnica gerada pelo sistema.
+   * **Critério Temporal para Duplicidades:** Se houver duas sessões idênticas dentro da planilha para o mesmo paciente/horário, a registrada em linha anterior (`row_number` menor) é aprovada de ofício, e a posterior é glosada automaticamente para evitar faturamento duplicado.
+
+2. **Arbitragem e Moderação Humana ("Soft Rules"):**
+   * Aplicada a casos ambíguos ou passíveis de justificativa operacional (como sessões sobrepostas do mesmo paciente na mesma clínica devido a atendimentos sequenciais ou terapias multidisciplinares integradas).
+   * **Ação do Sistema:** O SisTEA sinaliza o conflito em tela e oferece botões de ação rápida para arbitragem direta do auditor:
+     * **[Aprovar com Justificativa]:** O auditor opta por chancelar a sessão, informando uma nota administrativa (ex: "Terapia integrada justificada").
+     * **[Glosar Manualmente]:** O auditor rejeita o registro informando o motivo.
+   * A persistência definitiva só é autorizada após o auditor tomar uma decisão sobre todos os registros sob arbitragem.
 
 ### 5.3 Implementação Técnica
 A validação será executada via **RPC PostgreSQL** (Server-Side) para performance:
@@ -231,11 +246,14 @@ END;
 $$;
 ```
 
-### 5.4 Interface de Validação
-- Dashboard com **progresso em tempo real** da validação.
-- Resumo visual: 🟢 Aprovadas | 🔴 Glosadas | 🟡 Revisão Manual.
-- Tabela expandível com detalhes de cada irregularidade.
-- Botão "Confirmar e Persistir" — grava os aprovados nas tabelas reais do SisTEA e os glosados com `status = 'Glosado'` e justificativa automática.
+### 5.4 Interface de Validação e Arbitragem
+- Dashboard com **progresso em tempo real** da auditoria de regras.
+- Resumo visual interativo dividindo os registros em:
+  - 🟢 **Aprovados de Ofício:** Validados pelo sistema sem qualquer conflito.
+  - 🔴 **Glosados Automaticamente:** Registros cuja inconsistência técnica é clara (ex: BR-010).
+  - 🟡 **Sob Arbitragem (Ações Exigidas):** Registros em conflito passíveis de julgamento humano (com botões de **[Aprovar]** ou **[Glosar]** ativos na própria linha).
+- Tabela de inconsistências detalhada, contendo links dinâmicos para auditoria profunda de conflito (drill-down exibindo exatamente quais registros causaram a sobreposição de horários ou clínicas).
+- **Botão "Confirmar e Persistir":** Habilitado somente após a resolução de todas as arbitragens pendentes. Insere os registros oficiais como `'Realizada'` ou `'Glosada'` de acordo com o resultado final da validação física do lote.
 
 ---
 
@@ -411,13 +429,18 @@ Quando o gestor clica em um profissional, vê as sessões individuais:
 
 ## 12. Notas Finais
 
-1. **Dados importados devem ser claramente identificáveis.** Sugere-se adicionar uma flag `is_historical_import BOOLEAN DEFAULT FALSE` na tabela `attendances` para diferenciar dados importados de dados nativos do SisTEA.
+1. **Dados importados devem ser claramente identificáveis.** Adicionada uma flag `is_historical_import BOOLEAN DEFAULT FALSE` na tabela `attendances` para diferenciar dados importados de dados nativos do SisTEA nos relatórios gerenciais e de auditoria interna.
 
-2. **A importação NÃO dispara triggers de auditoria.** Os dados históricos não devem poluir a timeline de auditoria operacional. O módulo gera seu próprio registro de auditoria separado.
+2. **A importação NÃO dispara triggers de auditoria.** Os dados históricos não devem poluir a timeline de auditoria operacional do dia a dia. O módulo de auditoria histórica opera sob seu próprio rastro de logs no banco.
 
-3. **Reversibilidade:** Deve ser possível desfazer uma importação inteira (por `batch_id`), removendo todos os registros importados de uma vez.
+3. **Reversibilidade:** Deve ser possível desfazer uma importação inteira (por `batch_id`), removendo todos os registros importados daquele lote de uma só vez com um clique em caso de erro no upload original.
 
-4. **Sugestão futura:** Após a primeira rodada de auditoria, o mesmo motor pode ser reutilizado para auditorias periódicas automatizadas (ex: rodar mensalmente sobre os novos dados).
+4. **Governança de BPA e Competências Históricas:**
+   * **Bloqueio de Exportação BPA:** Como estes atendimentos recuperados correspondem a competências passadas cujo envio, validação e repasse financeiro do SUS já foram consolidados no passado, **o arquivo `.bpa` destas competências NUNCA deve ser gerado ou exportado**.
+   * Ao selecionar uma competência identificada como histórica na área de exportação/faturamento do SisTEA, o sistema exibirá um banner vermelho de governança rígida:
+     > **⚠️ Competência Histórica Recuperada:** O faturamento junto ao Ministério da Saúde (BPA-SUS) já foi consumado no passado. A geração e download do arquivo físico magnético está bloqueada para mitigar riscos de cobranças duplicadas ou inconsistências junto ao órgão fiscalizador.
+   * **Marcação de Competências no Banco:** A tabela de competências (`competences`) ganha uma flag `is_historical BOOLEAN DEFAULT FALSE`.
+   * **Identidade Visual Premium:** Na listagem de competências do sistema, todas as competências marcadas como históricas serão indicadas pelo sufixo **"Histórica (Manual)"** em uma cor premium de destaque (como roxo/índigo HSL), diferenciando-as claramente das competências operacionais ativas ou encerradas no SisTEA.
 
 ---
 
