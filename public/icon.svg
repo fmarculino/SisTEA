@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Gradiente de Fundo Premium Verde Esmeralda -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="50%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    
+    <!-- Gradiente para o Símbolo Branco/Prateado Translúcido -->
+    <linearGradient id="symbolGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f0fdf4" />
+    </linearGradient>
+    
+    <!-- Sombra Suave -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#022c22" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Fundo Circular com Degradê -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGrad)" filter="url(#dropShadow)" />
+
+  <!-- Símbolo: Fusão de Borboleta (Neurodiversidade) com Coração (Saúde/Cuidado) -->
+  <g fill="url(#symbolGrad)">
+    <!-- Asa Esquerda Superior / Metade do Coração -->
+    <path d="M 248,220 
+             C 248,150 170,120 130,170 
+             C 90,220 130,280 248,340 
+             Z" />
+             
+    <!-- Asa Direita Superior / Metade do Coração -->
+    <path d="M 264,220 
+             C 264,150 342,120 382,170 
+             C 422,220 382,280 264,340 
+             Z" />
+             
+    <!-- Asa Esquerda Inferior -->
+    <path d="M 244,248 
+             C 244,290 190,340 150,300 
+             C 110,260 170,220 244,248 
+             Z" opacity="0.9" />
+             
+    <!-- Asa Direita Inferior -->
+    <path d="M 268,248 
+             C 268,290 322,340 362,300 
+             C 402,260 342,220 268,248 
+             Z" opacity="0.9" />
+
+    <!-- Corpo Central Estilizado (Infinito ou Casulo Delicado) -->
+    <path d="M 256,180
+             C 262,180 266,220 256,260
+             C 246,220 250,180 256,180 Z" 
+          opacity="0.95" />
+          
+    <!-- Antenas Delicadas -->
+    <path d="M 256,180 C 250,170 240,165 238,155 C 236,145 244,140 246,146 C 248,152 253,165 256,180 Z" opacity="0.8" />
+    <path d="M 256,180 C 262,170 272,165 274,155 C 276,145 268,140 266,146 C 264,152 259,165 256,180 Z" opacity="0.8" />
+  </g>
+</svg>

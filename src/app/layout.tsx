@@ -16,6 +16,11 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "SisTEA - Gestão Multiprofissional",
   description: "Sistema Integrado de Saúde para Autismo e TDAH",
+  manifest: "/manifest.json",
+};
+
+export const viewport = {
+  themeColor: "#059669",
 };
 
 export default function RootLayout({
@@ -36,6 +41,26 @@ export default function RootLayout({
         >
           {children}
         </ThemeProvider>
+
+        {/* Registro Automático do Service Worker para suporte a PWA */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(reg) {
+                      console.log('PWA Service Worker registrado no escopo:', reg.scope);
+                    },
+                    function(err) {
+                      console.error('Erro ao registrar Service Worker do PWA:', err);
+                    }
+                  );
+                });
+              }
+            `
+          }}
+        />
       </body>
     </html>
   );

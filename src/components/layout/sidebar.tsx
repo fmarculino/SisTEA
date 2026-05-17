@@ -7,7 +7,8 @@ import {
   Activity, Users, UserSquare2, Building2, Stethoscope, FileText, 
   CalendarCheck, FileOutput, Shield, Lock, DatabaseBackup, 
   ScrollText, Archive, ShieldCheck, Settings, Database, 
-  ClipboardList, ChevronDown, LayoutDashboard, BookOpen, History
+  ClipboardList, ChevronDown, LayoutDashboard, BookOpen, History,
+  Download
 } from 'lucide-react'
 import { AboutMenu } from './about-menu'
 
@@ -68,6 +69,48 @@ const navigation = [
 export function Sidebar({ role, onLinkClick }: { role: string; onLinkClick?: () => void }) {
   const pathname = usePathname()
   const [openGroups, setOpenGroups] = useState<string[]>([])
+  
+  // Estados para gerenciar a instalação do PWA
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [isInstallable, setIsInstallable] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(false)
+
+  // Escuta os gatilhos nativos de PWA do navegador
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setIsInstallable(true)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+
+    // Detecta se já está rodando como standalone instalado
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true)
+    }
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true)
+      setIsInstallable(false)
+      setDeferredPrompt(null)
+    }
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    console.log(`PWA: Escolha de instalação - ${outcome}`)
+    setDeferredPrompt(null)
+    setIsInstallable(false)
+  }
 
   // Auto-expand group if a child is active
   useEffect(() => {
@@ -173,6 +216,18 @@ export function Sidebar({ role, onLinkClick }: { role: string; onLinkClick?: () 
           )
         })}
       </nav>
+
+      {isInstallable && !isInstalled && (
+        <div className="px-4 pb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <button
+            onClick={handleInstallClick}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-2xl shadow-lg shadow-emerald-500/20 text-xs font-black uppercase tracking-widest transition-all active:scale-95 duration-300 group border border-emerald-400/20"
+          >
+            <Download className="h-4.5 w-4.5 animate-bounce stroke-[2.5] text-white" />
+            <span>Instalar Aplicativo</span>
+          </button>
+        </div>
+      )}
 
       <div className="mt-auto px-4 pb-4">
         <AboutMenu />
