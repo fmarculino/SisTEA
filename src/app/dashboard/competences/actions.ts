@@ -219,7 +219,7 @@ export async function sendToMSCompetenceAction(id: string) {
     }
   }
 
-  // B. Estouro Físico e Procedimentos não pactuados
+  // B. Procedimentos não pactuados
   for (const [procId, count] of procedureCounts.entries()) {
     const item = itemsMap.get(procId)
     if (!item) {
@@ -232,14 +232,6 @@ export async function sendToMSCompetenceAction(id: string) {
       const name = fallbackProc?.name || 'Procedimento sem cadastro'
       return {
         error: `❌ Procedimento Não Pactuado: O procedimento "${code} - ${name}" foi realizado na competência mas não faz parte do contrato ativo desta clínica. Corrija ou remova estes atendimentos para prosseguir.`
-      }
-    }
-
-    if (count > (item.quantidade_saldo || 0)) {
-      const code = item.procedures?.code || 'Desconhecido'
-      const desc = item.procedures?.description || 'Sem descrição'
-      return {
-        error: `❌ Estouro de Limite Físico (BR-012): O procedimento "${code} - ${desc}" possui ${count} atendimentos faturados, excedendo o saldo físico disponível no contrato (${item.quantidade_saldo} de um total pactuado de ${item.quantidade_contratada}). O envio foi bloqueado.`
       }
     }
   }

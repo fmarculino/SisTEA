@@ -5,8 +5,8 @@ Este documento apresenta a reanálise técnica e o plano de ação refinado para
 Como analista sênior, esta revisão foca em garantir **desempenho máximo, segurança absoluta dos dados (RLS e auditoria forense) e estabilidade operacional**, eliminando qualquer risco de regressão no faturamento ativo das clínicas credenciadas.
 
 > [!IMPORTANT]
-> **Diretrizes Homologadas nesta Reanálise:**
-> 1. **Estouro na Homologação (BR-012):** Em caso de estouro de saldo (financeiro ou físico de quantidade) no fechamento mensal, o sistema **bloqueará o envio ao Ministério da Saúde**. O usuário (clínica/município) visualizará um detalhamento do estouro e deverá fazer glosas ou reajustes manuais nas frequências para adequar a produção ao teto antes de reenviar.
+> **Diretrizes Homologadas nesta Reanálise (Revisado em 19/05/2026):**
+> 1. **Estouro na Homologação (BR-012):** O sistema **bloqueará o envio ao Ministério da Saúde** apenas em caso de estouro de saldo financeiro global do contrato. Para o saldo físico de quantidade por procedimento, o envio é permitido e o saldo do item pode ficar negativo, acomodando flutuações normais na demanda de procedimentos da clínica.
 > 2. **Aditivos Contratuais (BR-013):** Aditivos contratuais de valor ou quantidade **não** sobrescrevem registros antigos. Eles criam vigências complementares (histórico imutável), finalizando o contrato antigo e iniciando o aditivado com herança de saldos, preservando a rastreabilidade forense das contas públicas.
 > 3. **Sem Efeitos Colaterais:** Nenhuma linha de código ou banco de dados será alterada nesta etapa. Este documento é o plano final para aprovação da governança.
 
@@ -187,36 +187,30 @@ ON public.attendances (clinic_id, procedure_id, status, attendance_date);
 
 Com base nas decisões estratégicas validadas pela governança, estabelecemos as seguintes regras rígidas de validação:
 
-### BR-012: Bloqueio Rígido de Homologação em caso de Estouro
-O fluxo de Envio ao Ministério da Saúde (`sendToMSCompetenceAction`) não permitirá a consolidação se a produção realizada exceder a capacidade do contrato.
+### BR-012: Bloqueio Rígido de Homologação em caso de Estouro Financeiro
+O fluxo de Envio ao Ministério da Saúde (`sendToMSCompetenceAction`) não permitirá a consolidação se o valor total faturado exceder o saldo financeiro global do contrato. Para as cotas físicas (quantidade por procedimento), o envio é permitido e o saldo do item pode ficar negativo.
 
 ```mermaid
 flowchart TD
     A[Iniciar Envio ao MS] --> B[Obter Produção Realizada da Competência]
     B --> C[Verificar Contrato Ativo e Saldos]
-    C --> D{Produção <= Saldo Contrato?}
+    C --> D{Valor total <= Saldo Financeiro?}
     D -- Sim --> E[Deduzir Saldos e Salvar Estado]
     E --> F[Atualizar Status para ENVIADA_MS - Hard Lock]
     E --> G[Gravar Log de Auditoria via logAudit]
     F --> H[Faturamento Concluído com Sucesso]
     
     D -- Não --> I[Bloquear Ação e Reverter Transação]
-    I --> J[Exibir Erro Detalhado com Itens Estourados]
+    I --> J[Exibir Erro Detalhado com Estouro Financeiro]
     J --> K[Clínica faz Ajustes/Glosas Manuais no Faturamento]
     K --> A
 ```
 
-* **Comportamento do Erro:** O sistema retornará um relatório legível em formato JSON:
+* **Comportamento do Erro:** O sistema retornará um erro amigável se o teto financeiro for ultrapassado:
   ```json
   {
     "success": false,
-    "error": "Estouro de saldo contratual detectado. Envio ao Ministério da Saúde bloqueado.",
-    "details": {
-      "valor_global": { "faturado": 12500.00, "saldo_disponivel": 10000.00, "excesso": 2500.00 },
-      "itens": [
-        { "codigo": "03.01.01.007-2", "nome": "Terapia Cognitivo Comportamental", "faturado": 120, "saldo_disponivel": 100, "excesso": 20 }
-      ]
-    }
+    "error": "❌ Estouro de Limite Financeiro (BR-012): O valor total do faturamento desta competência ultrapassa o saldo financeiro disponível no contrato..."
   }
   ```
 
