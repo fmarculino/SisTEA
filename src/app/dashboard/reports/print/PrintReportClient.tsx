@@ -53,6 +53,8 @@ export default function PrintReportClient({
 
   const totals = {
     billing: data.reduce((acc, row) => acc + (Number(row.value) || 0), 0),
+    susTotal: data.reduce((acc, row) => acc + (Number(row.valor_sus) || 0), 0),
+    rpTotal: data.reduce((acc, row) => acc + (Number(row.valor_rp) || 0), 0),
     completed: data.reduce((acc, row) => acc + (row.completed_sessions || 0), 0),
     missed: data.reduce((acc, row) => acc + (row.missed_sessions || 0), 0),
     pending: data.reduce((acc, row) => acc + (row.pending_sessions || 0), 0),
@@ -227,7 +229,9 @@ export default function PrintReportClient({
                 <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-left">Procedimento</th>
                 <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-center">Data</th>
                 <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-center">Status</th>
-                <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-right">Valor</th>
+                <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-right">SUS (Fed.)</th>
+                <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-right">RP (Mun.)</th>
+                <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-right">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -242,7 +246,7 @@ export default function PrintReportClient({
                     <span className="text-[9px] print:text-[6pt] text-slate-500 font-mono tracking-tighter">{row.professional_cbo || 'SEM CBO'}</span>
                   </td>
                   <td className="border border-slate-200 p-3 print:py-0.5 print:px-1 text-xs print:text-[7pt] italic">
-                    <span className="font-bold">{row.procedure_code}</span> - {row.procedure_name}
+                    <span className="font-bold">{row.procedure_code || 'SEM CÓDIGO'}</span> - {row.procedure_name}
                   </td>
                   <td className="border border-slate-200 p-3 print:py-0.5 print:px-1 text-xs print:text-[7pt] text-center whitespace-nowrap">
                     {new Date(row.session_date).toLocaleDateString('pt-BR')}
@@ -250,6 +254,8 @@ export default function PrintReportClient({
                   <td className="border border-slate-200 p-3 print:py-0.5 print:px-1 text-xs print:text-[7pt] text-center font-black uppercase tracking-tighter">
                     {row.status}
                   </td>
+                  <td className="border border-slate-200 p-3 print:py-0.5 print:px-1 text-xs print:text-[7pt] text-right">{formatCurrency(row.valor_sus || 0)}</td>
+                  <td className="border border-slate-200 p-3 print:py-0.5 print:px-1 text-xs print:text-[7pt] text-right">{formatCurrency(row.valor_rp || 0)}</td>
                   <td className="border border-slate-200 p-3 print:py-0.5 print:px-1 text-xs print:text-[7pt] text-right font-bold">{formatCurrency(row.value)}</td>
                 </tr>
               ))}
@@ -257,6 +263,8 @@ export default function PrintReportClient({
             <tfoot className="bg-slate-50">
               <tr className="font-bold border-t-2 border-slate-900">
                 <td colSpan={5} className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-xs print:text-[7pt] text-right uppercase tracking-tighter italic">Valor Total Consolidado da Produção:</td>
+                <td className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-xs print:text-[7pt] text-right font-bold">{formatCurrency(totals.susTotal)}</td>
+                <td className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-xs print:text-[7pt] text-right font-bold">{formatCurrency(totals.rpTotal)}</td>
                 <td className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-xs print:text-[7pt] text-right text-primary font-black">{formatCurrency(totals.billing)}</td>
               </tr>
             </tfoot>

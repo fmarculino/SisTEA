@@ -7,6 +7,8 @@ import { BpaExportButton } from './BpaExportButton'
 import SendToMSButton from './SendToMSButton'
 import { CompetencesFilterPanel } from './CompetencesFilterPanel'
 import { Pagination } from '@/components/ui/Pagination'
+import { formatCurrency } from '@/utils/format'
+import { Fragment } from 'react'
 
 export default async function CompetencesPage({
   searchParams,
@@ -44,6 +46,12 @@ export default async function CompetencesPage({
       .order('year', { ascending: false })
       .order('month', { ascending: false })
     const closed = comp || []
+
+    // Buscar faturamento acumulado por clínica/mês_ano
+    const { data: billingSumsData } = await supabase
+      .from('view_competence_billing_sums')
+      .select('*')
+    const billingSums = billingSumsData || []
 
     // Buscar todas as clínicas para popular o filtro e calcular abertas
     const { data: clinicsData } = await supabase
@@ -131,11 +139,27 @@ export default async function CompetencesPage({
     }
 
     totalItems = filteredList.length
-    paginatedCompetences = filteredList.slice(from, to)
+    paginatedCompetences = filteredList.slice(from, to).map(c => {
+      const monthYear = `${String(c.month).padStart(2, '0')}/${c.year}`
+      const billing = billingSums.find(b => b.clinic_id === c.clinic_id && b.month_year === monthYear)
+      return {
+        ...c,
+        total_sus: Number(billing?.total_sus) || 0,
+        total_rp: Number(billing?.total_rp) || 0,
+        total_value: Number(billing?.total_value) || 0
+      }
+    })
   } else {
     // Visão da Clínica
     const { data: comp } = await supabase.from('competences').select('*').eq('clinic_id', profile.clinic_id)
     closedCompetences = comp || []
+
+    // Buscar faturamento acumulado por clínica/mês_ano
+    const { data: billingSumsData } = await supabase
+      .from('view_competence_billing_sums')
+      .select('*')
+      .eq('clinic_id', profile.clinic_id)
+    const billingSums = billingSumsData || []
 
     const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', profile.clinic_id).single()
     const endDay = clinicConfig?.competence_end_day || 31
@@ -201,7 +225,16 @@ export default async function CompetencesPage({
     }
 
     totalItems = filteredMonths.length
-    paginatedMonths = filteredMonths.slice(from, to)
+    paginatedMonths = filteredMonths.slice(from, to).map(m => {
+      const monthYear = `${String(m.month).padStart(2, '0')}/${m.year}`
+      const billing = billingSums.find(b => b.clinic_id === profile.clinic_id && b.month_year === monthYear)
+      return {
+        ...m,
+        total_sus: Number(billing?.total_sus) || 0,
+        total_rp: Number(billing?.total_rp) || 0,
+        total_value: Number(billing?.total_value) || 0
+      }
+    })
   }
 
   return (
@@ -245,57 +278,80 @@ export default async function CompetencesPage({
                   const isHistorical = isClosed?.is_historical || false
                   
                   return (
-                    <tr key={`${m.year}-${m.month}`} className={`transition-colors group/row hover:bg-muted/30 ${isHistorical ? 'bg-purple-500/[0.01]' : ''}`}>
-                      <td className="whitespace-nowrap py-6 pl-8 pr-3">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-foreground capitalize">
-                            {m.label}
-                          </span>
-                          {isHistorical && (
-                            <span className="text-[9px] font-black text-purple-600 uppercase tracking-widest mt-1">
-                              Histórica (Manual)
+                    <Fragment key={`${m.year}-${m.month}`}>
+                      <tr className={`transition-colors group/row hover:bg-muted/30 ${isHistorical ? 'bg-purple-500/[0.01]' : ''}`}>
+                        <td className="whitespace-nowrap py-6 pl-8 pr-3">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-foreground capitalize">
+                              {m.label}
+                            </span>
+                            {isHistorical && (
+                              <span className="text-[9px] font-black text-purple-600 uppercase tracking-widest mt-1">
+                                Histórica (Manual)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-6">
+                          {isClosed ? (
+                            isHistorical ? (
+                              <span className="inline-flex items-center rounded-xl bg-purple-500/10 px-3 py-1.5 text-[10px] font-black text-purple-600 border border-purple-500/20 uppercase tracking-widest leading-none">
+                                <CalendarIcon className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Histórica
+                              </span>
+                            ) : isClosed.status === 'ENVIADA_MS' ? (
+                              <span className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black text-indigo-500 border border-indigo-500/20 uppercase tracking-widest leading-none">
+                                <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Enviada (Hard Lock)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-xl bg-red-500/10 px-3 py-1.5 text-[10px] font-black text-red-500 border border-red-500/20 uppercase tracking-widest leading-none">
+                                <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Fechada
+                              </span>
+                            )
+                          ) : (
+                            <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                              <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Aberta
                             </span>
                           )}
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-6">
-                        {isClosed ? (
-                          isHistorical ? (
-                            <span className="inline-flex items-center rounded-xl bg-purple-500/10 px-3 py-1.5 text-[10px] font-black text-purple-600 border border-purple-500/20 uppercase tracking-widest leading-none">
-                              <CalendarIcon className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Histórica
-                            </span>
-                          ) : isClosed.status === 'ENVIADA_MS' ? (
-                            <span className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black text-indigo-500 border border-indigo-500/20 uppercase tracking-widest leading-none">
-                              <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Enviada (Hard Lock)
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-xl bg-red-500/10 px-3 py-1.5 text-[10px] font-black text-red-500 border border-red-500/20 uppercase tracking-widest leading-none">
-                              <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Fechada
-                            </span>
-                          )
-                        ) : (
-                          <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase tracking-widest leading-none">
-                            <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Aberta
-                          </span>
-                        )}
-                      </td>
-                      <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          {!isClosed ? (
-                            <CloseCompetenceButton clinicId={profile.clinic_id} month={m.month} year={m.year} />
-                          ) : (
-                            <>
-                              <BpaExportButton clinicId={profile.clinic_id} month={m.month} year={m.year} isHistorical={isHistorical} />
-                              {isClosed.status === 'ENVIADA_MS' && (
-                                <span className="text-[10px] font-black text-indigo-500 border border-indigo-500/10 bg-indigo-500/[0.03] px-2.5 py-1 rounded-lg uppercase tracking-wider">
-                                  Bloqueada
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            {!isClosed ? (
+                              <CloseCompetenceButton clinicId={profile.clinic_id} month={m.month} year={m.year} />
+                            ) : (
+                              <>
+                                <BpaExportButton clinicId={profile.clinic_id} month={m.month} year={m.year} isHistorical={isHistorical} />
+                                {isClosed.status === 'ENVIADA_MS' && (
+                                  <span className="text-[10px] font-black text-indigo-500 border border-indigo-500/10 bg-indigo-500/[0.03] px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                                    Bloqueada
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {isClosed && !isHistorical && (
+                        <tr className="bg-muted/10 border-b border-border/20 hover:bg-transparent">
+                          <td colSpan={3} className="py-3.5 pl-8 pr-8 text-xs">
+                            <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-muted-foreground font-semibold">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Valores Faturados:</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground/80">Valor SUS:</span>
+                                <span className="text-foreground font-bold font-mono text-sm">{formatCurrency(m.total_sus || 0)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground/80">Valor RP (Municipal):</span>
+                                <span className="text-foreground font-bold font-mono text-sm">{formatCurrency(m.total_rp || 0)}</span>
+                              </div>
+                              <div className="flex items-center gap-2 bg-primary/5 px-2.5 py-1 rounded-xl border border-primary/10">
+                                <span className="text-[10px] uppercase font-black text-primary tracking-wider">Valor Total:</span>
+                                <span className="text-primary font-black font-mono text-sm">{formatCurrency(m.total_value || 0)}</span>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   )
                 })}
                 {paginatedMonths.length === 0 && (
@@ -334,53 +390,76 @@ export default async function CompetencesPage({
               </thead>
               <tbody className="divide-y divide-border/20">
                 {paginatedCompetences.map((comp) => (
-                  <tr key={comp.id} className="transition-colors group/row hover:bg-muted/30">
-                    <td className="whitespace-nowrap py-6 pl-8 pr-3">
-                      <span className="text-sm font-bold text-foreground">
-                        {(comp.clinic as any)?.name}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-6">
-                      <span className="text-sm font-bold text-foreground">
-                        {String(comp.month).padStart(2, '0')}/{comp.year}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-6">
-                      {comp.is_historical ? (
-                        <span className="inline-flex items-center rounded-xl bg-purple-500/10 px-3 py-1.5 text-[10px] font-black text-purple-600 border border-purple-500/20 uppercase tracking-widest leading-none">
-                          <CalendarIcon className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Histórica (Manual)
+                  <Fragment key={comp.id}>
+                    <tr className="transition-colors group/row hover:bg-muted/30">
+                      <td className="whitespace-nowrap py-6 pl-8 pr-3">
+                        <span className="text-sm font-bold text-foreground">
+                          {(comp.clinic as any)?.name}
                         </span>
-                      ) : comp.status === 'ENVIADA_MS' ? (
-                        <span className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black text-indigo-500 border border-indigo-500/20 uppercase tracking-widest leading-none">
-                          <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Enviada (Hard Lock)
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-6">
+                        <span className="text-sm font-bold text-foreground">
+                          {String(comp.month).padStart(2, '0')}/{comp.year}
                         </span>
-                      ) : comp.status === 'FECHADA' ? (
-                        <span className="inline-flex items-center rounded-xl bg-red-500/10 px-3 py-1.5 text-[10px] font-black text-red-500 border border-red-500/20 uppercase tracking-widest leading-none">
-                          <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Fechada
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase tracking-widest leading-none">
-                          <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Aberta
-                        </span>
-                      )}
-                    </td>
-                    <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        {comp.status !== 'ABERTA' && (
-                          <BpaExportButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} isHistorical={comp.is_historical} />
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-6">
+                        {comp.is_historical ? (
+                          <span className="inline-flex items-center rounded-xl bg-purple-500/10 px-3 py-1.5 text-[10px] font-black text-purple-600 border border-purple-500/20 uppercase tracking-widest leading-none">
+                            <CalendarIcon className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Histórica (Manual)
+                          </span>
+                        ) : comp.status === 'ENVIADA_MS' ? (
+                          <span className="inline-flex items-center rounded-xl bg-indigo-500/10 px-3 py-1.5 text-[10px] font-black text-indigo-500 border border-indigo-500/20 uppercase tracking-widest leading-none">
+                            <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Enviada (Hard Lock)
+                          </span>
+                        ) : comp.status === 'FECHADA' ? (
+                          <span className="inline-flex items-center rounded-xl bg-red-500/10 px-3 py-1.5 text-[10px] font-black text-red-500 border border-red-500/20 uppercase tracking-widest leading-none">
+                            <Lock className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Fechada
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase tracking-widest leading-none">
+                            <CheckCircle className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" /> Aberta
+                          </span>
                         )}
-                        {comp.status === 'FECHADA' && (
-                          <>
-                            <ReopenCompetenceButton id={comp.id} />
-                            <SendToMSButton id={comp.id} />
-                          </>
-                        )}
-                        {comp.status === 'ABERTA' && (
-                          <CloseCompetenceButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} />
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          {comp.status !== 'ABERTA' && (
+                            <BpaExportButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} isHistorical={comp.is_historical} />
+                          )}
+                          {comp.status === 'FECHADA' && (
+                            <>
+                              <ReopenCompetenceButton id={comp.id} />
+                              <SendToMSButton id={comp.id} />
+                            </>
+                          )}
+                          {comp.status === 'ABERTA' && (
+                            <CloseCompetenceButton clinicId={comp.clinic_id} month={comp.month} year={comp.year} isAdminView={true} />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {(comp.status === 'FECHADA' || comp.status === 'ENVIADA_MS') && !comp.is_historical && (
+                      <tr className="bg-muted/10 border-b border-border/20 hover:bg-transparent">
+                        <td colSpan={4} className="py-3.5 pl-8 pr-8 text-xs">
+                          <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-muted-foreground font-semibold">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Valores Faturados:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground/80">Valor SUS:</span>
+                              <span className="text-foreground font-bold font-mono text-sm">{formatCurrency(comp.total_sus || 0)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground/80">Valor RP (Municipal):</span>
+                              <span className="text-foreground font-bold font-mono text-sm">{formatCurrency(comp.total_rp || 0)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 bg-primary/5 px-2.5 py-1 rounded-xl border border-primary/10">
+                              <span className="text-[10px] uppercase font-black text-primary tracking-wider">Valor Total:</span>
+                              <span className="text-primary font-black font-mono text-sm">{formatCurrency(comp.total_value || 0)}</span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
                 {paginatedCompetences.length === 0 && (
                   <tr>

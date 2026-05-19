@@ -76,8 +76,9 @@ export class BpaExportService {
     }
 
     const errors: BpaValidationResult['errors'] = [];
+    const validAttendances = (attendances || []).filter((att: any) => att.procedures?.code && att.procedures.code.trim() !== '');
 
-    attendances.forEach((att: any) => {
+    validAttendances.forEach((att: any) => {
       const missing = [];
 
       // Validações Clínica
@@ -146,11 +147,13 @@ export class BpaExportService {
       throw new Error('Erro ao buscar dados para exportação.');
     }
 
-    if (attendances.length === 0) {
-      throw new Error('Nenhuma produção encontrada para esta competência.');
+    const validAttendances = (attendances || []).filter((att: any) => att.procedures?.code && att.procedures.code.trim() !== '');
+
+    if (validAttendances.length === 0) {
+      throw new Error('Nenhuma produção exportável encontrada para esta competência.');
     }
 
-    const clinic = attendances[0].clinics as any;
+    const clinic = validAttendances[0].clinics as any;
     const lines: string[] = [];
     
     // Formata competência de MM/YYYY para YYYYMM
@@ -174,7 +177,7 @@ export class BpaExportService {
 
     // --- Linhas de Produção ---
     // Ordenar por Profissional + CBO para agrupar boletins
-    const sortedAttendances = [...(attendances as any[])].sort((a, b) => {
+    const sortedAttendances = [...(validAttendances as any[])].sort((a, b) => {
       const keyA = `${a.professionals.cns}-${a.professional_cbo}`;
       const keyB = `${b.professionals.cns}-${b.professional_cbo}`;
       return keyA.localeCompare(keyB);

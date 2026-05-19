@@ -285,7 +285,9 @@ export default function ReportsClient({
                 <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Procedimento</th>
                 <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Data</th>
                 <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Status</th>
-                <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-right">Valor</th>
+                <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-right">SUS (Federal)</th>
+                <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-right">RP (Municipal)</th>
+                <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-right">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
@@ -306,7 +308,7 @@ export default function ReportsClient({
                   <td className="p-6">
                     <div className="flex flex-col gap-0.5 max-w-[200px]">
                       <span className="text-xs font-bold text-foreground truncate">{row.procedure_name}</span>
-                      <span className="text-[10px] text-muted-foreground font-mono">{row.procedure_code}</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">{row.procedure_code || 'SEM CÓDIGO'}</span>
                     </div>
                   </td>
                   <td className="p-6 text-sm font-medium text-foreground">
@@ -323,6 +325,16 @@ export default function ReportsClient({
                   </td>
                   <td className="p-6 text-right">
                     <span className="text-sm font-black text-foreground">
+                      {formatCurrency(row.valor_sus || 0)}
+                    </span>
+                  </td>
+                  <td className="p-6 text-right">
+                    <span className="text-sm font-black text-foreground">
+                      {formatCurrency(row.valor_rp || 0)}
+                    </span>
+                  </td>
+                  <td className="p-6 text-right">
+                    <span className="text-sm font-black text-foreground">
                       {formatCurrency(row.value)}
                     </span>
                   </td>
@@ -332,6 +344,12 @@ export default function ReportsClient({
             <tfoot className="bg-muted/30 font-black border-t-2 border-border/50">
               <tr>
                 <td colSpan={5} className="p-6 text-[10px] uppercase tracking-widest text-muted-foreground text-right italic">Valor Total da Produção no Período:</td>
+                <td className="p-6 text-right text-sm text-foreground/80 font-black">
+                  {formatCurrency(initialData.reduce((acc, row) => acc + (Number(row.valor_sus) || 0), 0))}
+                </td>
+                <td className="p-6 text-right text-sm text-foreground/80 font-black">
+                  {formatCurrency(initialData.reduce((acc, row) => acc + (Number(row.valor_rp) || 0), 0))}
+                </td>
                 <td className="p-6 text-right text-sm text-primary font-black">
                   {formatCurrency(initialData.reduce((acc, row) => acc + (Number(row.value) || 0), 0))}
                 </td>
