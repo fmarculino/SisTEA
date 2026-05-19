@@ -12,7 +12,7 @@ export default async function NewContractPage() {
   const supabase = await createClient()
   
   const { data: clinics } = await supabase.from('clinics').select('id, name').order('name')
-  const { data: procedures } = await supabase.from('procedures').select('id, code, description, valor_sus, valor_rp').order('description')
+  const { data: procedures } = await supabase.from('procedures').select('id, code, name, description, valor_sus, valor_rp').order('name')
 
   return (
     <div className="max-w-6xl mx-auto space-y-10">

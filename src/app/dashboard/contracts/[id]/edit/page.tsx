@@ -22,11 +22,22 @@ export default async function EditContractPage({
 
   const supabase = await createClient()
   
-  const { data: items } = await supabase
-    .from('clinic_procedure_prices')
-    .select('*')
-    .eq('clinic_id', clinic_id)
-    .eq('contract_number', contract_number)
+  const [
+    { data: items },
+    { data: contract }
+  ] = await Promise.all([
+    supabase
+      .from('clinic_procedure_prices')
+      .select('*')
+      .eq('clinic_id', clinic_id)
+      .eq('contract_number', contract_number),
+    supabase
+      .from('contracts')
+      .select('valor_total, valor_saldo')
+      .eq('clinic_id', clinic_id)
+      .eq('contract_number', contract_number)
+      .maybeSingle()
+  ])
   
   if (!items || items.length === 0) {
     redirect('/dashboard/contracts')
@@ -37,11 +48,13 @@ export default async function EditContractPage({
     contract_number: items[0].contract_number,
     valid_from: items[0].valid_from,
     valid_to: items[0].valid_to,
+    valor_total: contract?.valor_total ? Number(contract.valor_total) : 0,
+    valor_saldo: contract?.valor_saldo ? Number(contract.valor_saldo) : 0,
     items: items
   }
 
   const { data: clinics } = await supabase.from('clinics').select('id, name').order('name')
-  const { data: procedures } = await supabase.from('procedures').select('id, code, description, valor_sus, valor_rp').order('description')
+  const { data: procedures } = await supabase.from('procedures').select('id, code, name, description, valor_sus, valor_rp').order('name')
 
   return (
     <div className="max-w-6xl mx-auto space-y-10">

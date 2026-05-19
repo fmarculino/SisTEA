@@ -2,6 +2,32 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [0.12.2-beta] - 2026-05-19
+
+Esta versão introduz a gestão e controle robusto de **Saldos Globais de Contratos e Limites Operacionais de Itens de Procedimentos**, integrando monitoramento ativo em tempo real no Dashboard e refinamentos estéticos de alta fidelidade visual.
+
+### 💰 Controle Monetário Global de Contratos (`ContractForm.tsx` & Actions)
+- **Valor Global Reativo:** Adicionado o campo "Valor Global do Contrato" no formulário de edição/criação, dotado de um formatador dinâmico de moeda brasileira (BRL) que limpa os caracteres de pontuação automaticamente ao persistir no banco.
+- **Higienização de Linhas de Procedimentos:** Remoção das descrições extensas e confusas do DATASUS na tabela de itens, mantendo apenas o nome padrão/comercial simplificado dos procedimentos para melhor legibilidade operacional.
+- **Gravação Transacional Bulk:** Ajuste nas Server Actions para persistir o contrato pai e seus itens (tabela `clinic_procedure_prices`) de forma transacional e atômica.
+
+### 📊 Monitoramento Ativo com Alertas HSL no Dashboard (`page.tsx`)
+- **Faturamento e Consumo Integrados:** Cruzamento automático do saldo do contrato com a produção realizada em tempo real no painel de movimentação por clínica.
+- **Alertas Visuais Baseados em Faixas de Consumo:**
+  - **Verde (< 60%):** Indicação de consumo seguro e sob controle.
+  - **Amarelo (60% - 90%):** Alerta preventivo de consumo moderado.
+  - **Vermelho (> 90%):** Alerta crítico vibrante sinalizando risco eminente de estouro de saldo contratual.
+
+### 🎨 Refinamento de Diagramação (Progress Bars Empilhadas)
+- **Evolução de Layout:** Mudança do modelo anterior de duas colunas para **empilhamento vertical completo (uma barra sob a outra)**.
+- **Otimização de Espaço e Harmonia:** As barras agora aproveitam toda a largura disponível no card, com altura aumentada (`h-2.5`), cantos perfeitamente arredondados, bordas translúcidas sutis (`border-border/10`) e efeito de sombra neon suave, alcançando uma legibilidade estelar.
+
+### 📂 Organização Documental e Viabilidade
+- **Reestruturação Física:** Relocação do estudo técnico de viabilidade de saldos para a pasta dedicada `docs/analises/estudo_controle_saldo_contratos.md`.
+- **Plano de Implementação:** Registro detalhado de todas as fases de DDL, segurança, concorrência e front-end executadas no arquivo `docs/planos/plano_controle_saldo_contratos.md`.
+
+---
+
 ## [0.12.1-beta] - 2026-05-17
 
 Esta versão introduz a flexibilidade de **Vigências Individuais e Granulares por Item de Procedimento** na gestão de contratos clínicos, permitindo a governança de aditivos qualitativos (inclusão de novos procedimentos) e aditivos quantitativos (reajuste pontual de valores) sem comprometer o histórico financeiro e faturamentos de competências passadas.

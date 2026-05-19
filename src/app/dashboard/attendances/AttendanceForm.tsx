@@ -320,6 +320,23 @@ export function AttendanceForm({
   )
   const canPrint = !!id && hasSavedValidSessions
 
+  // Obter o contrato/preço correspondente ao procedimento selecionado para exibir informações de saldo
+  const selectedProcedurePrice = selectedProcedureId && selectedClinicId
+    ? clinicProcedurePrices.find(price => {
+        if (price.clinic_id !== selectedClinicId || price.procedure_id !== selectedProcedureId || !price.active) return false
+        if (selectedAttendanceDate) {
+          const attDate = new Date(selectedAttendanceDate)
+          const fromDate = new Date(price.valid_from)
+          if (attDate < fromDate) return false
+          if (price.valid_to) {
+            const toDate = new Date(price.valid_to)
+            if (attDate > toDate) return false
+          }
+        }
+        return true
+      })
+    : null
+
 
   const onSubmit = async (data: AttendanceFormData) => {
     setIsPending(true)
@@ -674,6 +691,58 @@ export function AttendanceForm({
             )}
           />
           {errors.procedure_id && <p className="mt-1 text-sm text-rose-500">{errors.procedure_id.message}</p>}
+
+          {selectedProcedurePrice && selectedProcedurePrice.contract_id && (
+            <div className={`mt-3 flex flex-col gap-2.5 p-3.5 rounded-2xl border transition-all animate-in fade-in slide-in-from-top-2 duration-200 ${
+              selectedProcedurePrice.quantidade_saldo <= 0
+                ? 'bg-rose-500/5 border-rose-500/20 text-rose-700 dark:text-rose-400'
+                : selectedProcedurePrice.quantidade_saldo <= 5
+                ? 'bg-amber-500/5 border-amber-500/20 text-amber-700 dark:text-amber-400'
+                : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`shrink-0 ${
+                    selectedProcedurePrice.quantidade_saldo <= 0 ? 'text-rose-500 animate-pulse' :
+                    selectedProcedurePrice.quantidade_saldo <= 5 ? 'text-amber-500' : 'text-emerald-500'
+                  }`}>
+                    {selectedProcedurePrice.quantidade_saldo <= 0 ? (
+                      <AlertCircle className="h-4.5 w-4.5" />
+                    ) : (
+                      <ShieldCheck className="h-4.5 w-4.5" />
+                    )}
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest">
+                    Saldo do Contrato
+                  </p>
+                </div>
+                <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                  selectedProcedurePrice.quantidade_saldo <= 0
+                    ? 'bg-rose-500/10 text-rose-500'
+                    : selectedProcedurePrice.quantidade_saldo <= 5
+                    ? 'bg-amber-500/10 text-amber-500'
+                    : 'bg-emerald-500/10 text-emerald-500'
+                }`}>
+                  {selectedProcedurePrice.quantidade_saldo <= 0 ? 'Esgotado' : selectedProcedurePrice.quantidade_saldo <= 5 ? 'Crítico' : 'Regular'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-0.5 border-t border-current/10 pt-2 text-[11px] font-medium">
+                <div>
+                  <span className="opacity-70">Qtd. Pactuada:</span>{' '}
+                  <span className="font-bold tabular-nums">{selectedProcedurePrice.quantidade_contratada}</span>
+                </div>
+                <div>
+                  <span className="opacity-70">Saldo Restante:</span>{' '}
+                  <span className="font-bold tabular-nums">{selectedProcedurePrice.quantidade_saldo}</span>
+                </div>
+              </div>
+              {selectedProcedurePrice.quantidade_saldo <= 0 && (
+                <p className="text-[10px] leading-relaxed font-bold text-rose-600 dark:text-rose-400 mt-1 bg-rose-500/5 p-2 rounded-lg border border-rose-500/10">
+                  ⚠️ O faturamento será travado no envio ao Ministério da Saúde se este procedimento for mantido sem saldo disponível!
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="sm:col-span-1">

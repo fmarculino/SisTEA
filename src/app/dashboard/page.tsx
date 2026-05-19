@@ -74,6 +74,13 @@ export default async function DashboardPage({
     totalPatients = count || 0
   }
 
+  // Fetch clinics and their active contracts to show contract balances in the list
+  const [clinicsListRes, contractsListRes] = await Promise.all([
+    supabase.from('clinics').select('id, name'),
+    supabase.from('contracts').select('clinic_id, valor_total, valor_saldo, contract_number').eq('active', true)
+  ])
+  const clinicsList = clinicsListRes.data || []
+  const contractsList = contractsListRes.data || []
 
   const monthLabels = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
   const periodLabel = selectedYear 
@@ -255,40 +262,112 @@ export default async function DashboardPage({
           </div>
         ) : (
           <div className="space-y-8">
-            {clinicStats.map((clinic, index) => (
-              <div key={clinic.name} className="space-y-3 group">
-                <div className="flex items-end justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-background border border-border/40 text-[10px] font-black group-hover:border-primary group-hover:text-primary transition-colors">
-                      {String(index + 1).padStart(2, '0')}
+            {clinicStats.map((clinic, index) => {
+              const matchedClinic = clinicsList.find(cl => cl.name === clinic.name)
+              const contract = matchedClinic ? contractsList.find(co => co.clinic_id === matchedClinic.id) : null
+              
+              let valorTotal = 0
+              let valorSaldo = 0
+              let valorConsumido = 0
+              let consumoPercent = 0
+              
+              if (contract) {
+                valorTotal = Number(contract.valor_total || 0)
+                valorSaldo = Number(contract.valor_saldo || 0)
+                valorConsumido = valorTotal - valorSaldo
+                consumoPercent = valorTotal > 0 ? (valorConsumido / valorTotal) * 100 : 0
+              }
+
+              // Color matching logic based on consumption
+              let barColorClass = 'bg-gradient-to-r from-emerald-500/80 to-emerald-600 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+              let textStatusColorClass = 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+              
+              if (consumoPercent >= 60 && consumoPercent < 90) {
+                barColorClass = 'bg-gradient-to-r from-amber-500/80 to-amber-600 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                textStatusColorClass = 'text-amber-600 dark:text-amber-400 font-extrabold'
+              } else if (consumoPercent >= 90) {
+                barColorClass = 'bg-gradient-to-r from-rose-500 to-rose-600 animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.4)]'
+                textStatusColorClass = 'text-rose-600 dark:text-rose-400 font-extrabold'
+              }
+
+              return (
+                <div key={clinic.name} className="p-5 rounded-2xl border border-border/30 bg-muted/5 hover:bg-muted/10 transition-all duration-300 space-y-4 shadow-sm hover:shadow-md">
+                  {/* Cabeçalho do item da clínica */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-background border border-border/40 text-[10px] font-black text-muted-foreground">
+                        {String(index + 1).padStart(2, '0')}
+                      </div>
+                      <div>
+                        <span className="text-sm font-black text-foreground block tracking-tight">{clinic.name}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] font-bold text-primary uppercase tracking-tighter bg-primary/5 px-1.5 py-0.5 rounded">
+                            {clinic.attendance_count || 0} Atend.
+                          </span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter bg-muted/10 px-1.5 py-0.5 rounded">
+                            {clinic.count} Freq.
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-sm font-black text-foreground block group-hover:text-primary transition-colors cursor-default">{clinic.name}</span>
-                      <span className="text-[10px] font-bold text-primary uppercase tracking-tighter bg-primary/5 px-1.5 py-0.5 rounded mr-1">
-                        {clinic.attendance_count || 0} Atend.
-                      </span>
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter bg-muted/10 px-1.5 py-0.5 rounded">
-                        {clinic.count} Freq.
-                      </span>
+                    {/* Resumo da produção */}
+                    <div className="flex items-center gap-4 text-right md:self-center self-start pl-11 md:pl-0">
+                      <div>
+                        <span className="text-xs font-semibold text-muted-foreground block uppercase tracking-wider text-[9px]">Faturamento Período</span>
+                        <span className="text-sm font-black text-foreground">{formatCurrency(clinic.value)}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-black text-foreground block">{formatCurrency(clinic.value)}</span>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase">{((clinic.value / totalValue) * 100).toFixed(1)}% do total</span>
+                  
+                  {/* Lista de Barras Empilhadas (Uma sobre a outra) */}
+                  <div className="space-y-4 pl-0 md:pl-11">
+                    {/* Barra 1: Participação na Produção do Município */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground uppercase">
+                        <span>Participação na Produção</span>
+                        <span className="text-foreground">{((clinic.value / totalValue) * 100).toFixed(1)}% do faturamento total</span>
+                      </div>
+                      <div className="relative h-2.5 w-full bg-muted/30 rounded-full overflow-hidden border border-border/10">
+                        <div 
+                          className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/80 to-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--primary),0.2)]"
+                          style={{ width: `${(clinic.value / maxValue) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Barra 2: Consumo do Contrato */}
+                    <div className="space-y-1.5">
+                      {contract ? (
+                        <>
+                          <div className="flex justify-between items-center text-[10px] font-bold uppercase">
+                            <span className="text-muted-foreground">Consumo do Contrato {contract.contract_number}</span>
+                            <span className={textStatusColorClass}>
+                              {consumoPercent.toFixed(1)}% consumido ({formatCurrency(valorSaldo)} restante)
+                            </span>
+                          </div>
+                          <div className="relative h-2.5 w-full bg-muted/30 rounded-full overflow-hidden border border-border/10">
+                            <div 
+                              className={`absolute top-0 left-0 h-full ${barColorClass} rounded-full transition-all duration-1000 ease-out`}
+                              style={{ width: `${Math.min(consumoPercent, 100)}%` }}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground/60 uppercase">
+                            <span>Contrato de Prestação de Contas</span>
+                            <span className="italic text-muted-foreground/40 font-medium">Sem contrato ativo registrado para esta clínica</span>
+                          </div>
+                          <div className="relative h-2.5 w-full bg-muted/20 rounded-full overflow-hidden border border-border/10 border-dashed">
+                            <div className="absolute inset-0 bg-muted/10" style={{ width: '0%' }} />
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-                
-                {/* Custom Progress Bar Chart */}
-                <div className="relative h-4 w-full bg-muted/30 rounded-full overflow-hidden border border-border/20">
-                  <div 
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/80 to-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(var(--primary),0.3)]"
-                    style={{ width: `${(clinic.value / maxValue) * 100}%` }}
-                  />
-                  {/* Subtle stripes overlay */}
-                  <div className="absolute inset-0 opacity-10 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px]" />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

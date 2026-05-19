@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Edit2, FileSignature } from 'lucide-react'
+import { Plus, Edit2, FileSignature, AlertCircle } from 'lucide-react'
 import { ContractActions } from './ContractActions'
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
 
@@ -19,37 +19,33 @@ export default async function ContractsPage({
 
   const supabase = await createClient()
   
-  const { data: prices } = await supabase
-    .from('clinic_procedure_prices')
+  const { data: contracts } = await supabase
+    .from('contracts')
     .select(`
       id,
       contract_number,
       valid_from,
       valid_to,
+      valor_total,
+      valor_saldo,
       clinic_id,
-      clinic:clinics!inner(name)
+      active,
+      clinic:clinics!inner(name),
+      items:clinic_procedure_prices(id)
     `)
     .order('valid_from', { ascending: false })
 
-  // Group by clinic_id and contract_number
-  const contractsMap = new Map()
-  prices?.forEach(p => {
-    const key = `${p.clinic_id}-${p.contract_number}`
-    if (!contractsMap.has(key)) {
-      contractsMap.set(key, {
-        clinic_id: p.clinic_id,
-        contract_number: p.contract_number || 'S/N',
-        clinic_name: (p.clinic as any)?.name,
-        valid_from: p.valid_from,
-        valid_to: p.valid_to,
-        items_count: 1
-      })
-    } else {
-      contractsMap.get(key).items_count++
-    }
-  })
-
-  const uniqueContracts = Array.from(contractsMap.values())
+  const uniqueContracts = contracts?.map(c => ({
+    clinic_id: c.clinic_id,
+    contract_number: c.contract_number,
+    clinic_name: (c.clinic as any)?.name,
+    valid_from: c.valid_from,
+    valid_to: c.valid_to,
+    valor_total: Number(c.valor_total || 0),
+    valor_saldo: Number(c.valor_saldo || 0),
+    active: c.active,
+    items_count: c.items?.length || 0
+  })) || []
 
   const filteredContracts = uniqueContracts.filter(c => {
     if (!queryParams.q) return true
@@ -68,7 +64,7 @@ export default async function ContractsPage({
             Tabela de <span className="text-primary tracking-tighter">Contratos</span>
           </h2>
           <p className="mt-2 text-base text-muted-foreground font-medium max-w-xl">
-            Gerencie os contratos de prestação de serviços com as clínicas credenciadas.
+            Gerencie os contratos de prestação de serviços, tetos financeiros e saldos de competência.
           </p>
         </div>
         <Link
@@ -96,6 +92,9 @@ export default async function ContractsPage({
               </th>
               <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                 Validade
+              </th>
+              <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                Valor Global / Saldo
               </th>
               <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                 Procedimentos
@@ -129,6 +128,16 @@ export default async function ContractsPage({
                     </span>
                   </div>
                 </td>
+                <td className="whitespace-nowrap px-3 py-6">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-foreground">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.valor_total)}
+                    </span>
+                    <span className="text-xs font-black text-emerald-500 mt-1 uppercase tracking-wider">
+                      Saldo: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.valor_saldo)}
+                    </span>
+                  </div>
+                </td>
                 <td className="whitespace-nowrap px-3 py-6 text-sm text-muted-foreground font-medium">
                   {contract.items_count} itens cadastrados
                 </td>
@@ -148,7 +157,7 @@ export default async function ContractsPage({
             ))}
             {filteredContracts.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-20 text-center">
+                <td colSpan={6} className="py-20 text-center">
                   <div className="flex flex-col items-center justify-center space-y-3">
                     <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
                       <FileSignature className="h-8 w-8 text-muted-foreground" />

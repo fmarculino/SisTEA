@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveContractBulkAction, type ContractFormData } from './actions'
+import { formatNumberBR } from '@/utils/format'
 
 export function ContractForm({
   initialData,
@@ -21,6 +22,14 @@ export function ContractForm({
   const [contractNumber, setContractNumber] = useState(initialData?.contract_number || '')
   const [validFrom, setValidFrom] = useState(initialData?.valid_from || '')
   const [validTo, setValidTo] = useState(initialData?.valid_to || '')
+  const [valorTotal, setValorTotal] = useState<number>(initialData?.valor_total ? Number(initialData.valor_total) : 0)
+
+  const handleCurrencyChange = (value: string) => {
+    const cleanValue = value.replace(/\D/g, '')
+    let numericValue = Number(cleanValue) / 100
+    if (isNaN(numericValue)) numericValue = 0
+    setValorTotal(numericValue)
+  }
 
   // States for items
   // Initialize items array with ALL procedures. If initialData has it, use it.
@@ -35,23 +44,29 @@ export function ContractForm({
         return {
           procedure_id: p.id,
           code: p.code,
+          name: p.name || p.description,
           description: p.description,
           valor_sus: Number(existing.valor_sus || 0).toFixed(2),
           valor_rp: Number(existing.valor_rp || 0).toFixed(2),
           active: existing.active,
           valid_from: existing.valid_from || '',
-          valid_to: existing.valid_to || ''
+          valid_to: existing.valid_to || '',
+          quantidade_contratada: existing.quantidade_contratada || 0,
+          quantidade_saldo: existing.quantidade_saldo || 0
         }
       }
       return {
         procedure_id: p.id,
         code: p.code,
+        name: p.name || p.description,
         description: p.description,
         valor_sus: Number(p.valor_sus || 0).toFixed(2),
         valor_rp: Number(p.valor_rp || 0).toFixed(2),
         active: false, // default to inactive unless they explicitly include it
         valid_from: '',
-        valid_to: ''
+        valid_to: '',
+        quantidade_contratada: 0,
+        quantidade_saldo: 0
       }
     })
     setItems(loadedItems)
@@ -77,20 +92,20 @@ export function ContractForm({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    // Filtramos apenas os que tem valores preenchidos se o usuario marcar active, 
-    // mas na verdade vamos mandar todos como um array
     const data: ContractFormData = {
       clinic_id: clinicId,
       contract_number: contractNumber,
       valid_from: validFrom,
       valid_to: validTo || undefined,
+      valor_total: Number(valorTotal || 0),
       items: items.map(i => ({
         procedure_id: i.procedure_id,
         valor_sus: Number(i.valor_sus),
         valor_rp: Number(i.valor_rp),
         active: Boolean(i.active),
         valid_from: i.active && i.valid_from ? i.valid_from : undefined,
-        valid_to: i.active && i.valid_to ? i.valid_to : undefined
+        valid_to: i.active && i.valid_to ? i.valid_to : undefined,
+        quantidade_contratada: Number(i.quantidade_contratada || 0)
       })),
       original_clinic_id: initialData?.clinic_id || undefined,
       original_contract_number: initialData?.contract_number || undefined
@@ -106,13 +121,14 @@ export function ContractForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 p-6 rounded-2xl border border-border/40">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/20 p-6 rounded-2xl border border-border/40">
         <div className="space-y-2">
           <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Clínica</label>
           <select
             value={clinicId}
             onChange={(e) => setClinicId(e.target.value)}
             required
+            disabled={!!initialData}
             className="w-full flex h-12 rounded-2xl border border-input bg-background px-4 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 transition-all font-medium"
           >
             <option value="" disabled>Selecione a clínica</option>
@@ -132,6 +148,26 @@ export function ContractForm({
             className="w-full flex h-12 rounded-2xl border border-input bg-background px-4 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 transition-all font-medium"
             placeholder="Ex: CT-001/2026"
           />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Valor Global do Contrato</label>
+          <div className="relative flex items-center">
+            <span className="absolute left-4 font-black text-muted-foreground text-sm">R$</span>
+            <input
+              type="text"
+              value={formatNumberBR(valorTotal)}
+              onChange={(e) => handleCurrencyChange(e.target.value)}
+              required
+              className="w-full flex h-12 rounded-2xl border border-input bg-background pl-11 pr-4 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 transition-all font-black text-primary"
+              placeholder="0,00"
+            />
+          </div>
+          {initialData && (
+            <span className="text-[11px] font-black text-emerald-500 block mt-1 tracking-wide uppercase">
+              Saldo Restante: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(initialData.valor_saldo || 0)}
+            </span>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -157,29 +193,36 @@ export function ContractForm({
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-black text-foreground">Tabela de Procedimentos</h3>
-        <p className="text-sm text-muted-foreground">Ative os procedimentos cobertos por este contrato e ajuste os valores se necessário.</p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-black text-foreground">Tabela de Procedimentos</h3>
+            <p className="text-sm text-muted-foreground">Ative os procedimentos cobertos por este contrato, definindo valores individuais e cotas físicas.</p>
+          </div>
+        </div>
 
         <div className="overflow-x-auto border border-border/40 rounded-2xl">
-          <table className="min-w-[1050px] w-full divide-y divide-border/30">
+          <table className="min-w-[1150px] w-full divide-y divide-border/30">
             <thead className="bg-muted/50">
               <tr>
                 <th scope="col" className="px-4 py-4 text-center text-[11px] font-black text-muted-foreground uppercase tracking-widest w-20">
                   Ativo
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[180px]">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[160px]">
                   Valor SUS (R$)
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[180px]">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[160px]">
                   Valor RP (R$)
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[220px]">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[140px]">
+                  Qtd. Pactuada
+                </th>
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[180px]">
                   Validade Início (Item)
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[220px]">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[180px]">
                   Validade Fim (Item)
                 </th>
-                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[170px]">
+                <th scope="col" className="px-4 py-4 text-left text-[11px] font-black text-muted-foreground uppercase tracking-widest w-[140px]">
                   Total (R$)
                 </th>
               </tr>
@@ -200,13 +243,13 @@ export function ContractForm({
                           className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                         />
                       </td>
-                      <td colSpan={5} className="px-4 py-3 align-middle">
+                      <td colSpan={6} className="px-4 py-3 align-middle">
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-background text-foreground border border-border/30 font-mono shadow-sm">
                             {item.code}
                           </span>
                           <span className="text-sm font-bold text-foreground leading-relaxed">
-                            {item.description}
+                            {item.name}
                           </span>
                         </div>
                       </td>
@@ -214,7 +257,7 @@ export function ContractForm({
 
                     {/* Linha 2: Inputs de Preço e Vigência individuais */}
                     <tr className={`transition-colors border-b-4 border-border/15 ${!isItemActive ? 'opacity-50 bg-background/40' : 'bg-muted/15 hover:bg-muted/25'}`}>
-                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[180px]">
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[160px]">
                         <input
                           type="number"
                           step="0.01"
@@ -227,7 +270,7 @@ export function ContractForm({
                           className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-black text-foreground focus:text-primary focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all shadow-sm"
                         />
                       </td>
-                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[180px]">
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[160px]">
                         <input
                           type="number"
                           step="0.01"
@@ -240,7 +283,23 @@ export function ContractForm({
                           className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-black text-foreground focus:text-primary focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all shadow-sm"
                         />
                       </td>
-                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[220px]">
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[140px]">
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          disabled={!item.active}
+                          value={item.quantidade_contratada}
+                          onChange={(e) => handleItemChange(index, 'quantidade_contratada', Number(e.target.value))}
+                          className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-black text-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all shadow-sm"
+                        />
+                        {item.active && initialData && (
+                          <span className="text-[10px] font-black text-emerald-500 block mt-1">
+                            Saldo: {item.quantidade_saldo}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[180px]">
                         <input
                           type="date"
                           disabled={!item.active}
@@ -249,7 +308,7 @@ export function ContractForm({
                           className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-bold text-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all shadow-sm"
                         />
                       </td>
-                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[220px]">
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap w-[180px]">
                         <input
                           type="date"
                           disabled={!item.active}
@@ -258,7 +317,7 @@ export function ContractForm({
                           className="w-full h-10 rounded-xl border border-input bg-background px-3 py-1 text-sm font-bold text-foreground focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50 transition-all shadow-sm"
                         />
                       </td>
-                      <td className="px-4 pb-4 pt-1 whitespace-nowrap align-middle w-[170px]">
+                      <td className="px-4 pb-4 pt-1 whitespace-nowrap align-middle w-[140px]">
                         <span className="text-sm font-black text-primary block py-2">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}
                         </span>

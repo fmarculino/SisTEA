@@ -49,7 +49,7 @@ export default async function NewAttendancePage() {
     supabase.from('procedures').select('id, name, code, valor_total, active, min_age, max_age, max_quantity, procedure_specialties(specialty_id), procedure_cid(cid_id, cid(code, name)), procedure_service_classifications(service_classifications(*))').eq('active', true).order('name'),
     profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : Promise.resolve({ data: [] }),
     supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single(),
-    supabase.from('clinic_procedure_prices').select('clinic_id, procedure_id, valor_total, valid_from, valid_to, active').eq('active', true)
+    supabase.from('clinic_procedure_prices').select('clinic_id, procedure_id, valor_total, valid_from, valid_to, active, contract_id, quantidade_contratada, quantidade_saldo').eq('active', true)
   ])
 
   const systemTimezone = settings?.value || 'America/Sao_Paulo'
