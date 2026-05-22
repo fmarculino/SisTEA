@@ -1,0 +1,174 @@
+[
+  {
+    "id": "208ef83f-a5cd-4fff-97b9-bd7c2c8cebed",
+    "instance_id": "00000000-0000-0000-0000-000000000000",
+    "email": "comunicare@comunicare.com.br",
+    "encrypted_password": "$2a$10$8fq4K504kdkIuVl6ftamCeQgD0yWOCxQTSfeS7oejbt7WWk4F1hFy",
+    "email_confirmed_at": "2026-03-13T20:40:11.058415+00:00",
+    "raw_app_meta_data": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    },
+    "raw_user_meta_data": {
+      "email_verified": true
+    },
+    "created_at": "2026-03-13T20:40:11.047058+00:00",
+    "updated_at": "2026-05-20T14:56:34.448463+00:00",
+    "role": "authenticated",
+    "aud": "authenticated",
+    "is_super_admin": null,
+    "confirmation_token": "",
+    "email_change": "",
+    "email_change_token_new": "",
+    "recovery_token": "",
+    "phone_change": "",
+    "phone_change_token": "",
+    "email_change_token_current": "",
+    "reauthentication_token": ""
+  },
+  {
+    "id": "5b54e1ed-57ea-43f3-a2a3-6a35a706bb95",
+    "instance_id": "00000000-0000-0000-0000-000000000000",
+    "email": "fernandomarculino@gmail.com",
+    "encrypted_password": "$2a$10$pY.ZhTfpbGlW2fCbPHPgfe.GYSVnq5x0Kdo1msdjJhecIKA84ZcSS",
+    "email_confirmed_at": "2026-03-13T02:38:49.165518+00:00",
+    "raw_app_meta_data": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    },
+    "raw_user_meta_data": {
+      "email_verified": true
+    },
+    "created_at": "2026-03-13T02:38:49.159249+00:00",
+    "updated_at": "2026-05-21T23:05:56.775573+00:00",
+    "role": "authenticated",
+    "aud": "authenticated",
+    "is_super_admin": null,
+    "confirmation_token": "",
+    "email_change": "",
+    "email_change_token_new": "",
+    "recovery_token": "",
+    "phone_change": "",
+    "phone_change_token": "",
+    "email_change_token_current": "",
+    "reauthentication_token": ""
+  },
+  {
+    "id": "83ade187-c38d-47c3-9204-2871bd2d5b26",
+    "instance_id": "00000000-0000-0000-0000-000000000000",
+    "email": "admin@sistea.mg",
+    "encrypted_password": "$2a$10$gxohp.UjkqhQDFI.Z2gsAuIhlZOnnSrSUEiMItSZ7.y3TJQSZzKhq",
+    "email_confirmed_at": "2026-03-13T00:08:40.500072+00:00",
+    "raw_app_meta_data": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    },
+    "raw_user_meta_data": {},
+    "created_at": "2026-03-13T00:08:40.500072+00:00",
+    "updated_at": "2026-05-19T04:36:42.559825+00:00",
+    "role": "authenticated",
+    "aud": "authenticated",
+    "is_super_admin": false,
+    "confirmation_token": "",
+    "email_change": "",
+    "email_change_token_new": "",
+    "recovery_token": "",
+    "phone_change": "",
+    "phone_change_token": "",
+    "email_change_token_current": "",
+    "reauthentication_token": ""
+  },
+  {
+    "id": "e20eb596-46f6-4a45-a75a-2b4feae45f25",
+    "instance_id": "00000000-0000-0000-0000-000000000000",
+    "email": "geizansilva22@hotmail.com",
+    "encrypted_password": "$2a$10$0H52BiG3rDI87mX91JtqsOaalZJsb4n46Mp56t4WasDUmIrp.Et46",
+    "email_confirmed_at": "2026-03-13T13:26:35.869195+00:00",
+    "raw_app_meta_data": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    },
+    "raw_user_meta_data": {
+      "email_verified": true
+    },
+    "created_at": "2026-03-13T13:26:35.824285+00:00",
+    "updated_at": "2026-03-13T17:45:29.461344+00:00",
+    "role": "authenticated",
+    "aud": "authenticated",
+    "is_super_admin": null,
+    "confirmation_token": "",
+    "email_change": "",
+    "email_change_token_new": "",
+    "recovery_token": "",
+    "phone_change": "",
+    "phone_change_token": "",
+    "email_change_token_current": "",
+    "reauthentication_token": ""
+  },
+  {
+    "id": "a8cdbb0c-ab8d-4528-a4e2-26da70a524d3",
+    "instance_id": "00000000-0000-0000-0000-000000000000",
+    "email": "nayanerebelo.enf@gmail.com",
+    "encrypted_password": "$2a$10$PBVDKzpaGj7YJ6TAA3XNAuze8F5kBGJC91b14YlrCWkNVEv.FjWSu",
+    "email_confirmed_at": "2026-03-20T14:53:51.453748+00:00",
+    "raw_app_meta_data": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    },
+    "raw_user_meta_data": {
+      "email_verified": true
+    },
+    "created_at": "2026-03-20T14:53:51.434381+00:00",
+    "updated_at": "2026-05-04T11:37:28.657924+00:00",
+    "role": "authenticated",
+    "aud": "authenticated",
+    "is_super_admin": null,
+    "confirmation_token": "",
+    "email_change": "",
+    "email_change_token_new": "",
+    "recovery_token": "",
+    "phone_change": "",
+    "phone_change_token": "",
+    "email_change_token_current": "",
+    "reauthentication_token": ""
+  },
+  {
+    "id": "932dc589-ab29-4905-9d2b-20d43be4c188",
+    "instance_id": "00000000-0000-0000-0000-000000000000",
+    "email": "infanty@infanty.com.br",
+    "encrypted_password": "$2a$10$FIELStsgMgv8tGcFVNqrn.W8I7klFmFQY2BvsIOs.dbW2tylU0rry",
+    "email_confirmed_at": "2026-03-13T20:40:49.924095+00:00",
+    "raw_app_meta_data": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    },
+    "raw_user_meta_data": {
+      "email_verified": true
+    },
+    "created_at": "2026-03-13T20:40:49.872708+00:00",
+    "updated_at": "2026-05-17T01:20:15.672497+00:00",
+    "role": "authenticated",
+    "aud": "authenticated",
+    "is_super_admin": null,
+    "confirmation_token": "",
+    "email_change": "",
+    "email_change_token_new": "",
+    "recovery_token": "",
+    "phone_change": "",
+    "phone_change_token": "",
+    "email_change_token_current": "",
+    "reauthentication_token": ""
+  }
+]
