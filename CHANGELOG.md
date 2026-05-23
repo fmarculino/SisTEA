@@ -20,6 +20,24 @@ Esta versão marca a **entrada oficial em produção do SisTEA (v1.0.0)** no ser
 
 ---
 
+## [0.12.3-beta] - 2026-05-22
+
+Esta versão marca a **Migração de Ambiente para a VPS (Coolify + Supabase Docker)**, trazendo correção no indicador estatístico do dashboard, ajustes de resiliência e a higienização de arquivos temporários de dados.
+
+### 🌐 Migração de Infraestrutura (VPS / Coolify)
+- **Estruturação de Schema & Dados:** Restauração bem-sucedida do banco de dados (esquema, autenticação, dados de negócio e logs de auditoria) através de scripts SQL otimizados e ordenados.
+- **Tratamento do GoTrue Auth Local:** Correção de campos de token nulos (`recovery_token`, etc.) na tabela `auth.users` convertendo-os para string vazia `''` a fim de viabilizar o login no Supabase self-hosted.
+- **Privilégios e Grants:** Executado script de liberação de permissões no schema `public` para os perfis `anon`, `authenticated` e `service_role` após a recriação do schema na VPS.
+
+### 📊 Correção do KPI de "Adoção Digital"
+- **Filtro de Validação de Frequência:** Atualização da função RPC `get_dashboard_stats` na VPS para excluir sessões validadas administrativamente (`validation_type = 'MANUAL_AUTH'`) da taxa de "Adoção Digital (QR Code)", alinhando as estatísticas da VPS com a produção da Vercel em **72.7% (8 de 11)**.
+
+### 🛡️ Resiliência & Segurança
+- **Null Safety em DAL:** Refatoração da função `getUserProfile` em `dal.ts` com verificações de segurança (`null safety`) e logs forenses de falha para prevenir falhas críticas da aplicação Next.js caso o banco de dados esteja inacessível.
+- **Higienização de Dados:** Exclusão física e remoção do repositório Git de todos os arquivos temporários de extração e dumps contendo dados de usuários (`scratch/`).
+
+---
+
 ## [0.12.2-beta] - 2026-05-19
 
 Esta versão introduz a gestão e controle robusto de **Saldos Globais de Contratos e Limites Operacionais de Itens de Procedimentos**, integrando monitoramento ativo em tempo real no Dashboard e refinamentos estéticos de alta fidelidade visual.

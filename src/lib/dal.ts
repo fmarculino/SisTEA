@@ -15,6 +15,14 @@ export async function getUserProfile() {
     .eq('id', auth.user.id)
     .single()
 
+  if (profileError) {
+    console.error('Error fetching user profile for ID:', auth.user.id, profileError)
+  }
+
+  if (!profile) {
+    return null
+  }
+
   return { 
     ...auth.user, 
     role: profile.role, 
