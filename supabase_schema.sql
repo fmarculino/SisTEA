@@ -22,6 +22,7 @@ CREATE TABLE public.users (
     email TEXT NOT NULL UNIQUE,
     role TEXT NOT NULL CHECK (role IN ('SMS_ADMIN', 'CLINIC_USER')),
     clinic_id UUID REFERENCES public.clinics(id) ON DELETE SET NULL,
+    active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

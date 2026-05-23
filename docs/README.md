@@ -29,4 +29,10 @@ Relatórios contendo investigações forenses, análises de conformidade de regr
 *   🔄 [Análise de Resiliência de Backup e Recuperação](file:///c:/Users/Cliente/Projetos/SisTEA/docs/analises/analise_backup_recuperacao.md) - Políticas de recuperação de dados e resiliência a desastres no Supabase.
 
 ---
+
+## 📊 Governança de Versões
+O SisTEA opera em produção oficial a partir da versão **1.0.0** (estável). 
+- Ajustes, correções e novas funcionalidades intermediárias em desenvolvimento seguem o ciclo de candidatos a lançamento: `vX.Y.Z-RC1`, `RC2`, `RC3` etc., garantindo que apenas versões homologadas e estáveis sejam promovidas em produção (assim como é realizado no SisEscala).
+
+---
 *Governança documental limpa, otimizada e livre de redundâncias de arquivos de atalhos.*

@@ -1,5 +1,5 @@
 # SisTEA - Sistema Inteligente de Gestão Integrada
-![Version](https://img.shields.io/badge/version-0.12.1--beta-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.0.0-green.svg?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-active-success.svg?style=for-the-badge)
 
 > **SisTEA** é uma plataforma enterprise de alta densidade projetada para a gestão especializada de acompanhamento multiprofissional em casos de **Autismo (TEA)** e **TDAH**. O sistema foca em três pilares fundamentais: **Transparência Forense**, **Eficiência Operacional** e **Segurança Jurídica**.
@@ -79,7 +79,10 @@ O SisTEA utiliza as tecnologias mais modernas do ecossistema de desenvolvimento 
 ---
 
 ## 📊 Governança de Versões
-O projeto segue o padrão de **Semantic Versioning** adaptado para betas administrativos.
+A partir da versão **1.0.0**, o SisTEA entra oficialmente em produção como versão estável (removendo a nomenclatura de teste `-beta`). O ciclo de versionamento do projeto adota a seguinte política (semelhante ao SisEscala):
+- **Versões Estáveis (Production-Ready):** Lançadas como `v1.0.0`, `v1.0.1`, `v1.1.0`, etc.
+- **Versões de Desenvolvimento e Ajustes (Release Candidates):** Modificações e novos desenvolvimentos intermediários são catalogados sob a nomenclatura `vX.Y.Z-RC1`, `RC2`, `RC3`... e assim sucessivamente. Ao se consolidarem e serem homologados, esses ajustes são promovidos à nova versão estável (ex: `v1.0.1`).
+
 Para detalhes das últimas atualizações, consulte o [CHANGELOG.md](./CHANGELOG.md) e o guia de [Regras de Negócio](./docs/business_rules.md).
 
 ---

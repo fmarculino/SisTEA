@@ -2,6 +2,24 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.0.0] - 2026-05-23
+
+Esta versão marca a **entrada oficial em produção do SisTEA (v1.0.0)** no servidor VPS como versão estável, consolidando as correções de segurança, auditoria geral e adequação arquitetural para o Go-Live.
+
+### 🛡️ Hardening de Segurança & Proteção de Dados (VPS / Vercel)
+- **Habilitação de RLS:** Implementada segurança a nível de linha (RLS) nas tabelas públicas `competence_audit_logs` e `system_metadata`, restringindo o acesso apenas a operações autorizadas.
+- **Isolamento de Views de Faturamento:** Atualizada a view `view_competence_billing_sums` com `WITH (security_invoker = true)` para assegurar que os dados faturados respeitem o RLS da clínica do usuário conectado, prevenindo vazamentos de dados multi-tenant.
+- **Search Path Imutável nas Funções:** Correção de 30 alertas de vulnerabilidade do PostgreSQL adicionando a diretiva `SET search_path = public, pg_temp;` de forma dinâmica e cirúrgica em todas as funções públicas do banco de dados, protegendo contra hijacking de schemas.
+
+### 🔑 Autenticação Segura de Presença (PIN)
+- **RPC `verify_patient_pin`:** Criada migração formal do banco de dados para registrar a função RPC de verificação de PIN dos pacientes. A validação executa a checagem segura do hash bcrypt no banco através do módulo `pgcrypto` (`crypt()`), evitando a exposição de hashes de senhas.
+
+### ⚙️ Alinhamento Arquitetural & Next.js 16
+- **Middleware / Proxy:** Validação do fluxo de middleware mantendo a convenção moderna `src/proxy.ts` com a exportação `proxy` de acordo com as especificações do Next.js 16, sanando os warnings do compilador de produção.
+- **Sincronização de Schema:** Atualização da tabela de usuários em `supabase_schema.sql` com a coluna `active BOOLEAN DEFAULT true` para garantir consistência entre o banco e o código-fonte da aplicação.
+
+---
+
 ## [0.12.2-beta] - 2026-05-19
 
 Esta versão introduz a gestão e controle robusto de **Saldos Globais de Contratos e Limites Operacionais de Itens de Procedimentos**, integrando monitoramento ativo em tempo real no Dashboard e refinamentos estéticos de alta fidelidade visual.
