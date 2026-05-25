@@ -48,7 +48,10 @@ export function CidForm({
         router.push('/dashboard/cid')
         router.refresh()
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.digest?.startsWith('NEXT_REDIRECT') || error?.message?.includes('NEXT_REDIRECT')) {
+        throw error
+      }
       setErrorMsg('Erro inesperado ao salvar CID')
     } finally {
       setIsPending(false)

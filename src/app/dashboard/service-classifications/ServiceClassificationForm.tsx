@@ -49,7 +49,10 @@ export function ServiceClassificationForm({
         router.push('/dashboard/service-classifications')
         router.refresh()
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.digest?.startsWith('NEXT_REDIRECT') || error?.message?.includes('NEXT_REDIRECT')) {
+        throw error
+      }
       setErrorMsg('Erro inesperado ao salvar cadastro')
     } finally {
       setIsPending(false)

@@ -48,7 +48,10 @@ export function SpecialtyForm({
         router.push('/dashboard/specialties')
         router.refresh()
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.digest?.startsWith('NEXT_REDIRECT') || error?.message?.includes('NEXT_REDIRECT')) {
+        throw error
+      }
       setErrorMsg('Erro inesperado ao salvar especialidade')
     } finally {
       setIsPending(false)
