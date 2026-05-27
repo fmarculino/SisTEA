@@ -1044,12 +1044,34 @@ export async function getAttachmentsAction(attendanceId: string) {
 
 export async function getAttachmentSignedUrlAction(filePath: string) {
   const supabase = await createClient()
-  const { data, error } = await supabase.storage
+  const { getUserProfile } = await import('@/lib/dal')
+  const profile = await getUserProfile()
+
+  // 1. Fetch attachment and verify clinic access using RLS on database
+  const { data: attachment, error: dbError } = await supabase
+    .from('attendance_attachments')
+    .select('*, attendances(clinic_id)')
+    .eq('file_path', filePath)
+    .single()
+
+  if (dbError || !attachment) {
+    console.error('Error verifying attachment access:', dbError)
+    return null
+  }
+
+  if (profile?.role === 'CLINIC_USER' && profile.clinic_id !== (attachment as any).attendances?.clinic_id) {
+    console.error('Unauthorized access to attachment:', filePath)
+    return null
+  }
+
+  // 2. Generate signed URL using admin client to avoid self-hosted storage RLS bugs
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase.storage
     .from('attendance-attachments')
     .createSignedUrl(filePath, 900)
 
   if (error) {
-    console.error('Error creating signed URL:', error)
+    console.error('Error creating signed URL with admin client:', error)
     return null
   }
   return data?.signedUrl || null
