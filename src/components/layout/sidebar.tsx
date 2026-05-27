@@ -24,7 +24,7 @@ const navigation = [
     icon: ClipboardList,
     roles: ['SMS_ADMIN', 'CLINIC_USER'],
     children: [
-      { name: 'Frequências', href: '/dashboard/attendances', icon: CalendarCheck, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
+      { name: 'Atendimentos', href: '/dashboard/attendances', icon: CalendarCheck, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
       { name: 'Competências', href: '/dashboard/competences', icon: Archive, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
     ]
   },
