@@ -1026,3 +1026,121 @@ async function validateSessionsAction(
 
   return null;
 }
+
+export async function getAttachmentsAction(attendanceId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('attendance_attachments')
+    .select('*')
+    .eq('attendance_id', attendanceId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching attachments:', error)
+    return []
+  }
+  return data || []
+}
+
+export async function getAttachmentSignedUrlAction(filePath: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.storage
+    .from('attendance-attachments')
+    .createSignedUrl(filePath, 900)
+
+  if (error) {
+    console.error('Error creating signed URL:', error)
+    return null
+  }
+  return data?.signedUrl || null
+}
+
+export async function deleteAttachmentAction(id: string, filePath: string) {
+  const supabase = await createClient()
+  const { getUserProfile } = await import('@/lib/dal')
+  const profile = await getUserProfile()
+
+  const { data: attachment } = await supabase
+    .from('attendance_attachments')
+    .select('*, attendances(clinic_id)')
+    .eq('id', id)
+    .single()
+
+  if (!attachment) return { error: 'Anexo não encontrado' }
+
+  if (profile?.role === 'CLINIC_USER' && profile.clinic_id !== (attachment as any).attendances?.clinic_id) {
+    return { error: 'Você não tem permissão para excluir anexos de outra clínica.' }
+  }
+
+  const { error: storageError } = await supabase.storage
+    .from('attendance-attachments')
+    .remove([filePath])
+
+  if (storageError) {
+    console.error('Storage deletion error:', storageError)
+  }
+
+  const { error: dbError } = await supabase
+    .from('attendance_attachments')
+    .delete()
+    .eq('id', id)
+
+  if (dbError) return { error: dbError.message }
+
+  await logAudit({
+    action: 'DELETE',
+    table_name: 'attendance_attachments',
+    record_id: id,
+    old_data: attachment,
+    description: `Excluiu o anexo "${attachment.file_name}" do atendimento ID: ${attachment.attendance_id}.`
+  })
+
+  return { success: true }
+}
+
+export async function saveAttachmentRecordAction(
+  attendanceId: string,
+  filePath: string,
+  fileName: string,
+  sizeBytes: number
+) {
+  const supabase = await createClient()
+  const { getUserProfile } = await import('@/lib/dal')
+  const profile = await getUserProfile()
+
+  const { data: attendance } = await supabase
+    .from('attendances')
+    .select('clinic_id')
+    .eq('id', attendanceId)
+    .single()
+
+  if (!attendance) return { error: 'Atendimento não encontrado' }
+
+  if (profile?.role === 'CLINIC_USER' && profile.clinic_id !== attendance.clinic_id) {
+    return { error: 'Você não tem permissão para adicionar anexos a esta clínica.' }
+  }
+
+  const { data: newAttachment, error } = await supabase
+    .from('attendance_attachments')
+    .insert({
+      attendance_id: attendanceId,
+      file_path: filePath,
+      file_name: fileName,
+      size_bytes: sizeBytes
+    })
+    .select()
+    .single()
+
+  if (error) return { error: error.message }
+
+  await logAudit({
+    action: 'CREATE',
+    table_name: 'attendance_attachments',
+    record_id: newAttachment.id,
+    new_data: newAttachment,
+    description: `Adicionou o anexo "${fileName}" ao atendimento ID: ${attendanceId}.`
+  })
+
+  return { success: true, attachment: newAttachment }
+}
+

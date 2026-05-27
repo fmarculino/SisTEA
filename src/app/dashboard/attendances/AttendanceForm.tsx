@@ -3,14 +3,15 @@
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { attendanceSchema, type AttendanceFormData } from './schema'
-import { createAttendanceAction, updateAttendanceAction } from './actions'
+import { createAttendanceAction, updateAttendanceAction, deleteAttachmentAction, saveAttachmentRecordAction, getAttachmentSignedUrlAction } from './actions'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { QRCodeModal } from './QRCodeModal'
 import { StatusModal } from '@/components/ui/StatusModal'
-import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck, Smartphone, UserCheck, UserCog } from 'lucide-react'
+import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck, Smartphone, UserCheck, UserCog, FileText, Upload, Eye, Loader2, X, Download, Image } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
 
 export function AttendanceForm({ 
   initialData, 
@@ -23,7 +24,8 @@ export function AttendanceForm({
   clinics,
   systemTimezone,
   competenceStatus,
-  clinicProcedurePrices = []
+  clinicProcedurePrices = [],
+  initialAttachments = []
 }: { 
   initialData?: Partial<AttendanceFormData>; 
   id?: string;
@@ -36,11 +38,68 @@ export function AttendanceForm({
   systemTimezone: string;
   competenceStatus?: string;
   clinicProcedurePrices?: any[];
+  initialAttachments?: any[];
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
   const [qrModalSession, setQrModalSession] = useState<{ index: number; sessionId: string } | null>(null)
+  
+  // Attachments State
+  const [existingAttachments, setExistingAttachments] = useState<any[]>(initialAttachments)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([])
+  const [previewAttachment, setPreviewAttachment] = useState<{ name: string; url: string; isImage: boolean } | null>(null)
+
+  const handleFileSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return
+    const files = Array.from(e.target.files)
+    const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+    const validFiles: File[] = []
+    
+    for (const file of files) {
+      if (file.size > MAX_SIZE) {
+        alert(`O arquivo "${file.name}" excede o limite máximo permitido de 10MB.`)
+        continue
+      }
+      const ext = file.name.split('.').pop()?.toLowerCase()
+      if (!ext || !['pdf', 'png', 'jpg', 'jpeg'].includes(ext)) {
+        alert(`O formato do arquivo "${file.name}" não é suportado. Apenas PDF, PNG e JPG são permitidos.`)
+        continue
+      }
+      validFiles.push(file)
+    }
+
+    setSelectedFiles(prev => [...prev, ...validFiles])
+    e.target.value = ''
+  }
+
+  const handleRemoveQueued = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleDeleteExisting = (attId: string) => {
+    setAttachmentsToDelete(prev => [...prev, attId])
+  }
+
+  const handleViewAttachment = async (attachment: any) => {
+    try {
+      const signedUrl = await getAttachmentSignedUrlAction(attachment.file_path)
+      if (signedUrl) {
+        const isPdf = attachment.file_name.toLowerCase().endsWith('.pdf')
+        setPreviewAttachment({
+          name: attachment.file_name,
+          url: signedUrl,
+          isImage: !isPdf
+        })
+      } else {
+        alert('Erro ao gerar link de visualização do arquivo.')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao obter visualização.')
+    }
+  }
 
   const defaultClinicId = userRole === 'SMS_ADMIN' 
     ? (initialData?.clinic_id || '') 
@@ -351,10 +410,67 @@ export function AttendanceForm({
       setIsPending(false)
     } else {
       // Success!
-      router.refresh()
-      if (!id && result && 'id' in result) {
-        router.push(`/dashboard/attendances/${result.id}/edit`)
-      } else {
+      const attendanceId = id || (result as any).id
+      
+      try {
+        const supabase = createClient()
+        
+        // 1. Process deletions
+        if (attachmentsToDelete.length > 0) {
+          for (const attId of attachmentsToDelete) {
+            const att = existingAttachments.find(x => x.id === attId)
+            if (att) {
+              const delRes = await deleteAttachmentAction(att.id, att.file_path)
+              if (delRes && 'error' in delRes) {
+                throw new Error(`Falha ao remover arquivo do servidor: ${delRes.error}`)
+              }
+            }
+          }
+        }
+        
+        // 2. Process uploads
+        if (selectedFiles.length > 0) {
+          for (const file of selectedFiles) {
+            const uniqueName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+            const filePath = `${attendanceId}/${uniqueName}`
+            
+            const { error: uploadError } = await supabase.storage
+              .from('attendance-attachments')
+              .upload(filePath, file)
+              
+            if (uploadError) {
+              console.error(`Upload error for ${file.name}:`, uploadError)
+              throw new Error(`Falha ao fazer upload do arquivo ${file.name}: ${uploadError.message}`)
+            }
+            
+            const saveRes = await saveAttachmentRecordAction(
+              attendanceId,
+              filePath,
+              file.name,
+              file.size
+            )
+            
+            if (saveRes && 'error' in saveRes) {
+              console.error(`Metadata save error for ${file.name}:`, saveRes.error)
+              throw new Error(`Falha ao salvar registro do arquivo ${file.name}: ${saveRes.error}`)
+            }
+          }
+        }
+        
+        router.refresh()
+        if (!id && result && 'id' in result) {
+          router.push(`/dashboard/attendances/${result.id}/edit`)
+        } else {
+          // If editing, reload state
+          const { getAttachmentsAction } = await import('./actions')
+          const updatedAtts = await getAttachmentsAction(attendanceId)
+          setExistingAttachments(updatedAtts)
+          setSelectedFiles([])
+          setAttachmentsToDelete([])
+          setIsPending(false)
+        }
+      } catch (err: any) {
+        setErrorMsg(err.message || 'Erro ao salvar os anexos.')
         setIsPending(false)
       }
     }
@@ -893,14 +1009,114 @@ export function AttendanceForm({
           {errors.value_applied && <p className="mt-1 text-sm text-rose-500">{errors.value_applied.message}</p>}
         </div>
 
-        <div className="sm:col-span-2">
+        <div className="sm:col-span-1">
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Observações Adicionais</label>
           <textarea
             {...register('notes')}
-            rows={2}
+            rows={4}
             placeholder="Alguma informação relevante sobre este faturamento..."
             className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-3 border bg-background transition-all"
           />
+        </div>
+
+        <div className="sm:col-span-1 flex flex-col justify-start">
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Documentos Anexos (PDF, PNG, JPG)</label>
+          <div className="mt-1 border border-border/60 rounded-xl p-4 bg-background/50 space-y-3 min-h-[114px] flex flex-col justify-between">
+            {/* File List */}
+            <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+              {existingAttachments.filter(att => !attachmentsToDelete.includes(att.id)).map((att) => (
+                <div key={att.id} className="flex items-center justify-between p-2 bg-muted/20 border border-border/40 rounded-lg text-xs group">
+                  <div className="flex items-center gap-2 truncate flex-1 mr-2">
+                    {att.file_name.toLowerCase().endsWith('.pdf') ? (
+                      <FileText className="h-4 w-4 text-rose-500 shrink-0" />
+                    ) : (
+                      <Image className="h-4 w-4 text-blue-500 shrink-0" />
+                    )}
+                    <span className="truncate font-medium text-foreground" title={att.file_name}>
+                      {att.file_name}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      ({(att.size_bytes / 1024).toFixed(1)} KB)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleViewAttachment(att)}
+                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                      title="Visualizar"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    {!isMetadataLocked && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteExisting(att.id)}
+                        className="p-1 text-muted-foreground hover:text-rose-500 transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {selectedFiles.map((file, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 bg-primary/5 border border-primary/20 rounded-lg text-xs">
+                  <div className="flex items-center gap-2 truncate flex-1 mr-2">
+                    {file.name.toLowerCase().endsWith('.pdf') ? (
+                      <FileText className="h-4 w-4 text-rose-500 shrink-0 animate-pulse" />
+                    ) : (
+                      <Image className="h-4 w-4 text-blue-500 shrink-0 animate-pulse" />
+                    )}
+                    <span className="truncate font-semibold text-primary" title={file.name}>
+                      [Novo] {file.name}
+                    </span>
+                    <span className="text-[10px] text-primary/70">
+                      ({(file.size / 1024).toFixed(1)} KB)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveQueued(idx)}
+                    className="p-1 text-muted-foreground hover:text-rose-500 transition-colors shrink-0"
+                    title="Remover da fila"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+
+              {existingAttachments.filter(att => !attachmentsToDelete.includes(att.id)).length === 0 && selectedFiles.length === 0 && (
+                <p className="text-xs text-muted-foreground italic text-center py-2">
+                  Nenhum documento anexado.
+                </p>
+              )}
+            </div>
+
+            {/* Upload Button */}
+            {!isMetadataLocked && (
+              <div className="pt-2 border-t border-border/30">
+                <input
+                  type="file"
+                  id="attendance-file-upload"
+                  multiple
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={handleFileSelection}
+                />
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('attendance-file-upload')?.click()}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background hover:bg-muted text-xs font-bold text-foreground py-2 shadow-sm transition-all active:scale-98"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Anexar Arquivos (PDF, Imagem)
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1221,6 +1437,79 @@ export function AttendanceForm({
           sessionDate={watch(`sessions.${qrModalSession.index}.session_date`) || ''}
           onClose={() => setQrModalSession(null)}
         />
+      )}
+
+      {/* Preview Modal */}
+      {previewAttachment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card text-card-foreground border border-border/80 shadow-2xl rounded-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border/60">
+              <div className="flex items-center gap-2 truncate pr-4">
+                {previewAttachment.name.toLowerCase().endsWith('.pdf') ? (
+                  <FileText className="h-5 w-5 text-rose-500 shrink-0" />
+                ) : (
+                  <Image className="h-5 w-5 text-blue-500 shrink-0" />
+                )}
+                <h3 className="font-bold text-foreground truncate max-w-[400px] sm:max-w-[600px]" title={previewAttachment.name}>
+                  {previewAttachment.name}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={previewAttachment.url}
+                  download={previewAttachment.name}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  title="Baixar/Imprimir em Nova Guia"
+                >
+                  <Download className="h-5 w-5" />
+                </a>
+                <button
+                  onClick={() => {
+                    const iframe = document.getElementById('pdf-preview-iframe') as HTMLIFrameElement
+                    if (iframe && iframe.contentWindow) {
+                      iframe.contentWindow.focus()
+                      iframe.contentWindow.print()
+                    } else {
+                      window.open(previewAttachment.url, '_blank')
+                    }
+                  }}
+                  className={`inline-flex items-center justify-center p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all ${previewAttachment.isImage ? 'hidden' : ''}`}
+                  title="Imprimir"
+                >
+                  <Printer className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setPreviewAttachment(null)}
+                  className="inline-flex items-center justify-center p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  title="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            {/* Content */}
+            <div className="flex-1 bg-muted/30 relative flex items-center justify-center overflow-auto p-4">
+              {previewAttachment.isImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewAttachment.url}
+                  alt={previewAttachment.name}
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-md"
+                />
+              ) : (
+                <iframe
+                  id="pdf-preview-iframe"
+                  src={`${previewAttachment.url}#toolbar=0`}
+                  className="w-full h-full rounded-lg border border-border/40 shadow-sm"
+                  title="PDF Preview"
+                />
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   )
