@@ -33,7 +33,7 @@ export async function createUser(data: UserFormData) {
     const { name, email, password, role, clinic_id } = validatedFields.data
 
     if (!password) {
-      return { error: 'Senha é obrigatória for novos usuários' }
+      return { error: 'Senha é obrigatória para novos usuários' }
     }
 
     const supabase = createAdminClient()

@@ -77,9 +77,9 @@ export function UserForm({
         </div>
       )}
 
-      {/* Seção 1: Credenciais */}
+      {/* Seção 1: Informações Pessoais */}
       <section>
-        <SectionTitle icon={Mail} title="Credenciais de Acesso" />
+        <SectionTitle icon={User} title="Informações Pessoais" />
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="block text-sm font-semibold text-foreground mb-1">Nome Completo *</label>
@@ -93,7 +93,13 @@ export function UserForm({
             </div>
             {errors.name && <p className="mt-1 text-xs text-destructive font-medium">{errors.name.message}</p>}
           </div>
+        </div>
+      </section>
 
+      {/* Seção 2: Credenciais de Acesso */}
+      <section>
+        <SectionTitle icon={Mail} title="Credenciais de Acesso" />
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="block text-sm font-semibold text-foreground mb-1">E-mail *</label>
             <div className="relative">
