@@ -37,7 +37,7 @@ export default async function UsersPage({
 
   // Apply Search Filter
   if (queryParams.q) {
-    query = query.ilike('email', `%${queryParams.q}%`)
+    query = query.or(`email.ilike.%${queryParams.q}%,name.ilike.%${queryParams.q}%`)
   }
 
   // Apply Status Filter
@@ -76,7 +76,7 @@ export default async function UsersPage({
 
       <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
         <DataTableFilters 
-          placeholder="Pesquisar por e-mail..." 
+          placeholder="Pesquisar por nome ou e-mail..." 
           extraFilters={[
             {
               paramName: 'clinic',
@@ -116,23 +116,26 @@ export default async function UsersPage({
                   className={`transition-colors group/row hover:bg-muted/30 ${!user.active ? 'opacity-60 grayscale-[0.3]' : ''}`}
                 >
                   <td className="whitespace-nowrap py-6 pl-8 pr-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-foreground">
-                        {user.email}
-                      </span>
-                      <div className="flex items-center mt-1">
-                        {user.role === 'SMS_ADMIN' ? (
-                          <span className="inline-flex items-center text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest">
-                            <Shield className="mr-1 h-3 w-3 stroke-[3]" /> Administrador Global
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
-                            <Building className="mr-1 h-3 w-3 stroke-[3]" /> Usuário de Clínica
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
+                     <div className="flex flex-col">
+                       <span className="text-sm font-black text-foreground">
+                         {user.name || 'Sem Nome'}
+                       </span>
+                       <span className="text-xs text-muted-foreground mt-0.5">
+                         {user.email}
+                       </span>
+                       <div className="flex items-center mt-1.5">
+                         {user.role === 'SMS_ADMIN' ? (
+                           <span className="inline-flex items-center text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest">
+                             <Shield className="mr-1 h-3 w-3 stroke-[3]" /> Administrador Global
+                           </span>
+                         ) : (
+                           <span className="inline-flex items-center text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                             <Building className="mr-1 h-3 w-3 stroke-[3]" /> Usuário de Clínica
+                           </span>
+                         )}
+                       </div>
+                     </div>
+                   </td>
                   <td className="whitespace-nowrap px-3 py-6">
                     {user.role === 'CLINIC_USER' ? (
                       <span className="inline-flex items-center text-xs font-bold text-foreground/70 bg-secondary/30 px-3 py-1.5 rounded-xl border border-border/50">

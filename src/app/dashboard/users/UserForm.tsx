@@ -6,7 +6,7 @@ import { userSchema, type UserFormData } from './schema'
 import { createUser, updateUser } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, Shield, Lock, Building, ChevronDown } from 'lucide-react'
+import { Mail, Shield, Lock, Building, ChevronDown, User } from 'lucide-react'
 
 type ClinicOption = { id: string; name: string }
 
@@ -33,6 +33,7 @@ export function UserForm({
   } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
+      name: (initialData as any)?.name || '',
       email: initialData?.email || '',
       role: initialData?.role || 'CLINIC_USER',
       clinic_id: initialData?.clinic_id || '',
@@ -80,6 +81,19 @@ export function UserForm({
       <section>
         <SectionTitle icon={Mail} title="Credenciais de Acesso" />
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-semibold text-foreground mb-1">Nome Completo *</label>
+            <div className="relative">
+              <input
+                type="text"
+                {...register('name')}
+                className="block w-full rounded-lg border-input bg-background px-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-primary/20 focus:border-primary border"
+                placeholder="Nome Completo do Usuário"
+              />
+            </div>
+            {errors.name && <p className="mt-1 text-xs text-destructive font-medium">{errors.name.message}</p>}
+          </div>
+
           <div className="sm:col-span-2">
             <label className="block text-sm font-semibold text-foreground mb-1">E-mail *</label>
             <div className="relative">

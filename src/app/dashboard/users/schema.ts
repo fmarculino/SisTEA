@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const userSchema = z.object({
+  name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres'),
   email: z.string().email('E-mail inválido'),
   role: z.enum(['SMS_ADMIN', 'CLINIC_USER']),
   clinic_id: z.string().optional().nullable(),

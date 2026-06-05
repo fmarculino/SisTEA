@@ -1,0 +1,97 @@
+[
+  {
+    "id": "3b114e1e-8ecd-455d-bc28-55b7e458a48c",
+    "provider_id": "e20eb596-46f6-4a45-a75a-2b4feae45f25",
+    "user_id": "e20eb596-46f6-4a45-a75a-2b4feae45f25",
+    "identity_data": {
+      "sub": "e20eb596-46f6-4a45-a75a-2b4feae45f25",
+      "email": "geizansilva22@hotmail.com",
+      "email_verified": false,
+      "phone_verified": false
+    },
+    "provider": "email",
+    "last_sign_in_at": "2026-03-13T13:26:35.861366+00:00",
+    "created_at": "2026-03-13T13:26:35.861423+00:00",
+    "updated_at": "2026-03-13T13:26:35.861423+00:00",
+    "email": "geizansilva22@hotmail.com"
+  },
+  {
+    "id": "e32740ab-8a45-4b03-90e7-22cc197b9d2b",
+    "provider_id": "5b54e1ed-57ea-43f3-a2a3-6a35a706bb95",
+    "user_id": "5b54e1ed-57ea-43f3-a2a3-6a35a706bb95",
+    "identity_data": {
+      "sub": "5b54e1ed-57ea-43f3-a2a3-6a35a706bb95",
+      "email": "fernandomarculino@gmail.com",
+      "email_verified": false,
+      "phone_verified": false
+    },
+    "provider": "email",
+    "last_sign_in_at": "2026-03-13T02:38:49.162686+00:00",
+    "created_at": "2026-03-13T02:38:49.162738+00:00",
+    "updated_at": "2026-03-13T02:38:49.162738+00:00",
+    "email": "fernandomarculino@gmail.com"
+  },
+  {
+    "id": "c602a40f-6724-4363-8041-2fa79d2947bc",
+    "provider_id": "a8cdbb0c-ab8d-4528-a4e2-26da70a524d3",
+    "user_id": "a8cdbb0c-ab8d-4528-a4e2-26da70a524d3",
+    "identity_data": {
+      "sub": "a8cdbb0c-ab8d-4528-a4e2-26da70a524d3",
+      "email": "nayanerebelo.enf@gmail.com",
+      "email_verified": false,
+      "phone_verified": false
+    },
+    "provider": "email",
+    "last_sign_in_at": "2026-03-20T14:53:51.446333+00:00",
+    "created_at": "2026-03-20T14:53:51.44639+00:00",
+    "updated_at": "2026-03-20T14:53:51.44639+00:00",
+    "email": "nayanerebelo.enf@gmail.com"
+  },
+  {
+    "id": "c919486c-bc85-4534-bd20-46eb36855703",
+    "provider_id": "932dc589-ab29-4905-9d2b-20d43be4c188",
+    "user_id": "932dc589-ab29-4905-9d2b-20d43be4c188",
+    "identity_data": {
+      "sub": "932dc589-ab29-4905-9d2b-20d43be4c188",
+      "email": "infanty@infanty.com.br",
+      "email_verified": false,
+      "phone_verified": false
+    },
+    "provider": "email",
+    "last_sign_in_at": "2026-03-13T20:40:49.90397+00:00",
+    "created_at": "2026-03-13T20:40:49.904022+00:00",
+    "updated_at": "2026-03-13T20:40:49.904022+00:00",
+    "email": "infanty@infanty.com.br"
+  },
+  {
+    "id": "4b625b1a-4bc3-4cbe-b4d9-b11bf3984766",
+    "provider_id": "208ef83f-a5cd-4fff-97b9-bd7c2c8cebed",
+    "user_id": "208ef83f-a5cd-4fff-97b9-bd7c2c8cebed",
+    "identity_data": {
+      "sub": "208ef83f-a5cd-4fff-97b9-bd7c2c8cebed",
+      "email": "comunicare@comunicare.com.br",
+      "email_verified": false,
+      "phone_verified": false
+    },
+    "provider": "email",
+    "last_sign_in_at": "2026-03-13T20:40:11.053009+00:00",
+    "created_at": "2026-03-13T20:40:11.05306+00:00",
+    "updated_at": "2026-03-13T20:40:11.05306+00:00",
+    "email": "comunicare@comunicare.com.br"
+  },
+  {
+    "id": "2b9a3e03-85cf-412b-869a-0311facf2089",
+    "provider_id": "83ade187-c38d-47c3-9204-2871bd2d5b26",
+    "user_id": "83ade187-c38d-47c3-9204-2871bd2d5b26",
+    "identity_data": {
+      "sub": "83ade187-c38d-47c3-9204-2871bd2d5b26",
+      "email": "admin@sistea.mg",
+      "email_verified": false
+    },
+    "provider": "email",
+    "last_sign_in_at": "2026-03-13T00:08:40.500072+00:00",
+    "created_at": "2026-03-13T00:08:40.500072+00:00",
+    "updated_at": "2026-03-13T00:08:40.500072+00:00",
+    "email": "admin@sistea.mg"
+  }
+]

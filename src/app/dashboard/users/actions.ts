@@ -30,10 +30,10 @@ export async function createUser(data: UserFormData) {
       return { error: 'Dados inválidos' }
     }
 
-    const { email, password, role, clinic_id } = validatedFields.data
+    const { name, email, password, role, clinic_id } = validatedFields.data
 
     if (!password) {
-      return { error: 'Senha é obrigatória para novos usuários' }
+      return { error: 'Senha é obrigatória for novos usuários' }
     }
 
     const supabase = createAdminClient()
@@ -43,6 +43,7 @@ export async function createUser(data: UserFormData) {
       email,
       password,
       email_confirm: true,
+      user_metadata: { name }
     })
 
     if (authError) {
@@ -55,6 +56,7 @@ export async function createUser(data: UserFormData) {
       .from('users')
       .insert({
         id: authUser.user.id,
+        name,
         email,
         role,
         clinic_id: role === 'CLINIC_USER' ? clinic_id : null,
@@ -74,8 +76,8 @@ export async function createUser(data: UserFormData) {
       action: 'CREATE',
       table_name: 'users',
       record_id: authUser.user.id,
-      new_data: { email, role, clinic_id },
-      description: `Criou novo usuário: ${email} (${role}).`
+      new_data: { name, email, role, clinic_id },
+      description: `Criou novo usuário: ${name} <${email}> (${role}).`
     })
 
     return { success: true }
@@ -93,6 +95,7 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
     const updateData: any = {}
     if (data.email) updateData.email = data.email
     if (data.password) updateData.password = data.password
+    if (data.name) updateData.user_metadata = { name: data.name }
 
     if (Object.keys(updateData).length > 0) {
       const { error: authError } = await supabase.auth.admin.updateUserById(id, updateData)
@@ -105,6 +108,7 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
     const { error: profileError } = await supabase
       .from('users')
       .update({
+        name: data.name,
         email: data.email, // Keep in sync
         role: data.role,
         clinic_id: data.role === 'CLINIC_USER' ? data.clinic_id : null,
@@ -122,8 +126,8 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
       action: 'UPDATE',
       table_name: 'users',
       record_id: id,
-      new_data: { email: data.email, role: data.role, clinic_id: data.clinic_id },
-      description: `Atualizou dados do usuário: ${data.email || id}.`
+      new_data: { name: data.name, email: data.email, role: data.role, clinic_id: data.clinic_id },
+      description: `Atualizou dados do usuário: ${data.name || data.email || id}.`
     })
 
     return { success: true }
