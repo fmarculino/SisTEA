@@ -19,8 +19,19 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE public.clinics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
-    cnes TEXT NOT NULL UNIQUE,
+    cnpj TEXT UNIQUE,
+    cnes TEXT,
+    corporate_name TEXT,
+    address TEXT,
+    phone TEXT,
+    email TEXT,
     active BOOLEAN DEFAULT true,
+    orgao_emissor TEXT,
+    closing_day INTEGER DEFAULT 25,
+    competence_end_day INTEGER DEFAULT 31,
+    competence_deadline_day INTEGER DEFAULT 5,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -52,16 +63,31 @@ CREATE TABLE public.professionals (
 -- 5. Tabela de Pacientes
 CREATE TABLE public.patients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    clinic_id UUID REFERENCES public.clinics(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
     cns_patient TEXT NOT NULL UNIQUE,
     mother_name TEXT,
-    address TEXT,
-    city TEXT,
     birth_date DATE NOT NULL,
-    gender TEXT NOT NULL,
+    gender TEXT NOT NULL DEFAULT 'Não Informado',
     phone TEXT,
-    race_color TEXT,
+    address TEXT,
+    address_street TEXT,
+    address_number TEXT,
+    address_complement TEXT,
+    address_neighborhood TEXT,
+    ibge_code TEXT,
+    nationality TEXT DEFAULT '010',
+    ethnicity TEXT,
+    city TEXT,
+    state TEXT,
     cep TEXT,
+    race_color TEXT DEFAULT 'Não Informado',
+    medical_record_number TEXT,
+    active BOOLEAN DEFAULT true,
+    auth_token TEXT,
+    token_updated_at TIMESTAMPTZ DEFAULT NOW(),
+    pin_hash TEXT,
+    cpf TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -72,7 +98,7 @@ CREATE TABLE public.procedures (
     description TEXT NOT NULL,
     valor_sus NUMERIC(10, 2) NOT NULL DEFAULT 0,
     valor_rp NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    valor_total NUMERIC(10, 2) GENERATED ALWAYS AS (valor_sus + valor_rp) STORED,
+    valor_total NUMERIC(10, 2),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -84,14 +110,23 @@ CREATE TABLE public.attendances (
     patient_id UUID NOT NULL REFERENCES public.patients(id) ON DELETE RESTRICT,
     procedure_id UUID NOT NULL REFERENCES public.procedures(id) ON DELETE RESTRICT,
     attendance_date DATE NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    cid TEXT NOT NULL,
+    start_time TIME,
+    end_time TIME,
+    cid TEXT,
     auth_number TEXT,
-    month_year TEXT NOT NULL, -- Exemplo: '03/2026' ou '2026-03'
-    status TEXT NOT NULL CHECK (status IN ('REALIZADO', 'GLOSADO', 'PENDENTE')) DEFAULT 'PENDENTE',
+    month_year TEXT,
+    status TEXT NOT NULL CHECK (status = ANY (ARRAY['Realizada'::text, 'Pendente'::text, 'Glosado'::text, 'present'::text, 'absent_justified'::text, 'absent_unjustified'::text])) DEFAULT 'Pendente',
+    quantity INTEGER DEFAULT 1,
+    attendance_character TEXT DEFAULT '01',
+    professional_cbo TEXT,
+    service_classification_id UUID,
+    is_historical_import BOOLEAN DEFAULT false,
+    notes TEXT,
+    value_applied NUMERIC DEFAULT 0,
+    authorization_date DATE,
+    authorized_quantity INTEGER DEFAULT 20,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    CONSTRAINT valid_time CHECK (start_time < end_time)
+    CONSTRAINT valid_time CHECK (start_time IS NULL OR end_time IS NULL OR start_time < end_time)
 );
 
 --=========================================
@@ -401,7 +436,7 @@ CREATE TABLE clinic_procedure_prices (
     procedure_id UUID NOT NULL REFERENCES procedures(id) ON DELETE CASCADE,
     valor_sus NUMERIC NOT NULL DEFAULT 0,
     valor_rp NUMERIC NOT NULL DEFAULT 0,
-    valor_total NUMERIC GENERATED ALWAYS AS (valor_sus + valor_rp) STORED,
+    valor_total NUMERIC,
     valid_from DATE NOT NULL,
     valid_to DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
@@ -4032,9 +4067,20 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE public.clinics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
-    cnes TEXT NOT NULL UNIQUE,
+    cnpj TEXT UNIQUE,
+    cnes TEXT,
+    corporate_name TEXT,
+    address TEXT,
+    phone TEXT,
+    email TEXT,
     active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone(''utc''::text, now()) NOT NULL
+    orgao_emissor TEXT,
+    closing_day INTEGER DEFAULT 25,
+    competence_end_day INTEGER DEFAULT 31,
+    competence_deadline_day INTEGER DEFAULT 5,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- 3. Tabela de Usuários (Extende auth.users)
@@ -4065,17 +4111,32 @@ CREATE TABLE public.professionals (
 -- 5. Tabela de Pacientes
 CREATE TABLE public.patients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    clinic_id UUID REFERENCES public.clinics(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
     cns_patient TEXT NOT NULL UNIQUE,
     mother_name TEXT,
-    address TEXT,
-    city TEXT,
     birth_date DATE NOT NULL,
-    gender TEXT NOT NULL,
+    gender TEXT NOT NULL DEFAULT 'Não Informado',
     phone TEXT,
-    race_color TEXT,
+    address TEXT,
+    address_street TEXT,
+    address_number TEXT,
+    address_complement TEXT,
+    address_neighborhood TEXT,
+    ibge_code TEXT,
+    nationality TEXT DEFAULT '010',
+    ethnicity TEXT,
+    city TEXT,
+    state TEXT,
     cep TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone(''utc''::text, now()) NOT NULL
+    race_color TEXT DEFAULT 'Não Informado',
+    medical_record_number TEXT,
+    active BOOLEAN DEFAULT true,
+    auth_token TEXT,
+    token_updated_at TIMESTAMPTZ DEFAULT NOW(),
+    pin_hash TEXT,
+    cpf TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- 6. Tabela de Procedimentos
@@ -4085,7 +4146,7 @@ CREATE TABLE public.procedures (
     description TEXT NOT NULL,
     valor_sus NUMERIC(10, 2) NOT NULL DEFAULT 0,
     valor_rp NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    valor_total NUMERIC(10, 2) GENERATED ALWAYS AS (valor_sus + valor_rp) STORED,
+    valor_total NUMERIC(10, 2),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone(''utc''::text, now()) NOT NULL
 );
 
@@ -4097,14 +4158,23 @@ CREATE TABLE public.attendances (
     patient_id UUID NOT NULL REFERENCES public.patients(id) ON DELETE RESTRICT,
     procedure_id UUID NOT NULL REFERENCES public.procedures(id) ON DELETE RESTRICT,
     attendance_date DATE NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    cid TEXT NOT NULL,
+    start_time TIME,
+    end_time TIME,
+    cid TEXT,
     auth_number TEXT,
-    month_year TEXT NOT NULL, -- Exemplo: ''03/2026'' ou ''2026-03''
-    status TEXT NOT NULL CHECK (status IN (''REALIZADO'', ''GLOSADO'', ''PENDENTE'')) DEFAULT ''PENDENTE'',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone(''utc''::text, now()) NOT NULL,
-    CONSTRAINT valid_time CHECK (start_time < end_time)
+    month_year TEXT,
+    status TEXT NOT NULL CHECK (status = ANY (ARRAY['Realizada'::text, 'Pendente'::text, 'Glosado'::text, 'present'::text, 'absent_justified'::text, 'absent_unjustified'::text])) DEFAULT 'Pendente',
+    quantity INTEGER DEFAULT 1,
+    attendance_character TEXT DEFAULT '01',
+    professional_cbo TEXT,
+    service_classification_id UUID,
+    is_historical_import BOOLEAN DEFAULT false,
+    notes TEXT,
+    value_applied NUMERIC DEFAULT 0,
+    authorization_date DATE,
+    authorized_quantity INTEGER DEFAULT 20,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    CONSTRAINT valid_time CHECK (start_time IS NULL OR end_time IS NULL OR start_time < end_time)
 );
 
 --=========================================
@@ -4386,7 +4456,7 @@ CREATE TABLE clinic_procedure_prices (
     procedure_id UUID NOT NULL REFERENCES procedures(id) ON DELETE CASCADE,
     valor_sus NUMERIC NOT NULL DEFAULT 0,
     valor_rp NUMERIC NOT NULL DEFAULT 0,
-    valor_total NUMERIC GENERATED ALWAYS AS (valor_sus + valor_rp) STORED,
+    valor_total NUMERIC,
     valid_from DATE NOT NULL,
     valid_to DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone(''utc''::text, now()),
@@ -7911,12 +7981,12 @@ INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confir
 INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud, is_super_admin, confirmation_token, email_change, email_change_token_new, recovery_token, phone_change, phone_change_token, email_change_token_current, reauthentication_token) VALUES ('932dc589-ab29-4905-9d2b-20d43be4c188', '00000000-0000-0000-0000-000000000000', 'infanty@infanty.com.br', '$2a$10$FIELStsgMgv8tGcFVNqrn.W8I7klFmFQY2BvsIOs.dbW2tylU0rry', '2026-03-13T20:40:49.924095+00:00', '{"provider":"email","providers":["email"]}'::jsonb, '{"email_verified":true}'::jsonb, '2026-03-13T20:40:49.872708+00:00', '2026-05-17T01:20:15.672497+00:00', 'authenticated', 'authenticated', NULL, '', '', '', '', '', '', '', '');
 
 -- 6. Insert Auth Identities
-INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at, email) VALUES ('3b114e1e-8ecd-455d-bc28-55b7e458a48c', 'e20eb596-46f6-4a45-a75a-2b4feae45f25', 'e20eb596-46f6-4a45-a75a-2b4feae45f25', '{"sub":"e20eb596-46f6-4a45-a75a-2b4feae45f25","email":"geizansilva22@hotmail.com","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-13T13:26:35.861366+00:00', '2026-03-13T13:26:35.861423+00:00', '2026-03-13T13:26:35.861423+00:00', 'geizansilva22@hotmail.com');
-INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at, email) VALUES ('e32740ab-8a45-4b03-90e7-22cc197b9d2b', '5b54e1ed-57ea-43f3-a2a3-6a35a706bb95', '5b54e1ed-57ea-43f3-a2a3-6a35a706bb95', '{"sub":"5b54e1ed-57ea-43f3-a2a3-6a35a706bb95","email":"fernandomarculino@gmail.com","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-13T02:38:49.162686+00:00', '2026-03-13T02:38:49.162738+00:00', '2026-03-13T02:38:49.162738+00:00', 'fernandomarculino@gmail.com');
-INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at, email) VALUES ('c602a40f-6724-4363-8041-2fa79d2947bc', 'a8cdbb0c-ab8d-4528-a4e2-26da70a524d3', 'a8cdbb0c-ab8d-4528-a4e2-26da70a524d3', '{"sub":"a8cdbb0c-ab8d-4528-a4e2-26da70a524d3","email":"nayanerebelo.enf@gmail.com","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-20T14:53:51.446333+00:00', '2026-03-20T14:53:51.44639+00:00', '2026-03-20T14:53:51.44639+00:00', 'nayanerebelo.enf@gmail.com');
-INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at, email) VALUES ('c919486c-bc85-4534-bd20-46eb36855703', '932dc589-ab29-4905-9d2b-20d43be4c188', '932dc589-ab29-4905-9d2b-20d43be4c188', '{"sub":"932dc589-ab29-4905-9d2b-20d43be4c188","email":"infanty@infanty.com.br","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-13T20:40:49.90397+00:00', '2026-03-13T20:40:49.904022+00:00', '2026-03-13T20:40:49.904022+00:00', 'infanty@infanty.com.br');
-INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at, email) VALUES ('4b625b1a-4bc3-4cbe-b4d9-b11bf3984766', '208ef83f-a5cd-4fff-97b9-bd7c2c8cebed', '208ef83f-a5cd-4fff-97b9-bd7c2c8cebed', '{"sub":"208ef83f-a5cd-4fff-97b9-bd7c2c8cebed","email":"comunicare@comunicare.com.br","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-13T20:40:11.053009+00:00', '2026-03-13T20:40:11.05306+00:00', '2026-03-13T20:40:11.05306+00:00', 'comunicare@comunicare.com.br');
-INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at, email) VALUES ('2b9a3e03-85cf-412b-869a-0311facf2089', '83ade187-c38d-47c3-9204-2871bd2d5b26', '83ade187-c38d-47c3-9204-2871bd2d5b26', '{"sub":"83ade187-c38d-47c3-9204-2871bd2d5b26","email":"admin@sistea.mg","email_verified":false}'::jsonb, 'email', '2026-03-13T00:08:40.500072+00:00', '2026-03-13T00:08:40.500072+00:00', '2026-03-13T00:08:40.500072+00:00', 'admin@sistea.mg');
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at) VALUES ('3b114e1e-8ecd-455d-bc28-55b7e458a48c', 'e20eb596-46f6-4a45-a75a-2b4feae45f25', 'e20eb596-46f6-4a45-a75a-2b4feae45f25', '{"sub":"e20eb596-46f6-4a45-a75a-2b4feae45f25","email":"geizansilva22@hotmail.com","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-13T13:26:35.861366+00:00', '2026-03-13T13:26:35.861423+00:00', '2026-03-13T13:26:35.861423+00:00', 'geizansilva22@hotmail.com');
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at) VALUES ('e32740ab-8a45-4b03-90e7-22cc197b9d2b', '5b54e1ed-57ea-43f3-a2a3-6a35a706bb95', '5b54e1ed-57ea-43f3-a2a3-6a35a706bb95', '{"sub":"5b54e1ed-57ea-43f3-a2a3-6a35a706bb95","email":"fernandomarculino@gmail.com","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-13T02:38:49.162686+00:00', '2026-03-13T02:38:49.162738+00:00', '2026-03-13T02:38:49.162738+00:00', 'fernandomarculino@gmail.com');
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at) VALUES ('c602a40f-6724-4363-8041-2fa79d2947bc', 'a8cdbb0c-ab8d-4528-a4e2-26da70a524d3', 'a8cdbb0c-ab8d-4528-a4e2-26da70a524d3', '{"sub":"a8cdbb0c-ab8d-4528-a4e2-26da70a524d3","email":"nayanerebelo.enf@gmail.com","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-20T14:53:51.446333+00:00', '2026-03-20T14:53:51.44639+00:00', '2026-03-20T14:53:51.44639+00:00', 'nayanerebelo.enf@gmail.com');
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at) VALUES ('c919486c-bc85-4534-bd20-46eb36855703', '932dc589-ab29-4905-9d2b-20d43be4c188', '932dc589-ab29-4905-9d2b-20d43be4c188', '{"sub":"932dc589-ab29-4905-9d2b-20d43be4c188","email":"infanty@infanty.com.br","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-13T20:40:49.90397+00:00', '2026-03-13T20:40:49.904022+00:00', '2026-03-13T20:40:49.904022+00:00', 'infanty@infanty.com.br');
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at) VALUES ('4b625b1a-4bc3-4cbe-b4d9-b11bf3984766', '208ef83f-a5cd-4fff-97b9-bd7c2c8cebed', '208ef83f-a5cd-4fff-97b9-bd7c2c8cebed', '{"sub":"208ef83f-a5cd-4fff-97b9-bd7c2c8cebed","email":"comunicare@comunicare.com.br","email_verified":false,"phone_verified":false}'::jsonb, 'email', '2026-03-13T20:40:11.053009+00:00', '2026-03-13T20:40:11.05306+00:00', '2026-03-13T20:40:11.05306+00:00', 'comunicare@comunicare.com.br');
+INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at) VALUES ('2b9a3e03-85cf-412b-869a-0311facf2089', '83ade187-c38d-47c3-9204-2871bd2d5b26', '83ade187-c38d-47c3-9204-2871bd2d5b26', '{"sub":"83ade187-c38d-47c3-9204-2871bd2d5b26","email":"admin@sistea.mg","email_verified":false}'::jsonb, 'email', '2026-03-13T00:08:40.500072+00:00', '2026-03-13T00:08:40.500072+00:00', '2026-03-13T00:08:40.500072+00:00', 'admin@sistea.mg');
 
 -- 7. Insert Public Tables Data (Ordered by foreign key dependencies)
 -- Table: public.clinics (2 rows)
@@ -9007,3 +9077,8 @@ INSERT INTO public.users (id, email, role, clinic_id, created_at, active) VALUES
 
 RESET session_replication_role;
 -- End of Dump
+
+-- Re-create valor_total as a generated column after data has been imported
+DROP VIEW IF EXISTS public.view_competence_billing_sums CASCADE;
+ALTER TABLE public.procedures DROP COLUMN IF EXISTS valor_total CASCADE;
+ALTER TABLE public.procedures ADD COLUMN valor_total NUMERIC(10, 2) GENERATED ALWAYS AS (valor_sus + valor_rp) STORED;
