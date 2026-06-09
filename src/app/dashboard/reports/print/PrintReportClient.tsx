@@ -152,7 +152,7 @@ export default function PrintReportClient({
               <tr className="bg-slate-100">
                 <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-left">Profissional / Clínica</th>
                 <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-center">Realizados</th>
-                <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-center">Não Realizado</th>
+                <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-center">Faltas</th>
                 <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-center">Glosadas</th>
                 <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-center">Pendentes</th>
                 <th className="border border-slate-200 p-3 print:py-1 print:px-1.5 text-[10px] print:text-[7pt] font-black uppercase text-slate-600 text-center">Taxa de Glosa</th>

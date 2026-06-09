@@ -1218,13 +1218,15 @@ export function AttendanceForm({
                           className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' :
                               watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 font-bold border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
                                 watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' :
-                                  watch(`sessions.${index}.status`) === 'Não Realizado' ? 'text-muted-foreground font-bold border-border bg-muted/30' : ''
+                                  watch(`sessions.${index}.status`) === 'Faltou' ? 'text-rose-500 dark:text-rose-400 font-bold border-rose-400 dark:border-rose-500/30 bg-rose-500/5' :
+                                    watch(`sessions.${index}.status`) === 'Não Realizado' ? 'text-muted-foreground font-bold border-border bg-muted/30' : ''
                             }`}
                         >
                           <option value="Não Realizado">○ Não Realizada</option>
                           <option value="Realizada">✓ Realizada</option>
                           <option value="Pendente">⏳ Pendente</option>
                           <option value="Glosado" className="text-rose-600 font-bold">✗ Glosado</option>
+                          <option value="Faltou" className="text-rose-500 font-bold">✗ Faltou</option>
                         </select>
 
                         {/* Audit Info Badge for SMS_ADMIN */}
@@ -1287,17 +1289,30 @@ export function AttendanceForm({
                       </div>
                     ) : (
                       <>
-                        <input type="hidden" {...register(`sessions.${index}.status` as const)} />
-                        <div className={`block w-full rounded-lg shadow-sm py-2 px-3 text-sm border font-bold text-center ${watch(`sessions.${index}.status` as any) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' :
-                            watch(`sessions.${index}.status` as any) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
-                              watch(`sessions.${index}.status` as any) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' :
-                                'text-muted-foreground border-border bg-muted/30'
-                          }`}>
-                          {watch(`sessions.${index}.status` as any) === 'Realizada' ? '✓ Realizada' :
-                            watch(`sessions.${index}.status` as any) === 'Pendente' ? '⏳ Pendente' :
-                              watch(`sessions.${index}.status` as any) === 'Glosado' ? '✗ Glosado' :
-                                watch(`sessions.${index}.status` as any) === 'Não Realizado' ? '○ Não Realizada' : watch(`sessions.${index}.status` as any)}
-                        </div>
+                        {['Realizada', 'Pendente', 'Glosado'].includes(watch(`sessions.${index}.status` as any)) ? (
+                          <>
+                            <input type="hidden" {...register(`sessions.${index}.status` as const)} />
+                            <div className={`block w-full rounded-lg shadow-sm py-2 px-3 text-sm border font-bold text-center ${watch(`sessions.${index}.status` as any) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' :
+                                watch(`sessions.${index}.status` as any) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
+                                  watch(`sessions.${index}.status` as any) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : ''
+                              }`}>
+                              {watch(`sessions.${index}.status` as any) === 'Realizada' ? '✓ Realizada' :
+                                watch(`sessions.${index}.status` as any) === 'Pendente' ? '⏳ Pendente' : '✗ Glosado'}
+                            </div>
+                          </>
+                        ) : (
+                          <select
+                            {...register(`sessions.${index}.status` as const)}
+                            disabled={isCompetenceLocked}
+                            className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
+                              watch(`sessions.${index}.status` as any) === 'Faltou' ? 'text-rose-500 dark:text-rose-400 font-bold border-rose-400 dark:border-rose-500/30 bg-rose-500/5' :
+                              'text-muted-foreground font-bold border-border bg-muted/30'
+                            }`}
+                          >
+                            <option value="Não Realizado">○ Não Realizada</option>
+                            <option value="Faltou" className="text-rose-500 font-bold">✗ Faltou</option>
+                          </select>
+                        )}
                       </>
                     )}
                   </div>

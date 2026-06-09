@@ -200,6 +200,8 @@ export async function generateFrequencyPDF(data: any) {
         drawText('ASSINADO DIGITALMENTE', 255, y, 6);
       } else if (session.status === 'Glosado') {
         drawText('FREQUÊNCIA GLOSADA', 255, y, 6, rgb(0.8, 0, 0));
+      } else if (session.status === 'Faltou') {
+        drawText('FALTOU', 255, y, 6);
       }
     }
   }

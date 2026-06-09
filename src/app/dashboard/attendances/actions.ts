@@ -355,6 +355,13 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
 
       // Any "Realizada" session that wasn't previously validated = fraud attempt
       for (const session of sessions) {
+        if (session.id) {
+          const existing = existingSessionsMap.get(session.id)
+          if (existing?.validated_at && session.status !== existing.status) {
+            return { error: 'Não é possível alterar o status de uma sessão que já foi realizada/validada.' }
+          }
+        }
+
         if (session.status === 'Realizada' && session.id) {
           const existing = existingSessionsMap.get(session.id)
 

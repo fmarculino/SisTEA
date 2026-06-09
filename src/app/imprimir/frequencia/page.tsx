@@ -101,6 +101,7 @@ export default function DigitalFrequencyPrintPage() {
     
     if (session.status === 'Pendente') return 'Pendente';
     if (session.status === 'Não Realizado') return 'Não Realizada';
+    if (session.status === 'Faltou') return 'FALTOU';
     
     if (session.status === 'Glosado') {
       if (session.validated_at) {
