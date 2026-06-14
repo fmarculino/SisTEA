@@ -155,9 +155,15 @@ export default async function AttendancesPage({
                 const doneSessions = att.sessions?.filter((s: any) => s.status === 'Realizada').length || 0
 
                 return (
-                  <tr key={att.id} className="group hover:bg-muted/20 transition-colors duration-200">
+                  <tr key={att.id} className="group hover:bg-muted/20 transition-colors duration-200 relative">
                     <td className="whitespace-nowrap py-5 pl-6 pr-3 text-sm font-semibold text-foreground">
-                      {format(new Date(att.attendance_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                      <Link
+                        href={`/dashboard/attendances/${att.id}/edit`}
+                        className="absolute inset-0 z-0"
+                      />
+                      <span className="relative z-10">
+                        {format(new Date(att.attendance_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-3 py-5 text-sm font-medium text-foreground/90 max-w-[200px] truncate">
                       {att.patient?.name || '-'}
@@ -181,7 +187,7 @@ export default async function AttendancesPage({
                     <td className="whitespace-nowrap px-3 py-5 text-sm font-bold text-foreground text-right pr-6">
                       {formatCurrency(att.value_applied)}
                     </td>
-                    <td className="whitespace-nowrap py-5 pl-3 pr-6 text-right text-sm font-medium">
+                    <td className="whitespace-nowrap py-5 pl-3 pr-6 text-right text-sm font-medium relative z-10">
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           href={`/dashboard/attendances/${att.id}/edit`}
