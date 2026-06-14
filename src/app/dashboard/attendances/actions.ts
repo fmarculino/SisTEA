@@ -337,7 +337,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
       if (!incomingIds.has(s.id)) {
         // Rule 1: Clinic User can only delete sessions that are "Pendente" or "Não Realizado" and NOT validated
         if (profile?.role === 'CLINIC_USER' && ((s.status !== 'Pendente' && s.status !== 'Não Realizado') || s.validated_at)) {
-          return { error: 'Clínicas não têm permissão para remover frequências que já foram realizadas ou validadas.' };
+          return { error: 'Clínicas não têm permissão para remover frequências que já foram realizadas, validadas ou registradas como "Faltou".' };
         }
         // Rule 2: Admin cannot delete a session validated by patient (digital signature)
         if (profile?.role === 'SMS_ADMIN' && s.validated_at) {
@@ -349,10 +349,28 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
 
   // --- SECURITY: Check session status consistency ---
   if (profile?.role === 'CLINIC_USER' && sessions) {
+    const existingSessionsMap = new Map<string, any>((dbSessions || []).map((s: any) => [s.id, s]))
+
+    // 1. Block reverting or modifying a session that was originally marked as Faltou
+    for (const session of sessions) {
+      if (session.id) {
+        const existing = existingSessionsMap.get(session.id)
+        if (existing?.status === 'Faltou' && session.status !== 'Faltou') {
+          return { error: 'Não é possível alterar o status de uma frequência que já foi registrada como "Faltou".' }
+        }
+        if (existing?.status === 'Faltou') {
+          const dateModified = session.session_date !== existing.session_date
+          const startModified = session.start_time !== existing.start_time
+          const endModified = session.end_time !== existing.end_time
+          if (dateModified || startModified || endModified) {
+            return { error: 'Não é possível alterar a data ou horários de uma frequência que já foi registrada como "Faltou".' }
+          }
+        }
+      }
+    }
+
     const hasRealizada = sessions.some(s => s.status === 'Realizada')
     if (hasRealizada || hasValidatedInDb) {
-      const existingSessionsMap = new Map<string, any>((dbSessions || []).map((s: any) => [s.id, s]))
-
       // Any "Realizada" session that wasn't previously validated = fraud attempt
       for (const session of sessions) {
         if (session.id) {

@@ -1143,179 +1143,201 @@ export function AttendanceForm({
           )}
 
           <div className="space-y-4">
-            {sessionFields.map((field, index) => (
-              <div key={field.id} className="flex gap-4 items-start group">
-                <div className="mt-8 flex flex-col items-center gap-1">
-                  <span className="text-[10px] font-black text-primary/40 group-hover:text-primary/60 transition-colors uppercase tracking-tighter tabular-nums">
-                    #{String(index + 1).padStart(2, '0')}
-                  </span>
-                  <div className="w-px h-full bg-border/40 group-hover:bg-primary/20 transition-colors min-h-[40px]" />
-                </div>
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-4 items-end p-5 bg-muted/10 border border-border/40 rounded-2xl relative transition-all hover:bg-muted/20 hover:border-border/60 shadow-sm">
-                  <div className="sm:col-span-1">
-                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Data</label>
-                    <input
-                      type="date"
-                      {...register(`sessions.${index}.session_date` as const)}
-                      readOnly={isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))}
-                      className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
-                        }`}
-                    />
+            {sessionFields.map((field, index) => {
+              const currentSessionId = watch(`sessions.${index}.id` as any);
+              const isOriginalFaltou = initialData?.sessions?.find((s: any) => s.id === currentSessionId)?.status === 'Faltou';
+              const isSessionLockedForClinic = userRole !== 'SMS_ADMIN' && (
+                watch(`sessions.${index}.status`) === 'Realizada' ||
+                watch(`sessions.${index}.status`) === 'Glosado' ||
+                isOriginalFaltou
+              );
+
+              return (
+                <div key={field.id} className="flex gap-4 items-start group">
+                  <div className="mt-8 flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-black text-primary/40 group-hover:text-primary/60 transition-colors uppercase tracking-tighter tabular-nums">
+                      #{String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div className="w-px h-full bg-border/40 group-hover:bg-primary/20 transition-colors min-h-[40px]" />
                   </div>
-                  <div className="sm:col-span-1">
-                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Início</label>
-                    <input
-                      type="time"
-                      {...register(`sessions.${index}.start_time` as const, {
-                        onChange: (e) => {
-                          const endTime = calculateEndTime(e.target.value, 50)
-                          if (endTime) {
-                            setValue(`sessions.${index}.end_time`, endTime)
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-4 items-end p-5 bg-muted/10 border border-border/40 rounded-2xl relative transition-all hover:bg-muted/20 hover:border-border/60 shadow-sm">
+                    <div className="sm:col-span-1">
+                      <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Data</label>
+                      <input
+                        type="date"
+                        {...register(`sessions.${index}.session_date` as const)}
+                        readOnly={isCompetenceLocked || isSessionLockedForClinic}
+                        className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || isSessionLockedForClinic) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                          }`}
+                      />
+                    </div>
+                    <div className="sm:col-span-1">
+                      <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Início</label>
+                      <input
+                        type="time"
+                        {...register(`sessions.${index}.start_time` as const, {
+                          onChange: (e) => {
+                            const endTime = calculateEndTime(e.target.value, 50)
+                            if (endTime) {
+                              setValue(`sessions.${index}.end_time`, endTime)
+                            }
                           }
-                        }
-                      })}
-                      readOnly={isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))}
-                      className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
-                        }`}
-                    />
-                  </div>
-                  <div className="sm:col-span-1">
-                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Fim</label>
-                    <input
-                      type="time"
-                      {...register(`sessions.${index}.end_time` as const)}
-                      readOnly={isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))}
-                      className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || (userRole !== 'SMS_ADMIN' && (watch(`sessions.${index}.status`) === 'Realizada' || watch(`sessions.${index}.status`) === 'Glosado'))) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
-                        }`}
-                    />
-                  </div>
-                  <div className="sm:col-span-1">
-                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Situação</label>
-                    {userRole === 'SMS_ADMIN' ? (
-                      <div className="relative group/audit">
-                        <select
-                          {...register(`sessions.${index}.status` as const, {
-                            onChange: (e) => {
-                              if (userRole === 'SMS_ADMIN') {
-                                const newStatus = e.target.value;
-                                if (newStatus === 'Realizada' || newStatus === 'Glosado' || newStatus === 'Pendente') {
-                                  const currentValidatedAt = watch(`sessions.${index}.validated_at` as any);
-                                  if (!currentValidatedAt) {
-                                    setValue(`sessions.${index}.validated_at` as any, new Date().toISOString());
+                        })}
+                        readOnly={isCompetenceLocked || isSessionLockedForClinic}
+                        className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || isSessionLockedForClinic) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                          }`}
+                      />
+                    </div>
+                    <div className="sm:col-span-1">
+                      <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Fim</label>
+                      <input
+                        type="time"
+                        {...register(`sessions.${index}.end_time` as const)}
+                        readOnly={isCompetenceLocked || isSessionLockedForClinic}
+                        className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || isSessionLockedForClinic) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                          }`}
+                      />
+                    </div>
+                    <div className="sm:col-span-1">
+                      <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Situação</label>
+                      {userRole === 'SMS_ADMIN' ? (
+                        <div className="relative group/audit">
+                          <select
+                            {...register(`sessions.${index}.status` as const, {
+                              onChange: (e) => {
+                                if (userRole === 'SMS_ADMIN') {
+                                  const newStatus = e.target.value;
+                                  if (newStatus === 'Realizada' || newStatus === 'Glosado' || newStatus === 'Pendente') {
+                                    const currentValidatedAt = watch(`sessions.${index}.validated_at` as any);
+                                    if (!currentValidatedAt) {
+                                      setValue(`sessions.${index}.validated_at` as any, new Date().toISOString());
+                                    }
+                                    // Seta o type na UI para atualizar a bolinha imediatamente
+                                    const newType = newStatus === 'Glosado' ? 'GLOSA' : newStatus === 'Pendente' ? 'PENDENCIA' : 'MANUAL_AUTH';
+                                    setValue(`sessions.${index}.validation_type` as any, newType);
+                                  } else {
+                                    // Se o administrador mudar o status de volta para Não Realizado
+                                    setValue(`sessions.${index}.validated_at` as any, null);
+                                    setValue(`sessions.${index}.validation_type` as any, null);
                                   }
-                                  // Seta o type na UI para atualizar a bolinha imediatamente
-                                  const newType = newStatus === 'Glosado' ? 'GLOSA' : newStatus === 'Pendente' ? 'PENDENCIA' : 'MANUAL_AUTH';
-                                  setValue(`sessions.${index}.validation_type` as any, newType);
-                                } else {
-                                  // Se o administrador mudar o status de volta para Não Realizado
-                                  setValue(`sessions.${index}.validated_at` as any, null);
-                                  setValue(`sessions.${index}.validation_type` as any, null);
                                 }
                               }
-                            }
-                          })}
-                          disabled={isCompetenceLocked}
-                          className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' :
-                              watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 font-bold border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
-                                watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' :
-                                  watch(`sessions.${index}.status`) === 'Faltou' ? 'text-rose-500 dark:text-rose-400 font-bold border-rose-400 dark:border-rose-500/30 bg-rose-500/5' :
-                                    watch(`sessions.${index}.status`) === 'Não Realizado' ? 'text-muted-foreground font-bold border-border bg-muted/30' : ''
-                            }`}
-                        >
-                          <option value="Não Realizado">○ Não Realizada</option>
-                          <option value="Realizada">✓ Realizada</option>
-                          <option value="Pendente">⏳ Pendente</option>
-                          <option value="Glosado" className="text-rose-600 font-bold">✗ Glosado</option>
-                          <option value="Faltou" className="text-rose-500 font-bold">✗ Faltou</option>
-                        </select>
+                            })}
+                            disabled={isCompetenceLocked}
+                            className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' :
+                                watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 font-bold border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
+                                  watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' :
+                                    watch(`sessions.${index}.status`) === 'Faltou' ? 'text-rose-500 dark:text-rose-400 font-bold border-rose-400 dark:border-rose-500/30 bg-rose-500/5' :
+                                      watch(`sessions.${index}.status`) === 'Não Realizado' ? 'text-muted-foreground font-bold border-border bg-muted/30' : ''
+                              }`}
+                          >
+                            <option value="Não Realizado">○ Não Realizada</option>
+                            <option value="Realizada">✓ Realizada</option>
+                            <option value="Pendente">⏳ Pendente</option>
+                            <option value="Glosado" className="text-rose-600 font-bold">✗ Glosado</option>
+                            <option value="Faltou" className="text-rose-500 font-bold">✗ Faltou</option>
+                          </select>
 
-                        {/* Audit Info Badge for SMS_ADMIN */}
-                        {['Realizada', 'Glosado', 'Pendente'].includes(watch(`sessions.${index}.status` as any)) && watch(`sessions.${index}.validated_at` as any) && (() => {
-                          const validationType = watch(`sessions.${index}.validation_type` as any);
-                          const actionByLogin = watch(`sessions.${index}.action_by_login` as any);
-                          const isDigital = validationType === 'QR_CODE' || (!validationType && !actionByLogin && watch(`sessions.${index}.status` as any) === 'Realizada');
-                          const isGlosa = validationType === 'GLOSA' || watch(`sessions.${index}.status` as any) === 'Glosado';
-                          const isPendente = validationType === 'PENDENCIA' || watch(`sessions.${index}.status` as any) === 'Pendente';
+                          {/* Audit Info Badge for SMS_ADMIN */}
+                          {['Realizada', 'Glosado', 'Pendente'].includes(watch(`sessions.${index}.status` as any)) && watch(`sessions.${index}.validated_at` as any) && (() => {
+                            const validationType = watch(`sessions.${index}.validation_type` as any);
+                            const actionByLogin = watch(`sessions.${index}.action_by_login` as any);
+                            const isDigital = validationType === 'QR_CODE' || (!validationType && !actionByLogin && watch(`sessions.${index}.status` as any) === 'Realizada');
+                            const isGlosa = validationType === 'GLOSA' || watch(`sessions.${index}.status` as any) === 'Glosado';
+                            const isPendente = validationType === 'PENDENCIA' || watch(`sessions.${index}.status` as any) === 'Pendente';
 
-                          const badgeColor = isDigital ? 'bg-emerald-500' : isGlosa ? 'bg-rose-500' : isPendente ? 'bg-amber-500' : 'bg-blue-500';
-                          const titleColor = isDigital ? 'text-emerald-400' : isGlosa ? 'text-rose-400' : isPendente ? 'text-amber-400' : 'text-blue-400';
-                          const BadgeIcon = isDigital ? ShieldCheck : isGlosa ? UserCog : isPendente ? AlertCircle : UserCheck;
-                          const titleText = isDigital ? 'Auditoria de Assinatura' : isGlosa ? 'Auditoria de Glosa' : isPendente ? 'Auditoria de Pendência' : 'Autorização Manual';
+                            const badgeColor = isDigital ? 'bg-emerald-500' : isGlosa ? 'bg-rose-500' : isPendente ? 'bg-amber-500' : 'bg-blue-500';
+                            const titleColor = isDigital ? 'text-emerald-400' : isGlosa ? 'text-rose-400' : isPendente ? 'text-amber-400' : 'text-blue-400';
+                            const BadgeIcon = isDigital ? ShieldCheck : isGlosa ? UserCog : isPendente ? AlertCircle : UserCheck;
+                            const titleText = isDigital ? 'Auditoria de Assinatura' : isGlosa ? 'Auditoria de Glosa' : isPendente ? 'Auditoria de Pendência' : 'Autorização Manual';
 
-                          return (
-                            <div className="absolute -top-2 -right-2 z-10">
-                              <div className={`${badgeColor} text-white p-1 rounded-full shadow-lg cursor-help group/tooltip`}>
-                                <BadgeIcon className="h-3 w-3" />
+                            return (
+                              <div className="absolute -top-2 -right-2 z-10">
+                                <div className={`${badgeColor} text-white p-1 rounded-full shadow-lg cursor-help group/tooltip`}>
+                                  <BadgeIcon className="h-3 w-3" />
 
-                                {/* Tooltip Content */}
-                                <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-auto border border-white/10 backdrop-blur-md z-[100]">
-                                  <p className={`font-bold border-b border-white/10 pb-1 mb-1 ${titleColor} uppercase tracking-widest`}>{titleText}</p>
-                                  <div className="space-y-1">
-                                    {!isDigital && actionByLogin && (
-                                      <p><span className="opacity-50">Usuário:</span> {actionByLogin}</p>
-                                    )}
-                                    <p><span className="opacity-50">Data/Hora:</span> {new Date(watch(`sessions.${index}.validated_at` as any)!).toLocaleString('pt-BR')}</p>
-                                    <p><span className="opacity-50">IP:</span> {watch(`sessions.${index}.validation_ip` as any)}</p>
-                                    <p className="truncate"><span className="opacity-50">Dispositivo:</span> {watch(`sessions.${index}.validation_ua` as any)}</p>
-                                    {isDigital && watch(`sessions.${index}.validation_geo` as any) && (
-                                      <div className="space-y-0.5 border-t border-white/10 pt-1 mt-1">
-                                        <div className="flex items-center justify-between">
-                                          <p className="text-sky-400 font-medium">
-                                            📍 Localização: {(watch(`sessions.${index}.validation_geo` as any) as any).lat.toFixed(4)}, {(watch(`sessions.${index}.validation_geo` as any) as any).lng.toFixed(4)}
-                                          </p>
+                                  {/* Tooltip Content */}
+                                  <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-auto border border-white/10 backdrop-blur-md z-[100]">
+                                    <p className={`font-bold border-b border-white/10 pb-1 mb-1 ${titleColor} uppercase tracking-widest`}>{titleText}</p>
+                                    <div className="space-y-1">
+                                      {!isDigital && actionByLogin && (
+                                        <p><span className="opacity-50">Usuário:</span> {actionByLogin}</p>
+                                      )}
+                                      <p><span className="opacity-50">Data/Hora:</span> {new Date(watch(`sessions.${index}.validated_at` as any)!).toLocaleString('pt-BR')}</p>
+                                      <p><span className="opacity-50">IP:</span> {watch(`sessions.${index}.validation_ip` as any)}</p>
+                                      <p className="truncate"><span className="opacity-50">Dispositivo:</span> {watch(`sessions.${index}.validation_ua` as any)}</p>
+                                      {isDigital && watch(`sessions.${index}.validation_geo` as any) && (
+                                        <div className="space-y-0.5 border-t border-white/10 pt-1 mt-1">
+                                          <div className="flex items-center justify-between">
+                                            <p className="text-sky-400 font-medium">
+                                              📍 Localização: {(watch(`sessions.${index}.validation_geo` as any) as any).lat.toFixed(4)}, {(watch(`sessions.${index}.validation_geo` as any) as any).lng.toFixed(4)}
+                                            </p>
+                                          </div>
+                                          {watch(`sessions.${index}.validation_distance` as any) !== undefined && watch(`sessions.${index}.validation_distance` as any) !== null && (
+                                            <p className={`font-bold ${watch(`sessions.${index}.is_out_of_range` as any) ? 'text-amber-400' : 'text-emerald-400/80'}`}>
+                                              📏 Distância: {Math.round(watch(`sessions.${index}.validation_distance` as any) as number)}m da clínica
+                                              {watch(`sessions.${index}.is_out_of_range` as any) && ' ⚠️ ASSINATURA REMOTA'}
+                                            </p>
+                                          )}
+                                          <a
+                                            href={`https://www.google.com/maps/search/?api=1&query=${(watch(`sessions.${index}.validation_geo` as any) as any).lat},${(watch(`sessions.${index}.validation_geo` as any) as any).lng}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="mt-2 flex items-center justify-center gap-1.5 w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 py-1.5 rounded-lg border border-emerald-500/30 transition-all font-bold uppercase tracking-tighter"
+                                          >
+                                            🗺️ Ver no Google Maps
+                                          </a>
                                         </div>
-                                        {watch(`sessions.${index}.validation_distance` as any) !== undefined && watch(`sessions.${index}.validation_distance` as any) !== null && (
-                                          <p className={`font-bold ${watch(`sessions.${index}.is_out_of_range` as any) ? 'text-amber-400' : 'text-emerald-400/80'}`}>
-                                            📏 Distância: {Math.round(watch(`sessions.${index}.validation_distance` as any) as number)}m da clínica
-                                            {watch(`sessions.${index}.is_out_of_range` as any) && ' ⚠️ ASSINATURA REMOTA'}
-                                          </p>
-                                        )}
-                                        <a
-                                          href={`https://www.google.com/maps/search/?api=1&query=${(watch(`sessions.${index}.validation_geo` as any) as any).lat},${(watch(`sessions.${index}.validation_geo` as any) as any).lng}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="mt-2 flex items-center justify-center gap-1.5 w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 py-1.5 rounded-lg border border-emerald-500/30 transition-all font-bold uppercase tracking-tighter"
-                                        >
-                                          🗺️ Ver no Google Maps
-                                        </a>
-                                      </div>
-                                    )}
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    ) : (
-                      <>
-                        {['Realizada', 'Pendente', 'Glosado'].includes(watch(`sessions.${index}.status` as any)) ? (
-                          <>
-                            <input type="hidden" {...register(`sessions.${index}.status` as const)} />
-                            <div className={`block w-full rounded-lg shadow-sm py-2 px-3 text-sm border font-bold text-center ${watch(`sessions.${index}.status` as any) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' :
-                                watch(`sessions.${index}.status` as any) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
-                                  watch(`sessions.${index}.status` as any) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' : ''
-                              }`}>
-                              {watch(`sessions.${index}.status` as any) === 'Realizada' ? '✓ Realizada' :
-                                watch(`sessions.${index}.status` as any) === 'Pendente' ? '⏳ Pendente' : '✗ Glosado'}
-                            </div>
-                          </>
-                        ) : (
-                          <select
-                            {...register(`sessions.${index}.status` as const)}
-                            disabled={isCompetenceLocked}
-                            className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
-                              watch(`sessions.${index}.status` as any) === 'Faltou' ? 'text-rose-500 dark:text-rose-400 font-bold border-rose-400 dark:border-rose-500/30 bg-rose-500/5' :
-                              'text-muted-foreground font-bold border-border bg-muted/30'
-                            }`}
-                          >
-                            <option value="Não Realizado">○ Não Realizada</option>
-                            <option value="Faltou" className="text-rose-500 font-bold">✗ Faltou</option>
-                          </select>
-                        )}
-                      </>
-                    )}
-                  </div>
+                            );
+                          })()}
+                        </div>
+                      ) : (
+                        <>
+                          {['Realizada', 'Pendente', 'Glosado'].includes(watch(`sessions.${index}.status` as any)) || isOriginalFaltou ? (
+                            <>
+                              <input type="hidden" {...register(`sessions.${index}.status` as const)} />
+                              <div className={`block w-full rounded-lg shadow-sm py-2 px-3 text-sm border font-bold text-center ${watch(`sessions.${index}.status` as any) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' :
+                                  watch(`sessions.${index}.status` as any) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
+                                    watch(`sessions.${index}.status` as any) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' :
+                                      watch(`sessions.${index}.status` as any) === 'Faltou' ? 'text-rose-500 dark:text-rose-400 border-rose-400 dark:border-rose-500/30 bg-rose-500/5' : ''
+                                }`}>
+                                {watch(`sessions.${index}.status` as any) === 'Realizada' ? '✓ Realizada' :
+                                  watch(`sessions.${index}.status` as any) === 'Pendente' ? '⏳ Pendente' :
+                                    watch(`sessions.${index}.status` as any) === 'Glosado' ? '✗ Glosado' : '✗ Faltou'}
+                              </div>
+                            </>
+                          ) : (
+                            <select
+                              {...register(`sessions.${index}.status` as const, {
+                                onChange: (e) => {
+                                  if (e.target.value === 'Faltou') {
+                                    const confirmChange = window.confirm(
+                                      "Atenção: Ao marcar esta frequência como FALTOU, essa alteração não poderá ser revertida no sistema. O profissional será liberado para outros atendimentos neste horário. Tem certeza que deseja prosseguir?"
+                                    );
+                                    if (!confirmChange) {
+                                      setValue(`sessions.${index}.status` as any, 'Não Realizado');
+                                    }
+                                  }
+                                }
+                              })}
+                              disabled={isCompetenceLocked}
+                              className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
+                                watch(`sessions.${index}.status` as any) === 'Faltou' ? 'text-rose-500 dark:text-rose-400 font-bold border-rose-400 dark:border-rose-500/30 bg-rose-500/5' :
+                                'text-muted-foreground font-bold border-border bg-muted/30'
+                              }`}
+                            >
+                              <option value="Não Realizado">○ Não Realizada</option>
+                              <option value="Faltou" className="text-rose-500 font-bold">✗ Faltou</option>
+                            </select>
+                          )}
+                        </>
+                      )}
+                    </div>
 
                   {(watch(`sessions.${index}.status` as any) === 'Glosado' || watch(`sessions.${index}.status` as any) === 'Pendente') && (
                     <div className={`sm:col-span-4 mt-2 sm:mt-0 transition-all animate-in fade-in slide-in-from-left-2`}>
@@ -1378,7 +1400,8 @@ export function AttendanceForm({
                   <div className="absolute -left-2 top-1/2 -translate-y-1/2 h-8 w-1 rounded-full bg-primary/20 group-hover:bg-primary transition-all" />
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         </div>
 
