@@ -10,6 +10,7 @@ import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { QRCodeModal } from './QRCodeModal'
 import { StatusModal } from '@/components/ui/StatusModal'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck, Smartphone, UserCheck, UserCog, FileText, Upload, Eye, Loader2, X, Download, Image } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { createPortal } from 'react-dom'
@@ -45,6 +46,7 @@ export function AttendanceForm({
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
   const [qrModalSession, setQrModalSession] = useState<{ index: number; sessionId: string } | null>(null)
+  const [confirmFaltouSession, setConfirmFaltouSession] = useState<{ index: number; previousValue: string } | null>(null)
 
   // Attachments State
   const [existingAttachments, setExistingAttachments] = useState<any[]>(initialAttachments)
@@ -591,6 +593,23 @@ export function AttendanceForm({
         title="Operação Negada"
         message={errorMsg}
         type="error"
+      />
+      <ConfirmModal
+        isOpen={confirmFaltouSession !== null}
+        onClose={() => {
+          if (confirmFaltouSession) {
+            setValue(`sessions.${confirmFaltouSession.index}.status` as any, confirmFaltouSession.previousValue);
+          }
+          setConfirmFaltouSession(null);
+        }}
+        onConfirm={() => {
+          setConfirmFaltouSession(null);
+        }}
+        title="Confirmar Falta"
+        message="Atenção: Ao marcar esta frequência como FALTOU, essa alteração não poderá ser revertida no sistema. O profissional será liberado para outros atendimentos neste horário. Tem certeza que deseja prosseguir?"
+        type="warning"
+        confirmText="Sim, Confirmar"
+        cancelText="Voltar"
       />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-8 rounded-2xl shadow-xl border border-border/40 mb-10">
 
@@ -1316,12 +1335,7 @@ export function AttendanceForm({
                               {...register(`sessions.${index}.status` as const, {
                                 onChange: (e) => {
                                   if (e.target.value === 'Faltou') {
-                                    const confirmChange = window.confirm(
-                                      "Atenção: Ao marcar esta frequência como FALTOU, essa alteração não poderá ser revertida no sistema. O profissional será liberado para outros atendimentos neste horário. Tem certeza que deseja prosseguir?"
-                                    );
-                                    if (!confirmChange) {
-                                      setValue(`sessions.${index}.status` as any, 'Não Realizado');
-                                    }
+                                    setConfirmFaltouSession({ index, previousValue: 'Não Realizado' });
                                   }
                                 }
                               })}
