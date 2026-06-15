@@ -161,7 +161,7 @@ export function AttendanceForm({
   const selectedProfessionalId = watch('professional_id')
   const authorizedQuantity = watch('authorized_quantity')
   const sessions = watch('sessions') || []
-  const hasValidatedSession = sessions.some(s => s.status === 'Realizada' || s.status === 'Glosado');
+  const hasValidatedSession = sessions.some(s => s.status === 'Realizada' || s.status === 'Glosado' || s.status === 'Faltou');
   const isCompetenceLocked = competenceStatus === 'FECHADA' || competenceStatus === 'ENVIADA_MS';
 
   // IDENTITY LOCK logic: 

@@ -313,7 +313,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   if (!currentAttendance) return { error: 'Atendimento não encontrado' }
 
   const dbSessions = (currentAttendance as any).sessions as any[] || []
-  const hasValidatedInDb = dbSessions.some((s: any) => s.status === 'Realizada' || s.status === 'Glosado')
+  const hasValidatedInDb = dbSessions.some((s: any) => s.status === 'Realizada' || s.status === 'Glosado' || s.status === 'Faltou')
 
   if (profile?.role === 'CLINIC_USER' && hasValidatedInDb) {
     // If ANY session is validated, critical header fields become IMMUTABLE
@@ -324,7 +324,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
 
     if (patientChanged || professionalChanged || procedureChanged || dateChanged) {
       return {
-        error: 'Não é possível alterar o Paciente, Profissional, Procedimento ou Data de Competência após uma sessão ter sido realizada ou glosada.'
+        error: 'Não é possível alterar o Paciente, Profissional, Procedimento ou Data de Competência após uma sessão ter sido realizada, glosada ou registrada como "Faltou".'
       }
     }
   }
