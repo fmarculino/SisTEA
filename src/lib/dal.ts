@@ -37,3 +37,37 @@ export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
 }
+
+export async function getActiveTerm() {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('terms_versions')
+    .select('id, version, content')
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching active terms_version:', error)
+    return null
+  }
+  return data
+}
+
+export async function hasAcceptedTerm(userId: string, termVersionId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('terms_acceptances')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('term_version_id', termVersionId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error checking term acceptance:', error)
+    return false
+  }
+  return !!data
+}
+

@@ -1,6 +1,7 @@
-import { getUserProfile } from '@/lib/dal'
+import { getUserProfile, getActiveTerm, hasAcceptedTerm } from '@/lib/dal'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/layout/DashboardShell'
+import { TermAcceptanceModal } from '@/components/layout/TermAcceptanceModal'
 
 export default async function DashboardLayout({
   children,
@@ -21,13 +22,25 @@ export default async function DashboardLayout({
     redirect('/login?error=Esta clínica está desativada. O acesso foi bloqueado.')
   }
 
+  const activeTerm = await getActiveTerm()
+  let needsAcceptance = false
+  if (activeTerm) {
+    needsAcceptance = !(await hasAcceptedTerm(profile.id, activeTerm.id))
+  }
+
   return (
-    <DashboardShell 
-      role={profile.role} 
-      email={profile.email || ''} 
-      clinicName={profile.clinic_name}
-    >
-      {children}
-    </DashboardShell>
+    <>
+      {needsAcceptance && activeTerm && (
+        <TermAcceptanceModal activeTerm={activeTerm} />
+      )}
+      <DashboardShell 
+        role={profile.role} 
+        email={profile.email || ''} 
+        clinicName={profile.clinic_name}
+      >
+        {children}
+      </DashboardShell>
+    </>
   )
 }
+

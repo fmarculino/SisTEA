@@ -2,6 +2,22 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.1.0] - 2026-06-15
+
+Esta versão introduz o **Termo de Confidencialidade e Responsabilidade digital (Click-wrap)** e correções de banco de dados locais para conformidade e estabilidade.
+
+### 🛡️ Termo de Confidencialidade e Aceite Obrigatório (Click-wrap)
+- **Tabelas de Versionamento:** Implementação das tabelas `terms_versions` e `terms_acceptances` no banco de dados para controle granular de termos e registros de aceites de usuários em conformidade com a LGPD.
+- **Assinatura Digital Auditável:** Captura automática de dados de auditoria (Endereço IP, User-Agent do navegador, carimbo de data/hora e ID do usuário) no momento do aceite para fins de validade jurídica.
+- **Trava de Rolagem Obrigatória:** O modal de aceite bloqueia toda a interface do dashboard e exige que o usuário role todo o texto do termo até o fim antes de habilitar o checkbox de aceite.
+- **Versionamento Dinâmico:** Caso uma nova versão do termo seja ativada no banco de dados, o sistema força automaticamente a revalidação do aceite para todos os usuários no próximo login.
+
+### 🔧 Correções de Banco de Dados Local
+- **Compatibilidade de Coluna de Nome:** Alteração da coluna `nome` na tabela `public.users` para aceitar valores nulos (`DROP NOT NULL`), resolvendo erros de inserção quando o Next.js envia o campo `name`.
+- **Desativação de Trigger Redundante:** Remoção do trigger `on_auth_user_created` e de sua respectiva função no banco de dados local para evitar conflitos de duplicação de chave primária (`users_pkey`) com as Server Actions do Next.js.
+
+---
+
 ## [1.0.0] - 2026-05-23
 
 Esta versão marca a **entrada oficial em produção do SisTEA (v1.0.0)** no servidor VPS como versão estável, consolidando as correções de segurança, auditoria geral e adequação arquitetural para o Go-Live.
