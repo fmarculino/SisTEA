@@ -2,6 +2,18 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.2.0] - 2026-06-15
+
+Esta versão introduz o **Painel Administrativo do Termo de Confidencialidade**, permitindo que administradores gerenciem versões, acompanhem aceites e editem termos diretamente no sistema.
+
+### ⚙️ Painel Admin do Termo de Confidencialidade (Gestão Digital)
+- **Tela de Controle de Termos:** Adicionada a página `/dashboard/settings/terms` listando todas as versões do termo de confidencialidade com contagem de aceites de usuários em tempo real para fins de auditoria LGPD.
+- **Formulário com Live Preview:** Criação da página `/dashboard/settings/terms/new` permitindo criar novas versões do termo com editor Markdown e painel de pré-visualização ao vivo.
+- **Integração na Barra Lateral:** Link de navegação exclusivo "Termos de Conf." adicionado no grupo "Sistema" do menu lateral para usuários `SMS_ADMIN`.
+- **Ações de Gerenciamento:** Server Actions para criação com autodesativação de termos antigos e exclusão segura (impedida caso já existam aceites registrados).
+
+---
+
 ## [1.1.0] - 2026-06-15
 
 Esta versão introduz o **Termo de Confidencialidade e Responsabilidade digital (Click-wrap)** e correções de banco de dados locais para conformidade e estabilidade.

@@ -59,6 +59,7 @@ const navigation = [
     roles: ['SMS_ADMIN', 'CLINIC_USER'],
     children: [
       { name: 'Configurações', href: '/dashboard/settings', icon: Settings, roles: ['SMS_ADMIN'] },
+      { name: 'Termos de Conf.', href: '/dashboard/settings/terms', icon: ScrollText, roles: ['SMS_ADMIN'] },
       { name: 'Usuários', href: '/dashboard/users', icon: Shield, roles: ['SMS_ADMIN'] },
       { name: 'Backup', href: '/dashboard/backup', icon: DatabaseBackup, roles: ['SMS_ADMIN'] },
       { name: 'Segurança', href: '/auth/update-password', icon: Lock, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
