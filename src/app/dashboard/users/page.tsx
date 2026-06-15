@@ -28,7 +28,7 @@ export default async function UsersPage({
   const queryParams = await searchParams
   const profile = await getUserProfile()
   
-  if (profile?.role !== 'SMS_ADMIN') {
+  if (profile?.role !== 'SMS_ADMIN' && profile?.role !== 'GERENTE') {
     redirect('/dashboard')
   }
 
@@ -48,6 +48,11 @@ export default async function UsersPage({
 
   let query = supabase.from('users').select('*, clinics(name)', { count: 'exact' })
 
+  // If GERENTE, restrict to their clinic
+  if (profile?.role === 'GERENTE') {
+    query = query.eq('clinic_id', profile.clinic_id)
+  }
+
   // Apply Search Filter
   if (queryParams.q) {
     query = query.or(`email.ilike.%${queryParams.q}%,name.ilike.%${queryParams.q}%`)
@@ -58,8 +63,8 @@ export default async function UsersPage({
     query = query.eq('active', queryParams.status === 'true')
   }
 
-  // Apply Clinic Filter
-  if (queryParams.clinic && queryParams.clinic !== 'all') {
+  // Apply Clinic Filter (only if SMS_ADMIN)
+  if (profile?.role === 'SMS_ADMIN' && queryParams.clinic && queryParams.clinic !== 'all') {
     query = query.eq('clinic_id', queryParams.clinic)
   }
 
@@ -90,13 +95,15 @@ export default async function UsersPage({
       <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
         <DataTableFilters 
           placeholder="Pesquisar por nome ou e-mail..." 
-          extraFilters={[
-            {
-              paramName: 'clinic',
-              placeholder: 'Todas as Clínicas',
-              options: (clinicsList || []).map(c => ({ value: c.id, label: c.name }))
-            }
-          ]}
+          extraFilters={
+            profile?.role === 'SMS_ADMIN' ? [
+              {
+                paramName: 'clinic',
+                placeholder: 'Todas as Clínicas',
+                options: (clinicsList || []).map(c => ({ value: c.id, label: c.name }))
+              }
+            ] : []
+          }
         />
       </div>
 

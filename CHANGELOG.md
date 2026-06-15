@@ -15,6 +15,11 @@ Esta versão introduz uma matriz expandida de Controle de Acesso Baseado em Pap�
 - **Segurança Unificada:** Garantia de que todos os perfis possam acessar a tela de alteração de senha em `/auth/update-password`.
 - **Navegação e Redirecionamento Dinâmico:** Atualização da barra lateral e redirecionamento de usuários sem permissão ao dashboard raiz diretamente para `/dashboard/attendances`.
 - **Listagem e Formulários:** Mapeamento visual das novas badges de perfil na listagem administrativa e agrupamento no formulário de criação/edição.
+- **Autogestão de Usuários da Clínica (Gerente):**
+  - **Acesso ao Menu:** O papel `GERENTE` passa a ter acesso ao menu *Sistema / Usuários*.
+  - **Filtro de Escopo:** A listagem de usuários para o gerente exibe apenas colaboradores vinculados à mesma clínica.
+  - **Limitação de Criação/Edição:** O formulário de criação/edição oculta papéis da SMS e o seletor de clínicas, atribuindo e travando automaticamente o `clinic_id` do novo usuário para a clínica do próprio gerente.
+  - **Segurança nos Bastidores:** Proteção e validação do usuário de sessão e integridade de clínica nas Server Actions de criação, edição e alteração de status.
 
 ---
 

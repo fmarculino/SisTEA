@@ -14,12 +14,14 @@ export function UserForm({
   initialData, 
   id, 
   clinics,
-  userRole
+  userRole,
+  userClinicId
 }: { 
   initialData?: Partial<UserFormData>; 
   id?: string;
   clinics: ClinicOption[];
   userRole: string;
+  userClinicId?: string | null;
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
@@ -36,7 +38,7 @@ export function UserForm({
       name: (initialData as any)?.name || '',
       email: initialData?.email || '',
       role: initialData?.role || 'GERENTE',
-      clinic_id: initialData?.clinic_id || '',
+      clinic_id: initialData?.clinic_id || userClinicId || '',
     },
   })
 
@@ -140,12 +142,14 @@ export function UserForm({
               {...register('role')}
               className="block w-full rounded-lg border-input bg-background px-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-primary/20 focus:border-primary border appearance-none"
             >
-              <optgroup label="Secretaria de Saúde (SMS)">
-                {userRole === 'SMS_ADMIN' && <option value="SMS_ADMIN">Administrador Geral</option>}
-                <option value="REGULACAO">Regulação</option>
-                <option value="COORDENADOR">Coordenador</option>
-                <option value="OPERADOR">Operador</option>
-              </optgroup>
+              {userRole === 'SMS_ADMIN' && (
+                <optgroup label="Secretaria de Saúde (SMS)">
+                  <option value="SMS_ADMIN">Administrador Geral</option>
+                  <option value="REGULACAO">Regulação</option>
+                  <option value="COORDENADOR">Coordenador</option>
+                  <option value="OPERADOR">Operador</option>
+                </optgroup>
+              )}
               <optgroup label="Prestador Externo (Clínica)">
                 <option value="GERENTE">Gerente da Clínica</option>
                 <option value="RECEPCIONISTA">Recepcionista</option>
@@ -155,7 +159,7 @@ export function UserForm({
             {errors.role && <p className="mt-1 text-xs text-destructive font-medium">{errors.role.message}</p>}
           </div>
 
-          {['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(selectedRole) && (
+          {userRole === 'SMS_ADMIN' && ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(selectedRole) && (
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1">Clínica Vinculada *</label>
               <select
@@ -169,6 +173,10 @@ export function UserForm({
               </select>
               {errors.clinic_id && <p className="mt-1 text-xs text-destructive font-medium">{errors.clinic_id.message}</p>}
             </div>
+          )}
+
+          {userRole === 'GERENTE' && (
+            <input type="hidden" {...register('clinic_id')} />
           )}
         </div>
       </section>

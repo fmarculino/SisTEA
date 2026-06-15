@@ -11,7 +11,7 @@ export default async function EditUserPage({
   const { id } = await params
   const profile = await getUserProfile()
   
-  if (profile?.role !== 'SMS_ADMIN') {
+  if (profile?.role !== 'SMS_ADMIN' && profile?.role !== 'GERENTE') {
     redirect('/dashboard')
   }
 
@@ -26,6 +26,11 @@ export default async function EditUserPage({
 
   if (!userToEdit) {
     notFound()
+  }
+
+  // If GERENTE, block access to editing users of other clinics or SMS users
+  if (profile.role === 'GERENTE' && userToEdit.clinic_id !== profile.clinic_id) {
+    redirect('/dashboard/users')
   }
 
   // Fetch clinics for the dropdown
@@ -50,6 +55,7 @@ export default async function EditUserPage({
         initialData={userToEdit} 
         clinics={clinics || []} 
         userRole={profile.role} 
+        userClinicId={profile.clinic_id}
       />
     </div>
   )

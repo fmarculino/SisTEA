@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 export default async function NewUserPage() {
   const profile = await getUserProfile()
   
-  if (profile?.role !== 'SMS_ADMIN') {
+  if (profile?.role !== 'SMS_ADMIN' && profile?.role !== 'GERENTE') {
     redirect('/dashboard')
   }
 
@@ -30,6 +30,7 @@ export default async function NewUserPage() {
       <UserForm 
         clinics={clinics || []} 
         userRole={profile.role} 
+        userClinicId={profile.clinic_id}
       />
     </div>
   )

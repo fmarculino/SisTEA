@@ -4,6 +4,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { userSchema, UserFormData } from './schema'
 import { logAudit } from '@/lib/audit'
+import { getUserProfile } from '@/lib/dal'
 
 // Helper to create an admin client (direct client, no cookie handling needed for admin operations)
 function createAdminClient() {
@@ -24,16 +25,29 @@ function createAdminClient() {
 
 export async function createUser(data: UserFormData) {
   try {
+    const profile = await getUserProfile()
+    if (!profile || !['SMS_ADMIN', 'GERENTE'].includes(profile.role)) {
+      return { error: 'Não autorizado' }
+    }
+
     const validatedFields = userSchema.safeParse(data)
 
     if (!validatedFields.success) {
       return { error: 'Dados inválidos' }
     }
 
-    const { name, email, password, role, clinic_id } = validatedFields.data
+    let { name, email, password, role, clinic_id } = validatedFields.data
 
     if (!password) {
       return { error: 'Senha é obrigatória para novos usuários' }
+    }
+
+    // Security check for GERENTE
+    if (profile.role === 'GERENTE') {
+      if (!['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(role)) {
+        return { error: 'Não autorizado a criar usuários com este papel' }
+      }
+      clinic_id = profile.clinic_id
     }
 
     const supabase = createAdminClient()
@@ -89,7 +103,31 @@ export async function createUser(data: UserFormData) {
 
 export async function updateUser(id: string, data: Partial<UserFormData>) {
   try {
+    const profile = await getUserProfile()
+    if (!profile || !['SMS_ADMIN', 'GERENTE'].includes(profile.role)) {
+      return { error: 'Não autorizado' }
+    }
+
     const supabase = createAdminClient()
+
+    // Security check for GERENTE
+    if (profile.role === 'GERENTE') {
+      const { data: userToEdit } = await supabase
+        .from('users')
+        .select('clinic_id')
+        .eq('id', id)
+        .single()
+
+      if (!userToEdit || userToEdit.clinic_id !== profile.clinic_id) {
+        return { error: 'Não autorizado a alterar usuários de outra clínica' }
+      }
+
+      if (data.role && !['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(data.role)) {
+        return { error: 'Não autorizado a definir este papel' }
+      }
+
+      data.clinic_id = profile.clinic_id
+    }
 
     // 1. Update Auth email/password if provided
     const updateData: any = {}
@@ -139,7 +177,25 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
 
 export async function toggleUserStatus(id: string, currentStatus: boolean) {
   try {
+    const profile = await getUserProfile()
+    if (!profile || !['SMS_ADMIN', 'GERENTE'].includes(profile.role)) {
+      return { error: 'Não autorizado' }
+    }
+
     const supabase = createAdminClient()
+
+    // Security check for GERENTE
+    if (profile.role === 'GERENTE') {
+      const { data: userToEdit } = await supabase
+        .from('users')
+        .select('clinic_id')
+        .eq('id', id)
+        .single()
+
+      if (!userToEdit || userToEdit.clinic_id !== profile.clinic_id) {
+        return { error: 'Não autorizado a alterar status de usuários de outra clínica' }
+      }
+    }
 
     const { error } = await supabase
       .from('users')
