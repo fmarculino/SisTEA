@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { createTermVersionAction } from '@/app/dashboard/actions/termAdminActions'
 import { ScrollText, Check, AlertTriangle, Eye } from 'lucide-react'
 
-export function TermNewForm() {
+export function TermNewForm({ initialContent }: { initialContent?: string }) {
   const router = useRouter()
   const [version, setVersion] = useState('')
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState(initialContent || '')
   const [active, setActive] = useState(true)
   const [isPending, setIsPending] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')

@@ -1,4 +1,4 @@
-import { getUserProfile } from '@/lib/dal'
+import { getUserProfile, getActiveTerm } from '@/lib/dal'
 import { redirect } from 'next/navigation'
 import { TermNewForm } from './TermNewForm'
 
@@ -7,6 +7,8 @@ export default async function NewTermPage() {
   if (profile?.role !== 'SMS_ADMIN') {
     redirect('/dashboard')
   }
+
+  const latestTerm = await getActiveTerm()
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -19,7 +21,8 @@ export default async function NewTermPage() {
         </p>
       </div>
 
-      <TermNewForm />
+      <TermNewForm initialContent={latestTerm?.content || ''} />
     </div>
   )
 }
+

@@ -2,6 +2,15 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.2.1] - 2026-06-15
+
+Esta versão aprimora a criação de novos termos no Painel Administrativo.
+
+### ⚙️ Melhoria na Criação de Termos (Painel Admin)
+- **Pré-carregamento do Termo Anterior:** O editor de termos agora puxa automaticamente o texto do termo ativo anterior quando uma nova versão está sendo criada, agilizando o processo de pequenos ajustes e correções.
+
+---
+
 ## [1.2.0] - 2026-06-15
 
 Esta versão introduz o **Painel Administrativo do Termo de Confidencialidade**, permitindo que administradores gerenciem versões, acompanhem aceites e editem termos diretamente no sistema.
