@@ -54,8 +54,77 @@ export function AttendanceForm({
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([])
   const [previewAttachment, setPreviewAttachment] = useState<{ name: string; url: string; isImage: boolean } | null>(null)
   const [isPrinting, setIsPrinting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
-  const handleFileSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadImmediate = async (files: File[]) => {
+    if (!id) return
+    setIsUploading(true)
+    setErrorMsg('')
+    try {
+      const supabase = createClient()
+      const newAttachments = [...existingAttachments]
+
+      for (const file of files) {
+        const uniqueName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+        const filePath = `${id}/${uniqueName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('attendance-attachments')
+          .upload(filePath, file)
+
+        if (uploadError) {
+          throw new Error(`Falha ao fazer upload do arquivo ${file.name}: ${uploadError.message}`)
+        }
+
+        const saveRes = await saveAttachmentRecordAction(
+          id,
+          filePath,
+          file.name,
+          file.size
+        )
+
+        if (saveRes && 'error' in saveRes) {
+          throw new Error(`Falha ao salvar registro do arquivo ${file.name}: ${saveRes.error}`)
+        }
+
+        if (saveRes && 'attachment' in saveRes && saveRes.attachment) {
+          newAttachments.push(saveRes.attachment)
+        }
+      }
+
+      setExistingAttachments(newAttachments)
+      router.refresh()
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao salvar os anexos.')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleDeleteImmediate = async (attId: string) => {
+    if (!id) return
+    const att = existingAttachments.find(x => x.id === attId)
+    if (!att) return
+
+    if (!window.confirm(`Tem certeza que deseja excluir o anexo "${att.file_name}"?`)) return
+
+    setIsUploading(true)
+    setErrorMsg('')
+    try {
+      const delRes = await deleteAttachmentAction(att.id, att.file_path)
+      if (delRes && 'error' in delRes) {
+        throw new Error(`Falha ao remover arquivo do servidor: ${delRes.error}`)
+      }
+      setExistingAttachments(prev => prev.filter(x => x.id !== attId))
+      router.refresh()
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao remover o anexo.')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleFileSelection = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
     const files = Array.from(e.target.files)
     const MAX_SIZE = 10 * 1024 * 1024 // 10MB
@@ -74,7 +143,11 @@ export function AttendanceForm({
       validFiles.push(file)
     }
 
-    setSelectedFiles(prev => [...prev, ...validFiles])
+    if (id) {
+      await handleUploadImmediate(validFiles)
+    } else {
+      setSelectedFiles(prev => [...prev, ...validFiles])
+    }
     e.target.value = ''
   }
 
@@ -82,8 +155,12 @@ export function AttendanceForm({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  const handleDeleteExisting = (attId: string) => {
-    setAttachmentsToDelete(prev => [...prev, attId])
+  const handleDeleteExisting = async (attId: string) => {
+    if (id) {
+      await handleDeleteImmediate(attId)
+    } else {
+      setAttachmentsToDelete(prev => [...prev, attId])
+    }
   }
 
   const handleViewAttachment = async (attachment: any) => {
@@ -1066,16 +1143,15 @@ export function AttendanceForm({
                       >
                         <Eye className="h-4 w-4" />
                       </button>
-                      {!isMetadataLocked && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteExisting(att.id)}
-                          className="p-1 text-muted-foreground hover:text-rose-500 transition-colors"
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        disabled={isUploading}
+                        onClick={() => handleDeleteExisting(att.id)}
+                        className="p-1 text-muted-foreground hover:text-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1114,26 +1190,35 @@ export function AttendanceForm({
               </div>
 
               {/* Upload Button */}
-              {!isMetadataLocked && (
-                <div className="pt-2 border-t border-border/30">
-                  <input
-                    type="file"
-                    id="attendance-file-upload"
-                    multiple
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    className="hidden"
-                    onChange={handleFileSelection}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById('attendance-file-upload')?.click()}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background hover:bg-muted text-xs font-bold text-foreground py-2 shadow-sm transition-all active:scale-98"
-                  >
-                    <Upload className="h-3.5 w-3.5" />
-                    Anexar Arquivos (PDF, Imagem)
-                  </button>
-                </div>
-              )}
+              <div className="pt-2 border-t border-border/30">
+                <input
+                  type="file"
+                  id="attendance-file-upload"
+                  multiple
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={handleFileSelection}
+                  disabled={isUploading}
+                />
+                <button
+                  type="button"
+                  disabled={isUploading}
+                  onClick={() => document.getElementById('attendance-file-upload')?.click()}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background hover:bg-muted text-xs font-bold text-foreground py-2 shadow-sm transition-all active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-3.5 w-3.5" />
+                      Anexar Arquivos (PDF, Imagem)
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
