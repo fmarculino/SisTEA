@@ -35,7 +35,7 @@ export function UserForm({
     defaultValues: {
       name: (initialData as any)?.name || '',
       email: initialData?.email || '',
-      role: initialData?.role || 'CLINIC_USER',
+      role: initialData?.role || 'GERENTE',
       clinic_id: initialData?.clinic_id || '',
     },
   })
@@ -140,13 +140,22 @@ export function UserForm({
               {...register('role')}
               className="block w-full rounded-lg border-input bg-background px-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-primary/20 focus:border-primary border appearance-none"
             >
-              <option value="CLINIC_USER">Usuário de Clínica</option>
-              {userRole === 'SMS_ADMIN' && <option value="SMS_ADMIN">Administrador SMS</option>}
+              <optgroup label="Secretaria de Saúde (SMS)">
+                {userRole === 'SMS_ADMIN' && <option value="SMS_ADMIN">Administrador Geral</option>}
+                <option value="REGULACAO">Regulação</option>
+                <option value="COORDENADOR">Coordenador</option>
+                <option value="OPERADOR">Operador</option>
+              </optgroup>
+              <optgroup label="Prestador Externo (Clínica)">
+                <option value="GERENTE">Gerente da Clínica</option>
+                <option value="RECEPCIONISTA">Recepcionista</option>
+                <option value="FATURISTA">Faturista</option>
+              </optgroup>
             </select>
             {errors.role && <p className="mt-1 text-xs text-destructive font-medium">{errors.role.message}</p>}
           </div>
 
-          {selectedRole === 'CLINIC_USER' && (
+          {['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(selectedRole) && (
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1">Clínica Vinculada *</label>
               <select

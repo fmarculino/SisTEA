@@ -17,52 +17,52 @@ const navigation = [
     name: 'Dashboard', 
     href: '/dashboard', 
     icon: LayoutDashboard, 
-    roles: ['SMS_ADMIN', 'CLINIC_USER'] 
+    roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE'] 
   },
   {
     name: 'Operação',
     icon: ClipboardList,
-    roles: ['SMS_ADMIN', 'CLINIC_USER'],
+    roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE', 'RECEPCIONISTA', 'FATURISTA'],
     children: [
-      { name: 'Atendimentos', href: '/dashboard/attendances', icon: CalendarCheck, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
-      { name: 'Competências', href: '/dashboard/competences', icon: Archive, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
+      { name: 'Atendimentos', href: '/dashboard/attendances', icon: CalendarCheck, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE', 'RECEPCIONISTA', 'FATURISTA'] },
+      { name: 'Competências', href: '/dashboard/competences', icon: Archive, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE', 'FATURISTA'] },
     ]
   },
   {
     name: 'Cadastros',
     icon: Database,
-    roles: ['SMS_ADMIN', 'CLINIC_USER'],
+    roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE', 'RECEPCIONISTA', 'FATURISTA'],
     children: [
-      { name: 'Pacientes', href: '/dashboard/patients', icon: Users, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
-      { name: 'Profissionais', href: '/dashboard/professionals', icon: UserSquare2, roles: ['SMS_ADMIN'] },
-      { name: 'Clínicas', href: '/dashboard/clinics', icon: Building2, roles: ['SMS_ADMIN'] },
-      { name: 'Contratos', href: '/dashboard/contracts', icon: ScrollText, roles: ['SMS_ADMIN'] },
-      { name: 'Procedimentos', href: '/dashboard/procedures', icon: Stethoscope, roles: ['SMS_ADMIN'] },
-      { name: 'Especialidades', href: '/dashboard/specialties', icon: FileText, roles: ['SMS_ADMIN'] },
-      { name: 'Classificação DATASUS', href: '/dashboard/service-classifications', icon: Activity, roles: ['SMS_ADMIN'] },
-      { name: 'CID-10', href: '/dashboard/cid', icon: BookOpen, roles: ['SMS_ADMIN'] },
+      { name: 'Pacientes', href: '/dashboard/patients', icon: Users, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE', 'RECEPCIONISTA', 'FATURISTA'] },
+      { name: 'Profissionais', href: '/dashboard/professionals', icon: UserSquare2, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'] },
+      { name: 'Clínicas', href: '/dashboard/clinics', icon: Building2, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'] },
+      { name: 'Contratos', href: '/dashboard/contracts', icon: ScrollText, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'] },
+      { name: 'Procedimentos', href: '/dashboard/procedures', icon: Stethoscope, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'] },
+      { name: 'Especialidades', href: '/dashboard/specialties', icon: FileText, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'] },
+      { name: 'Classificação DATASUS', href: '/dashboard/service-classifications', icon: Activity, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'] },
+      { name: 'CID-10', href: '/dashboard/cid', icon: BookOpen, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'] },
     ]
   },
   {
     name: 'Auditoria & Gestão',
     icon: ShieldCheck,
-    roles: ['SMS_ADMIN'],
+    roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE'],
     children: [
       { name: 'Auditoria Digital', href: '/dashboard/audit', icon: ShieldCheck, roles: ['SMS_ADMIN'] },
       { name: 'Auditoria Histórica', href: '/dashboard/historical-audit', icon: History, roles: ['SMS_ADMIN'] },
-      { name: 'Relatórios', href: '/dashboard/reports', icon: FileOutput, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
+      { name: 'Relatórios', href: '/dashboard/reports', icon: FileOutput, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE'] },
     ]
   },
   {
     name: 'Sistema',
     icon: Settings,
-    roles: ['SMS_ADMIN', 'CLINIC_USER'],
+    roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE', 'RECEPCIONISTA', 'FATURISTA'],
     children: [
       { name: 'Configurações', href: '/dashboard/settings', icon: Settings, roles: ['SMS_ADMIN'] },
       { name: 'Termos de Conf.', href: '/dashboard/settings/terms', icon: ScrollText, roles: ['SMS_ADMIN'] },
       { name: 'Usuários', href: '/dashboard/users', icon: Shield, roles: ['SMS_ADMIN'] },
       { name: 'Backup', href: '/dashboard/backup', icon: DatabaseBackup, roles: ['SMS_ADMIN'] },
-      { name: 'Segurança', href: '/auth/update-password', icon: Lock, roles: ['SMS_ADMIN', 'CLINIC_USER'] },
+      { name: 'Segurança', href: '/auth/update-password', icon: Lock, roles: ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR', 'GERENTE', 'RECEPCIONISTA', 'FATURISTA'] },
     ]
   }
 ]

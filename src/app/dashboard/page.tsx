@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
+import { redirect } from 'next/navigation'
 import { Users, Activity, Building, DollarSign, TrendingUp, ShieldCheck } from 'lucide-react'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { DashboardFilters } from './DashboardFilters'
@@ -11,6 +12,11 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams
   const profile = await getUserProfile()
+
+  if (profile?.role === 'RECEPCIONISTA' || profile?.role === 'FATURISTA') {
+    redirect('/dashboard/attendances')
+  }
+
   const supabase = await createClient()
 
   // Date ranges based on params

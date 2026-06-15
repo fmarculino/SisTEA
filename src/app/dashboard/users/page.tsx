@@ -7,6 +7,19 @@ import UserActions from './UserActions'
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
 import { Pagination } from '@/components/ui/Pagination'
 
+const ROLE_LABELS: Record<string, string> = {
+  SMS_ADMIN: 'Administrador Geral',
+  REGULACAO: 'Regulação',
+  COORDENADOR: 'Coordenador',
+  OPERADOR: 'Operador',
+  GERENTE: 'Gerente',
+  RECEPCIONISTA: 'Recepcionista',
+  FATURISTA: 'Faturista',
+}
+
+const GLOBAL_ROLES = ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR']
+const CLINIC_ROLES = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA']
+
 export default async function UsersPage({
   searchParams,
 }: {
@@ -124,20 +137,20 @@ export default async function UsersPage({
                          {user.email}
                        </span>
                        <div className="flex items-center mt-1.5">
-                         {user.role === 'SMS_ADMIN' ? (
+                         {GLOBAL_ROLES.includes(user.role) ? (
                            <span className="inline-flex items-center text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest">
-                             <Shield className="mr-1 h-3 w-3 stroke-[3]" /> Administrador Global
+                             <Shield className="mr-1 h-3 w-3 stroke-[3]" /> {ROLE_LABELS[user.role] || user.role} (Global)
                            </span>
                          ) : (
                            <span className="inline-flex items-center text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
-                             <Building className="mr-1 h-3 w-3 stroke-[3]" /> Usuário de Clínica
+                             <Building className="mr-1 h-3 w-3 stroke-[3]" /> {ROLE_LABELS[user.role] || user.role} (Clínica)
                            </span>
                          )}
                        </div>
                      </div>
                    </td>
                   <td className="whitespace-nowrap px-3 py-6">
-                    {user.role === 'CLINIC_USER' ? (
+                    {CLINIC_ROLES.includes(user.role) ? (
                       <span className="inline-flex items-center text-xs font-bold text-foreground/70 bg-secondary/30 px-3 py-1.5 rounded-xl border border-border/50">
                         {/* @ts-ignore */}
                         {user.clinics?.name || 'Não vinculada'}

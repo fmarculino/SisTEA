@@ -2,6 +2,22 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.3.0] - 2026-06-15
+
+Esta versão introduz uma matriz expandida de Controle de Acesso Baseado em Papéis (RBAC) no SisTEA para acomodar novas funções da Secretaria Municipal de Saúde (SMS) e dos prestadores clínicos.
+
+### 🔑 Expansão do Matriz de Permissões (RBAC)
+- **Papéis da Secretaria (SMS):** Criação das funções de `REGULACAO`, `COORDENADOR` e `OPERADOR` com acessos equivalentes aos do administrador SMS (`SMS_ADMIN`), exceto para menus críticos como *Configurações*, *Termos de Confidencialidade*, *Backup* e *Gestão de Usuários*.
+- **Papéis Clínicos:**
+  - Renomeação do antigo `CLINIC_USER` para `GERENTE` (mantendo as permissões anteriores).
+  - Criação da função de `RECEPCIONISTA`, limitando o acesso estritamente a *Cadastro de Pacientes*, *Operação de Atendimentos* e *Segurança* (com total bloqueio ao painel de controle e faturamento).
+  - Criação da função de `FATURISTA`, contendo os mesmos acessos de Recepcionista mais o controle de *Competências*.
+- **Segurança Unificada:** Garantia de que todos os perfis possam acessar a tela de alteração de senha em `/auth/update-password`.
+- **Navegação e Redirecionamento Dinâmico:** Atualização da barra lateral e redirecionamento de usuários sem permissão ao dashboard raiz diretamente para `/dashboard/attendances`.
+- **Listagem e Formulários:** Mapeamento visual das novas badges de perfil na listagem administrativa e agrupamento no formulário de criação/edição.
+
+---
+
 ## [1.2.1] - 2026-06-15
 
 Esta versão aprimora a criação de novos termos no Painel Administrativo.

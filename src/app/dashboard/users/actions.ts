@@ -59,7 +59,7 @@ export async function createUser(data: UserFormData) {
         name,
         email,
         role,
-        clinic_id: role === 'CLINIC_USER' ? clinic_id : null,
+        clinic_id: ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(role) ? clinic_id : null,
       })
 
     if (profileError) {
@@ -111,7 +111,7 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
         name: data.name,
         email: data.email, // Keep in sync
         role: data.role,
-        clinic_id: data.role === 'CLINIC_USER' ? data.clinic_id : null,
+        clinic_id: data.role && ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(data.role) ? data.clinic_id : null,
       })
       .eq('id', id)
 
