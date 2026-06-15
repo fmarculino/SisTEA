@@ -117,7 +117,6 @@ export function ConfirmModal({
             <button
               onClick={() => {
                 onConfirm()
-                onClose()
               }}
               className={`flex-1 py-3.5 rounded-2xl text-white text-sm font-bold transition-all active:scale-95 shadow-lg ${button}`}
             >
