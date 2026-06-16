@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
 import { 
   Activity, Users, UserSquare2, Building2, Stethoscope, FileText, 
   CalendarCheck, FileOutput, Shield, Lock, DatabaseBackup, 
@@ -70,6 +71,8 @@ const navigation = [
 export function Sidebar({ role, onLinkClick }: { role: string; onLinkClick?: () => void }) {
   const pathname = usePathname()
   const [openGroups, setOpenGroups] = useState<string[]>([])
+  const [headerLogoUrl, setHeaderLogoUrl] = useState<string>('')
+  const supabase = createClient()
   
   // Estados para gerenciar a instalação do PWA
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
@@ -123,6 +126,21 @@ export function Sidebar({ role, onLinkClick }: { role: string; onLinkClick?: () 
     }
   }, [pathname])
 
+  // Fetch institution logo
+  useEffect(() => {
+    async function fetchLogo() {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'instituicao_cabecalho_url')
+        .maybeSingle()
+      if (data?.value) {
+        setHeaderLogoUrl(data.value as string)
+      }
+    }
+    fetchLogo()
+  }, [supabase])
+
   const toggleGroup = (name: string) => {
     setOpenGroups(prev => 
       prev.includes(name) ? prev.filter(g => g !== name) : [...prev, name]
@@ -138,18 +156,33 @@ export function Sidebar({ role, onLinkClick }: { role: string; onLinkClick?: () 
 
   return (
     <div className="flex h-full w-full flex-col overflow-y-auto border-r border-border/40 bg-card/50 backdrop-blur-xl no-scrollbar">
-      <div className="flex h-24 shrink-0 items-center px-8 mb-4">
-        <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-primary shadow-lg shadow-primary/20 mr-4 group/logo cursor-pointer transition-transform active:scale-95">
-          <Activity className="h-7 w-7 text-primary-foreground group-hover/logo:scale-110 transition-transform duration-300" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-2xl font-black bg-gradient-to-br from-foreground to-foreground/50 bg-clip-text text-transparent tracking-tighter leading-none">
-            SisTEA
-          </span>
-          <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1 opacity-80">
-            Inteligência
-          </span>
-        </div>
+      <div className={`flex shrink-0 items-center px-8 ${headerLogoUrl ? 'flex-col py-5 gap-2' : 'h-24 mb-4'}`}>
+        {headerLogoUrl ? (
+          <>
+            <div className="h-14 w-full flex items-center justify-center overflow-hidden">
+              <img 
+                src={headerLogoUrl} 
+                alt="Logo Institucional" 
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">SisTEA</span>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-primary shadow-lg shadow-primary/20 mr-4 group/logo cursor-pointer transition-transform active:scale-95">
+              <Activity className="h-7 w-7 text-primary-foreground group-hover/logo:scale-110 transition-transform duration-300" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-2xl font-black bg-gradient-to-br from-foreground to-foreground/50 bg-clip-text text-transparent tracking-tighter leading-none">
+                SisTEA
+              </span>
+              <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1 opacity-80">
+                Inteligência
+              </span>
+            </div>
+          </>
+        )}
       </div>
       
       <nav className="flex-1 space-y-1 px-4 py-4">

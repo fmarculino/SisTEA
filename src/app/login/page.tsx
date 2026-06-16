@@ -1,6 +1,7 @@
 import { login } from './actions'
 import { Activity, Mail, Lock } from 'lucide-react'
 import Link from 'next/link'
+import { createAdminClient } from '@/utils/supabase/server'
 
 export default async function LoginPage({
   searchParams,
@@ -8,6 +9,16 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string }>
 }) {
   const { error } = await searchParams
+  const supabase = await createAdminClient()
+
+  // Fetch institution logo URL from system_settings (admin client bypasses RLS for unauthenticated page)
+  const { data: logoSetting } = await supabase
+    .from('system_settings')
+    .select('value')
+    .eq('key', 'instituicao_cabecalho_url')
+    .maybeSingle()
+  
+  const headerLogoUrl = logoSetting?.value || ''
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-12 sm:px-6 lg:px-8">
@@ -18,24 +29,48 @@ export default async function LoginPage({
       <div className="relative w-full max-w-[440px] animate-in">
         <div className="bento-card p-10 md:p-12">
           <div className="flex flex-col items-center">
-            {/* Logo Section */}
-            <div className="group relative flex h-24 w-24 items-center justify-center rounded-[2rem] bg-primary shadow-2xl shadow-primary/30 transition-all duration-500 hover:rotate-6 hover:scale-110">
-              <Activity className="h-12 w-12 text-primary-foreground group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute inset-0 rounded-[2rem] bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
+            {headerLogoUrl ? (
+              <>
+                {/* Institution Logo (Prefeitura/SMS) */}
+                <div className="mb-4 h-24 w-full flex items-center justify-center overflow-hidden animate-in fade-in duration-500">
+                  <img 
+                    src={headerLogoUrl} 
+                    alt="Logo Institucional" 
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
 
-            <div className="mt-8 text-center">
-              <h2 className="text-4xl font-black tracking-tighter text-foreground uppercase">
-                Sis<span className="text-primary italic">TEA</span>
-              </h2>
-              <div className="mt-2 flex items-center justify-center gap-2">
-                <span className="h-[1px] w-4 bg-primary/30" />
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-70">
-                  Controle & Auditoria
-                </p>
-                <span className="h-[1px] w-4 bg-primary/30" />
-              </div>
-            </div>
+                <div className="text-center mt-2">
+                  <h2 className="text-3xl font-black tracking-tighter text-foreground uppercase">
+                    Sis<span className="text-primary italic">TEA</span>
+                  </h2>
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-70">
+                    Controle & Auditoria
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Fallback: SisTEA Icon when no institutional logo */}
+                <div className="group relative flex h-24 w-24 items-center justify-center rounded-[2rem] bg-primary shadow-2xl shadow-primary/30 transition-all duration-500 hover:rotate-6 hover:scale-110">
+                  <Activity className="h-12 w-12 text-primary-foreground group-hover:scale-110 transition-transform duration-500" />
+                  <div className="absolute inset-0 rounded-[2rem] bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+
+                <div className="mt-8 text-center">
+                  <h2 className="text-4xl font-black tracking-tighter text-foreground uppercase">
+                    Sis<span className="text-primary italic">TEA</span>
+                  </h2>
+                  <div className="mt-2 flex items-center justify-center gap-2">
+                    <span className="h-[1px] w-4 bg-primary/30" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-70">
+                      Controle & Auditoria
+                    </p>
+                    <span className="h-[1px] w-4 bg-primary/30" />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <form className="mt-10 space-y-5" action={login}>

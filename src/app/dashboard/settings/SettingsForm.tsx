@@ -5,11 +5,12 @@ import {
   ShieldAlert, RefreshCw, MapPin, 
   ClipboardList, Activity, Lock, 
   Clock, Globe, Save, Loader2,
-  Settings
+  Settings, Image as ImageIcon
 } from 'lucide-react'
 import { updateAllSettingsAction } from './actions'
 import { useRouter } from 'next/navigation'
 import { StatusModal } from '@/components/ui/StatusModal'
+import { createClient } from '@/utils/supabase/client'
 
 interface SettingsFormProps {
   initialSettings: any[]
@@ -17,8 +18,10 @@ interface SettingsFormProps {
 
 export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const router = useRouter()
+  const supabase = createClient()
   const [isPending, startTransition] = useTransition()
   const [showStatus, setShowStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   // State for all settings
   const [values, setValues] = useState(() => {
@@ -86,6 +89,94 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-8 max-w-4xl pb-10">
+        {/* Identidade Visual Section */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+            <ImageIcon className="h-5 w-5 text-blue-500" />
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Identidade Visual</h3>
+          </div>
+
+          <div className="bento-card p-6 group hover:border-primary/30 transition-all">
+            <div className="space-y-1 mb-6">
+              <h4 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                Logo da Instituição (Prefeitura / SMS)
+              </h4>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Será exibida no topo da tela de login e na barra lateral do sistema.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {values.instituicao_cabecalho_url ? (
+                <div className="flex items-center gap-4 animate-in fade-in">
+                  <div className="h-20 w-48 border-2 border-border/40 rounded-2xl overflow-hidden bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] bg-[size:10px_10px] bg-muted/30 flex items-center justify-center p-2 shadow-inner">
+                    <img 
+                      src={values.instituicao_cabecalho_url} 
+                      alt="Logo Instituição" 
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleChange('instituicao_cabecalho_url', '')}
+                    className="px-4 py-2 text-xs font-black text-rose-600 bg-rose-50 dark:bg-rose-950/30 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-950/50 transition-all uppercase tracking-wider"
+                  >
+                    Remover Imagem
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="relative group max-w-md animate-in fade-in duration-200">
+                    <input
+                      id="instituicao_cabecalho"
+                      type="file"
+                      accept="image/png, image/jpeg, image/svg+xml"
+                      disabled={uploadingImage}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        if (file.size > 1 * 1024 * 1024) {
+                          setShowStatus({ type: 'error', message: 'A imagem deve ter no máximo 1MB.' })
+                          return
+                        }
+                        setUploadingImage(true)
+                        try {
+                          const fileExt = file.name.split('.').pop()
+                          const fileName = `instituicao_cabecalho.${fileExt}`
+                          const { error: uploadError } = await supabase.storage
+                            .from('logos')
+                            .upload(fileName, file, { contentType: file.type, upsert: true })
+                          if (uploadError) {
+                            setShowStatus({ type: 'error', message: 'Erro no upload: ' + uploadError.message })
+                            return
+                          }
+                          const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(fileName)
+                          handleChange('instituicao_cabecalho_url', publicUrl)
+                        } catch (err: any) {
+                          setShowStatus({ type: 'error', message: 'Erro ao processar: ' + err.message })
+                        } finally {
+                          setUploadingImage(false)
+                        }
+                      }}
+                      className="block w-full text-sm text-muted-foreground file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-2 file:border-dashed file:border-border/60 file:text-sm file:font-bold file:bg-primary/5 file:text-primary hover:file:bg-primary/10 file:transition-all cursor-pointer disabled:opacity-50"
+                    />
+                    {uploadingImage && (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Processando...</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                    Recomendado: PNG com fundo transparente. Resolução máxima sugerida: 400x120px (máx. 1MB).
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Auditoria & Segurança Section */}
         <section className="space-y-6">
           <div className="flex items-center gap-3 border-b border-border/40 pb-4">

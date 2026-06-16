@@ -7,13 +7,16 @@ import { createClinicAction, updateClinicAction } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCNPJ } from '@/lib/validation-utils'
-import { MapPin, ExternalLink } from 'lucide-react'
+import { MapPin, ExternalLink, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { StatusModal } from '@/components/ui/StatusModal'
+import { createClient } from '@/utils/supabase/client'
 
 export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFormData>; id?: string }) {
   const router = useRouter()
+  const supabase = createClient()
   const [errorMsg, setErrorMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   const {
     register,
@@ -37,6 +40,7 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
       competence_deadline_day: initialData?.competence_deadline_day || 5,
       latitude: initialData?.latitude || null,
       longitude: initialData?.longitude || null,
+      logo_url: initialData?.logo_url || null,
     },
   })
 
@@ -93,6 +97,80 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
         type="error"
       />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 max-w-4xl bg-card text-card-foreground p-10 rounded-2xl shadow-xl border border-border/40 mb-10">
+
+      {/* Logo da Clínica */}
+      <div className="pb-6 border-b border-border/30">
+        <h3 className="text-sm font-black uppercase tracking-widest text-foreground mb-4 flex items-center gap-2">
+          <ImageIcon className="h-4 w-4 text-primary" />
+          Logo da Clínica
+        </h3>
+        <div className="space-y-4">
+          {watch('logo_url') ? (
+            <div className="flex items-center gap-4 animate-in fade-in">
+              <div className="h-20 w-40 border-2 border-border/40 rounded-2xl overflow-hidden bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] bg-[size:10px_10px] bg-muted/30 flex items-center justify-center p-2 shadow-inner">
+                <img 
+                  src={watch('logo_url')!} 
+                  alt="Logo da clínica" 
+                  className="max-h-full max-w-full object-contain"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setValue('logo_url', null)}
+                className="px-4 py-2 text-xs font-black text-rose-600 bg-rose-50 dark:bg-rose-950/30 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-950/50 transition-all uppercase tracking-wider"
+              >
+                Remover Logo
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="relative group max-w-md animate-in fade-in duration-200">
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/svg+xml"
+                  disabled={uploadingLogo}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    if (file.size > 1 * 1024 * 1024) {
+                      setErrorMsg('A imagem deve ter no máximo 1MB.')
+                      return
+                    }
+                    setUploadingLogo(true)
+                    try {
+                      const fileExt = file.name.split('.').pop()
+                      const fileName = `clinic_${id || 'new'}_${Date.now()}.${fileExt}`
+                      const { error: uploadError } = await supabase.storage
+                        .from('logos')
+                        .upload(fileName, file, { contentType: file.type, upsert: true })
+                      if (uploadError) {
+                        setErrorMsg('Erro no upload: ' + uploadError.message)
+                        return
+                      }
+                      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(fileName)
+                      setValue('logo_url', publicUrl)
+                    } catch (err: any) {
+                      setErrorMsg('Erro ao processar: ' + err.message)
+                    } finally {
+                      setUploadingLogo(false)
+                    }
+                  }}
+                  className="block w-full text-sm text-muted-foreground file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-2 file:border-dashed file:border-border/60 file:text-sm file:font-bold file:bg-primary/5 file:text-primary hover:file:bg-primary/10 file:transition-all cursor-pointer disabled:opacity-50"
+                />
+                {uploadingLogo && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Enviando...</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                Recomendado: PNG com fundo transparente. Resolução máxima sugerida: 400x120px (máx. 1MB).
+              </p>
+            </>
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
         <div className="sm:col-span-2">

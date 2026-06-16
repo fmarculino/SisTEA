@@ -19,6 +19,7 @@ export const clinicSchema = z.object({
   latitude: z.coerce.number().optional().nullable(),
   longitude: z.coerce.number().optional().nullable(),
   orgao_emissor: z.string().optional().nullable(),
+  logo_url: z.string().optional().nullable(),
 })
 
 export type ClinicFormData = z.infer<typeof clinicSchema>
