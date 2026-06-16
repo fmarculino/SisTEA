@@ -274,7 +274,9 @@ export function Sidebar({ role, onLinkClick }: { role: string; onLinkClick?: () 
               <Shield className="h-4 w-4 text-primary" />
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="text-[10px] font-black text-foreground uppercase tracking-widest truncate">{role === 'SMS_ADMIN' ? 'Secretaria' : 'Clínica'}</span>
+              <span className="text-[10px] font-black text-foreground uppercase tracking-widest truncate">
+                {['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'].includes(role) ? 'Secretaria' : 'Clínica'}
+              </span>
               <span className="text-[9px] text-muted-foreground font-medium truncate opacity-50">Sessão Segura</span>
             </div>
           </div>

@@ -5,6 +5,16 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { ThemeToggle } from '@/components/theme-toggle'
 
+const ROLE_LABELS: Record<string, string> = {
+  SMS_ADMIN: 'Controlador Geral',
+  REGULACAO: 'Regulação',
+  COORDENADOR: 'Coordenador',
+  OPERADOR: 'Operador',
+  GERENTE: 'Gestor de Clínica',
+  RECEPCIONISTA: 'Recepcionista',
+  FATURISTA: 'Faturista',
+}
+
 export function Header({
   email,
   role,
@@ -26,6 +36,8 @@ export function Header({
     await logout()
   }
 
+  const isGlobalRole = ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'].includes(role)
+
   return (
     <header className="sticky top-0 z-30 flex h-24 shrink-0 items-center justify-between border-b border-border/10 bg-background/50 backdrop-blur-2xl px-6 md:px-12">
       <div className="flex items-center gap-6">
@@ -35,7 +47,7 @@ export function Header({
         >
           <Menu className="h-6 w-6 stroke-[2.5]" />
         </button>
-        {role !== 'SMS_ADMIN' && clinicLogoUrl ? (
+        {!isGlobalRole && clinicLogoUrl ? (
           <div className="hidden sm:flex h-14 items-center overflow-hidden">
             <img 
               src={clinicLogoUrl} 
@@ -58,7 +70,7 @@ export function Header({
           <p className="font-black text-xs text-foreground uppercase tracking-widest leading-none mb-1.5">{email}</p>
           <div className="flex flex-col items-end">
             <span className="px-3 py-1 rounded-lg bg-primary/10 text-primary text-[9px] font-black uppercase tracking-[0.2em] border border-primary/20">
-              {role === 'SMS_ADMIN' ? 'Controlador Geral' : 'Gestor de Clínica'}
+              {ROLE_LABELS[role] || role}
             </span>
             {clinicName && (
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-70">
