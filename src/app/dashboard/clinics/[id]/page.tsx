@@ -11,6 +11,14 @@ export default async function EditClinicPage({ params }: { params: Promise<{ id:
     notFound()
   }
 
+  // Buscar clínicas que podem ser matrizes (que não são filiais)
+  const { data: matrixClinics } = await supabase
+    .from('clinics')
+    .select('id, name, cnes')
+    .is('parent_clinic_id', null)
+    .eq('active', true)
+    .order('name')
+
   return (
     <div className="space-y-10">
       <div>
@@ -21,7 +29,8 @@ export default async function EditClinicPage({ params }: { params: Promise<{ id:
           Atualize os dados cadastrais, informações de contato e configurações de acesso da unidade.
         </p>
       </div>
-      <ClinicForm id={clinic.id} initialData={clinic} />
+      <ClinicForm id={clinic.id} initialData={clinic} matrixClinics={matrixClinics || []} />
     </div>
   )
 }
+

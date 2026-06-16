@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Edit2, Plus, CheckCircle, XCircle } from 'lucide-react'
+import { Edit2, Plus, CheckCircle, XCircle, Building2, GitBranch } from 'lucide-react'
 import { ClinicActions } from './ClinicActions'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
@@ -28,7 +28,7 @@ export default async function ClinicsPage({
   const from = (page - 1) * limit
   const to = from + limit - 1
 
-  let query = supabase.from('clinics').select('*', { count: 'exact' })
+  let query = supabase.from('clinics').select('*, parent_clinic:clinics!parent_clinic_id(name)', { count: 'exact' })
 
   // Filtro de Busca Inteligente
   if (queryParams.q) {
@@ -43,6 +43,7 @@ export default async function ClinicsPage({
   }
 
   const { data: clinics, count } = await query
+    .order('parent_clinic_id', { ascending: true, nullsFirst: true })
     .order('name')
     .range(from, to)
 
@@ -87,6 +88,9 @@ export default async function ClinicsPage({
                   CNPJ / Identificação
                 </th>
                 <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Tipo
+                </th>
+                <th scope="col" className="px-3 py-5 text-left text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                   Status Operacional
                 </th>
                 <th scope="col" className="relative py-5 pl-3 pr-8">
@@ -95,18 +99,25 @@ export default async function ClinicsPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
-              {clinics?.map((clinic) => (
+              {clinics?.map((clinic: any) => (
                 <tr 
                   key={clinic.id} 
-                  className={`transition-colors group/row hover:bg-muted/30 ${!clinic.active ? 'opacity-60 grayscale-[0.3]' : ''}`}
+                  className={`transition-colors group/row hover:bg-muted/30 ${!clinic.active ? 'opacity-60 grayscale-[0.3]' : ''} ${clinic.parent_clinic_id ? 'bg-muted/5' : ''}`}
                 >
                   <td className="whitespace-nowrap py-6 pl-8 pr-3">
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-foreground group-hover/row:text-primary transition-colors">
-                        {clinic.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {clinic.parent_clinic_id && (
+                          <span className="text-muted-foreground/40 text-sm">└</span>
+                        )}
+                        <span className="text-sm font-bold text-foreground group-hover/row:text-primary transition-colors">
+                          {clinic.name}
+                        </span>
+                      </div>
                       <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
-                        {clinic.corporate_name || 'Razão Social não informada'}
+                        {clinic.parent_clinic_id 
+                          ? `Filial de: ${(clinic.parent_clinic as any)?.name || 'Matriz'}`
+                          : (clinic.corporate_name || 'Razão Social não informada')}
                       </span>
                     </div>
                   </td>
@@ -114,6 +125,17 @@ export default async function ClinicsPage({
                     <span className="text-sm font-black tracking-tight text-foreground">
                       {clinic.cnpj ? applyMask(clinic.cnpj, 'cnpj') : '-'}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-6">
+                    {clinic.parent_clinic_id ? (
+                      <span className="inline-flex items-center rounded-xl bg-amber-500/10 px-3 py-1.5 text-[10px] font-black text-amber-600 dark:text-amber-400 border border-amber-500/20 uppercase tracking-widest leading-none">
+                        <GitBranch className="w-3 h-3 mr-1.5 stroke-[2.5]" /> Filial
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-xl bg-primary/10 px-3 py-1.5 text-[10px] font-black text-primary border border-primary/20 uppercase tracking-widest leading-none">
+                        <Building2 className="w-3 h-3 mr-1.5 stroke-[2.5]" /> Matriz
+                      </span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-6">
                     {clinic.active ? (
@@ -146,7 +168,7 @@ export default async function ClinicsPage({
               ))}
               {(!clinics || clinics.length === 0) && (
                 <tr>
-                  <td colSpan={4} className="py-20 text-center">
+                  <td colSpan={5} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
                         <Plus className="h-8 w-8 text-muted-foreground" />
@@ -167,3 +189,4 @@ export default async function ClinicsPage({
     </div>
   )
 }
+

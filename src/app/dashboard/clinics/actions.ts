@@ -17,6 +17,8 @@ export async function createClinicAction(data: ClinicFormData) {
   const { error } = await supabase.from('clinics').insert({
     ...validatedFields.data,
     email: validatedFields.data.email || null,
+    parent_clinic_id: validatedFields.data.parent_clinic_id || null,
+    cnes: validatedFields.data.cnes || null,
   })
 
   if (error) {
@@ -42,6 +44,8 @@ export async function updateClinicAction(id: string, data: ClinicFormData) {
   const { error } = await supabase.from('clinics').update({
     ...validatedFields.data,
     email: validatedFields.data.email || null,
+    parent_clinic_id: validatedFields.data.parent_clinic_id || null,
+    cnes: validatedFields.data.cnes || null,
   }).eq('id', id)
 
   if (error) {

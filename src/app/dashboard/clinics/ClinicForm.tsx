@@ -7,11 +7,13 @@ import { createClinicAction, updateClinicAction } from './actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCNPJ } from '@/lib/validation-utils'
-import { MapPin, ExternalLink, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { MapPin, ExternalLink, Image as ImageIcon, Loader2, Building2, GitBranch } from 'lucide-react'
 import { StatusModal } from '@/components/ui/StatusModal'
 import { createClient } from '@/utils/supabase/client'
 
-export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFormData>; id?: string }) {
+type MatrixClinicOption = { id: string; name: string; cnes: string | null }
+
+export function ClinicForm({ initialData, id, matrixClinics = [] }: { initialData?: Partial<ClinicFormData> & { parent_clinic_id?: string | null }; id?: string; matrixClinics?: MatrixClinicOption[] }) {
   const router = useRouter()
   const supabase = createClient()
   const [errorMsg, setErrorMsg] = useState('')
@@ -41,8 +43,25 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
       latitude: initialData?.latitude || null,
       longitude: initialData?.longitude || null,
       logo_url: initialData?.logo_url || null,
+      parent_clinic_id: initialData?.parent_clinic_id || null,
     },
   })
+
+  const selectedParentId = watch('parent_clinic_id')
+  const isFilial = !!selectedParentId
+
+  // Quando seleciona um parent, herda o CNES automaticamente
+  const handleParentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const parentId = e.target.value || null
+    setValue('parent_clinic_id', parentId, { shouldValidate: true })
+    
+    if (parentId) {
+      const parent = matrixClinics.find(c => c.id === parentId)
+      if (parent?.cnes) {
+        setValue('cnes', parent.cnes)
+      }
+    }
+  }
 
   // CNPJ Mask handler
   const handleCNPJChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,6 +192,41 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
       </div>
 
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+        {/* Seletor de Clínica Matriz (Filial) */}
+        <div className="sm:col-span-2 pb-4 border-b border-border/30">
+          <div className="flex items-center gap-2 mb-3">
+            <GitBranch className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Tipo de Unidade</h3>
+          </div>
+          {isFilial && (
+            <div className="mb-3 inline-flex items-center rounded-xl bg-amber-500/10 px-3 py-1.5 text-[10px] font-black text-amber-600 dark:text-amber-400 border border-amber-500/20 uppercase tracking-widest leading-none">
+              <Building2 className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" />
+              Filial — Vinculada à Matriz
+            </div>
+          )}
+          {!isFilial && id && (
+            <div className="mb-3 inline-flex items-center rounded-xl bg-primary/10 px-3 py-1.5 text-[10px] font-black text-primary border border-primary/20 uppercase tracking-widest leading-none">
+              <Building2 className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" />
+              Matriz — Unidade Principal
+            </div>
+          )}
+          <select
+            value={selectedParentId || ''}
+            onChange={handleParentChange}
+            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-3 border bg-background transition-all"
+          >
+            <option value="">Nenhuma — Esta clínica é uma Matriz (independente)</option>
+            {matrixClinics.filter(c => c.id !== id).map((c) => (
+              <option key={c.id} value={c.id}>{c.name}{c.cnes ? ` (CNES: ${c.cnes})` : ''}</option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-[10px] text-muted-foreground">
+            {isFilial 
+              ? 'Esta clínica é uma filial. CNES, contrato e competência serão herdados da matriz selecionada.' 
+              : 'Deixe vazio se esta clínica opera de forma independente ou é a matriz do grupo.'}
+          </p>
+        </div>
+
         <div className="sm:col-span-2">
           <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Nome Fantasia *</label>
           <input
@@ -208,13 +262,19 @@ export function ClinicForm({ initialData, id }: { initialData?: Partial<ClinicFo
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">CNES *</label>
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">
+            CNES {isFilial ? '(herdado da matriz)' : '*'}
+          </label>
           <input
             type="text"
             {...register('cnes')}
-            className="mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-3 border bg-background transition-all font-mono"
-            placeholder="Ex: 1234567"
+            readOnly={isFilial}
+            className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-3 border bg-background transition-all font-mono ${isFilial ? 'opacity-60 cursor-not-allowed bg-muted/20' : ''}`}
+            placeholder={isFilial ? 'Herdado da matriz' : 'Ex: 1234567'}
           />
+          {isFilial && (
+            <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400 font-bold">O CNES é herdado automaticamente da clínica matriz.</p>
+          )}
           {errors.cnes && <p className="mt-1 text-sm text-rose-500">{errors.cnes.message}</p>}
         </div>
 

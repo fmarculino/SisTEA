@@ -66,6 +66,7 @@ export async function createUser(data: UserFormData) {
     }
 
     // 2. Create user record in public.users
+    const isClinicRole = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(role)
     const { error: profileError } = await supabase
       .from('users')
       .insert({
@@ -73,7 +74,7 @@ export async function createUser(data: UserFormData) {
         name,
         email,
         role,
-        clinic_id: ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(role) ? clinic_id : null,
+        clinic_id: isClinicRole ? clinic_id : null,
       })
 
     if (profileError) {
@@ -81,6 +82,20 @@ export async function createUser(data: UserFormData) {
       // Rollback auth user
       await supabase.auth.admin.deleteUser(authUser.user.id)
       return { error: `Erro ao criar perfil: ${profileError.message}` }
+    }
+
+    // 3. Create user_clinics record (multi-unidade)
+    if (isClinicRole && clinic_id) {
+      const { error: ucError } = await supabase
+        .from('user_clinics')
+        .insert({
+          user_id: authUser.user.id,
+          clinic_id: clinic_id,
+          is_default: true,
+        })
+      if (ucError) {
+        console.error('UserClinics Error:', ucError)
+      }
     }
 
     revalidatePath('/dashboard/users')
@@ -112,14 +127,26 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
 
     // Security check for GERENTE
     if (profile.role === 'GERENTE') {
-      const { data: userToEdit } = await supabase
-        .from('users')
+      // Verificar via user_clinics se o usuário pertence à mesma clínica
+      const { data: userClinics } = await supabase
+        .from('user_clinics')
         .select('clinic_id')
-        .eq('id', id)
-        .single()
+        .eq('user_id', id)
 
-      if (!userToEdit || userToEdit.clinic_id !== profile.clinic_id) {
-        return { error: 'Não autorizado a alterar usuários de outra clínica' }
+      const userClinicIds = (userClinics || []).map((uc: any) => uc.clinic_id)
+      const hasAccess = userClinicIds.includes(profile.clinic_id)
+
+      // Fallback: verificar campo legado
+      if (!hasAccess) {
+        const { data: userToEdit } = await supabase
+          .from('users')
+          .select('clinic_id')
+          .eq('id', id)
+          .single()
+
+        if (!userToEdit || userToEdit.clinic_id !== profile.clinic_id) {
+          return { error: 'Não autorizado a alterar usuários de outra clínica' }
+        }
       }
 
       if (data.role && !['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(data.role)) {
@@ -143,18 +170,33 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
     }
 
     // 2. Update public profile
+    const isClinicRole = data.role && ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(data.role)
     const { error: profileError } = await supabase
       .from('users')
       .update({
         name: data.name,
-        email: data.email, // Keep in sync
+        email: data.email,
         role: data.role,
-        clinic_id: data.role && ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(data.role) ? data.clinic_id : null,
+        clinic_id: isClinicRole ? data.clinic_id : null,
       })
       .eq('id', id)
 
     if (profileError) {
       return { error: `Erro ao atualizar perfil: ${profileError.message}` }
+    }
+
+    // 3. Sync user_clinics
+    if (isClinicRole && data.clinic_id) {
+      // Upsert: garante que o vínculo existe na user_clinics
+      await supabase
+        .from('user_clinics')
+        .upsert({
+          user_id: id,
+          clinic_id: data.clinic_id,
+          is_default: true,
+        }, {
+          onConflict: 'user_id,clinic_id'
+        })
     }
 
     revalidatePath('/dashboard/users')

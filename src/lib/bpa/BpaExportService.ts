@@ -52,10 +52,50 @@ export interface BpaValidationResult {
 
 export class BpaExportService {
   /**
+   * Resolve o ID da clínica matriz e retorna todos os IDs do grupo.
+   * Se a clínica já for matriz, retorna ela mesma + filiais.
+   * Se for filial, encontra a matriz e retorna o grupo completo.
+   */
+  private static async resolveGroupClinicIds(clinic_id: string): Promise<{ matrixId: string; groupIds: string[] }> {
+    const supabase = await createClient();
+    
+    // Verificar se é filial
+    const { data: clinic } = await supabase
+      .from('clinics')
+      .select('id, parent_clinic_id')
+      .eq('id', clinic_id)
+      .single();
+    
+    const matrixId = clinic?.parent_clinic_id || clinic_id;
+    
+    // Buscar todas as clínicas do grupo (matriz + filiais)
+    const { data: groupClinics } = await supabase
+      .from('clinics')
+      .select('id')
+      .or(`id.eq.${matrixId},parent_clinic_id.eq.${matrixId}`);
+    
+    const groupIds = (groupClinics || []).map((c: any) => c.id);
+    
+    // Garantir que pelo menos a clínica passada esteja no grupo
+    if (groupIds.length === 0) groupIds.push(clinic_id);
+    
+    return { matrixId, groupIds };
+  }
+
+  /**
    * Varredura Pre-flight: Retorna inconsistências que impediriam a geração correta do BPA.
+   * Consolida atendimentos de TODAS as unidades do grupo (matriz + filiais).
    */
   static async validateExport(clinic_id: string, month_year: string): Promise<BpaValidationResult> {
     const supabase = await createClient();
+    const { matrixId, groupIds } = await this.resolveGroupClinicIds(clinic_id);
+
+    // Buscar dados da matriz para validação do CNES
+    const { data: matrixClinic } = await supabase
+      .from('clinics')
+      .select('cnes')
+      .eq('id', matrixId)
+      .single();
 
     const { data: attendances, error } = await supabase
       .from('attendances')
@@ -67,7 +107,7 @@ export class BpaExportService {
         procedures!inner ( name, code, bpa_type ),
         clinics!inner ( cnes )
       `)
-      .eq('clinic_id', clinic_id)
+      .in('clinic_id', groupIds)
       .eq('month_year', month_year)
       .eq('status', 'Realizada');
 
@@ -78,11 +118,17 @@ export class BpaExportService {
     const errors: BpaValidationResult['errors'] = [];
     const validAttendances = (attendances || []).filter((att: any) => att.procedures?.code && att.procedures.code.trim() !== '');
 
+    // Validar CNES da matriz (usado no cabeçalho do BPA)
+    if (!matrixClinic?.cnes) {
+      errors.push({
+        attendance_id: 'HEADER',
+        patient_name: 'Clínica Matriz',
+        missing_fields: ['Clínica Matriz sem CNES configurado'],
+      });
+    }
+
     validAttendances.forEach((att: any) => {
       const missing = [];
-
-      // Validações Clínica
-      if (!att.clinics?.cnes) missing.push('Clínica sem CNES');
 
       // Validações Paciente (Crucial para BPA-I)
       if (att.procedures?.bpa_type === 'BPA_I' || att.procedures?.bpa_type === 'AMBOS') {
@@ -119,7 +165,9 @@ export class BpaExportService {
   }
 
   /**
-   * Gera o conteúdo TXT no formato DATASUS
+   * Gera o conteúdo TXT no formato DATASUS.
+   * Consolida atendimentos de TODAS as unidades do grupo em um arquivo único.
+   * O cabeçalho usa CNPJ/CNES da MATRIZ.
    */
   static async generateTxt(clinic_id: string, month_year: string): Promise<string> {
     const validation = await this.validateExport(clinic_id, month_year);
@@ -128,7 +176,20 @@ export class BpaExportService {
     }
 
     const supabase = await createClient();
+    const { matrixId, groupIds } = await this.resolveGroupClinicIds(clinic_id);
 
+    // Buscar dados da MATRIZ para o cabeçalho do BPA
+    const { data: matrixClinic } = await supabase
+      .from('clinics')
+      .select('name, cnes, cnpj, orgao_emissor')
+      .eq('id', matrixId)
+      .single();
+
+    if (!matrixClinic) {
+      throw new Error('Clínica matriz não encontrada.');
+    }
+
+    // Buscar atendimentos de TODAS as unidades do grupo
     const { data: attendances, error } = await supabase
       .from('attendances')
       .select(`
@@ -139,7 +200,7 @@ export class BpaExportService {
         procedures!inner ( name, code, bpa_type ),
         clinics!inner ( name, cnes, cnpj, orgao_emissor )
       `)
-      .eq('clinic_id', clinic_id)
+      .in('clinic_id', groupIds)
       .eq('month_year', month_year)
       .eq('status', 'Realizada');
 
@@ -153,7 +214,8 @@ export class BpaExportService {
       throw new Error('Nenhuma produção exportável encontrada para esta competência.');
     }
 
-    const clinic = validAttendances[0].clinics as any;
+    // Usa dados da MATRIZ para o cabeçalho (não da clínica individual)
+    const clinic = matrixClinic as any;
     const lines: string[] = [];
     
     // Formata competência de MM/YYYY para YYYYMM
@@ -161,15 +223,16 @@ export class BpaExportService {
     const compYYYYMM = `${year}${month.padStart(2, '0')}`;
 
     // --- Header (Registro 01) - 127 caracteres seguindo padrão PACOMU.ABR ---
+    // Sempre usa CNPJ/CNES da MATRIZ
     const headerLine = 
       '01' +                                      // 1-2: Identificador
       '#BPA#' +                                   // 3-7: Fixo
       compYYYYMM +                                // 8-13: Competência AAAAMM
-      padLeft(attendances.length.toString(), 6) + // 14-19: Quantidade de Registros
-      padLeft(clinic.cnes, 12) +                  // 20-31: CNES/Órgão Emissor
-      padRight(normalizeText(clinic.name), 30) +  // 32-61: Nome do Órgão
+      padLeft(validAttendances.length.toString(), 6) + // 14-19: Quantidade de Registros (consolidado)
+      padLeft(clinic.cnes, 12) +                  // 20-31: CNES/Órgão Emissor (MATRIZ)
+      padRight(normalizeText(clinic.name), 30) +  // 32-61: Nome do Órgão (MATRIZ)
       'NVM' +                                     // 62-64: Sigla (Nova Versão Magnético)
-      padLeft(clinic.cnpj || '', 14) +            // 65-78: CNPJ
+      padLeft(clinic.cnpj || '', 14) +            // 65-78: CNPJ (MATRIZ)
       padRight('', 42) +                          // 79-120: Reserva
       'MD04.12';                                  // 121-127: Versão Layout
       
@@ -243,7 +306,7 @@ export class BpaExportService {
           padLeft(att.service_classifications?.classification_code || '002', 3) + // 163-165: Classificação
           padRight('', 8) +                       // 166-173: Equipe Seq
           padRight('', 4) +                       // 174-177: Equipe Area
-          padLeft(clinic.cnpj || '', 14) +        // 178-191: CNPJ Unidade
+          padLeft(clinic.cnpj || '', 14) +        // 178-191: CNPJ (MATRIZ — BPA unificado)
           padLeft(sanitize(att.patients.cep), 8) + // 192-199: CEP Paciente
           '081' +                                 // 200-202: Código Logradouro (Default: RUA)
           padRight(normalizeText(att.patients.address_street), 30) + // 203-232: Logradouro (Rua)
@@ -268,10 +331,14 @@ export class BpaExportService {
 
   /**
    * Sugere o nome do arquivo seguindo o padrão BPA_CNES_AAAAMM.EXT
+   * Sempre usa o CNES da MATRIZ.
    */
   static async getSuggestedFilename(clinic_id: string, month_year: string): Promise<string> {
     const supabase = await createClient();
-    const { data: clinic } = await supabase.from('clinics').select('cnes').eq('id', clinic_id).single();
+    const { matrixId } = await this.resolveGroupClinicIds(clinic_id);
+    
+    // Sempre busca CNES da matriz
+    const { data: clinic } = await supabase.from('clinics').select('cnes').eq('id', matrixId).single();
     
     const [month, year] = month_year.split('/');
     const compAAAAMM = `${year}${month.padStart(2, '0')}`;

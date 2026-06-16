@@ -23,14 +23,35 @@ export async function getUserProfile() {
     return null
   }
 
+  // Carregar clínicas vinculadas via user_clinics (multi-unidade)
+  const { data: userClinics } = await supabase
+    .from('user_clinics')
+    .select('clinic_id, is_default, clinic:clinics(id, name, active, logo_url, parent_clinic_id)')
+    .eq('user_id', auth.user.id)
+    .order('is_default', { ascending: false })
+
+  const linkedClinics = (userClinics || []).map((uc: any) => ({
+    clinic_id: uc.clinic_id,
+    is_default: uc.is_default,
+    name: uc.clinic?.name,
+    active: uc.clinic?.active,
+    logo_url: uc.clinic?.logo_url,
+    parent_clinic_id: uc.clinic?.parent_clinic_id,
+  }))
+
+  // Clínica default: primeiro a marcada como default, depois a do campo legado
+  const defaultClinic = linkedClinics.find((c: any) => c.is_default) || linkedClinics[0]
+  const effectiveClinicId = defaultClinic?.clinic_id || profile.clinic_id
+
   return { 
     ...auth.user, 
     role: profile.role, 
-    clinic_id: profile.clinic_id, 
-    clinic_name: profile.clinic?.name,
-    clinic_logo_url: profile.clinic?.logo_url,
-    clinic_active: profile.role === 'SMS_ADMIN' ? true : (profile.clinic?.active ?? true),
-    active: profile.active 
+    clinic_id: effectiveClinicId, 
+    clinic_name: defaultClinic?.name || profile.clinic?.name,
+    clinic_logo_url: defaultClinic?.logo_url || profile.clinic?.logo_url,
+    clinic_active: profile.role === 'SMS_ADMIN' ? true : (defaultClinic?.active ?? profile.clinic?.active ?? true),
+    active: profile.active,
+    linked_clinics: linkedClinics,
   }
 }
 

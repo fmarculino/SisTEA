@@ -2,6 +2,30 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.4.0] - 2026-06-16
+
+Esta versão introduz o suporte completo a **Clínicas Filiais (Unidades Vinculadas)**, permitindo a gestão hierárquica de clínicas, herança automática de CNES e consolidação unificada do faturamento BPA e competências para todo o grupo.
+
+### 🏢 Suporte a Clínicas Filiais & Hierarquia (Multi-Unidades)
+- **Modelagem de Hierarquia:** Adicionado o campo `parent_clinic_id` na tabela `clinics` com triggers para garantir integridade (limitação a apenas 1 nível e prevenção de auto-referência).
+- **Vínculos Multi-Clínica:** Criação da tabela de junção `user_clinics` para permitir que usuários (como faturistas e administradores) estejam vinculados a múltiplas clínicas, definindo uma unidade padrão (`is_default`).
+- **Migração de Dados Estruturada:** Script de migração de dados de `users.clinic_id` para a nova tabela `user_clinics` preservando todos os vínculos existentes.
+- **Funções Auxiliares SQL:** Criação de funções como `get_matrix_clinic_id`, `get_clinic_group_ids` e `get_user_accessible_clinic_ids` para consulta ágil de grupos de clínicas e permissões.
+
+### 🛡️ Reestruturação Completa de Políticas de Segurança (RLS)
+- **Políticas Multi-Clínica (Group-Aware):** Atualização sistemática de todas as políticas de RLS das tabelas críticas (`clinics`, `patients`, `attendances`, `contracts`, `professionals`, `users`, `competences`, `attendance_sessions`, etc.) para usar a função de validação de acesso `user_can_access_clinic(clinic_id)`, permitindo que usuários vejam/operem dados de qualquer clínica do grupo de sua matriz se tiverem permissão.
+
+### 📄 Consolidação do Faturamento BPA (Ministério da Saúde)
+- **Exportação Consolidada:** O `BpaExportService` agora resolve a matriz do grupo e exporta de forma unificada os atendimentos de todas as filiais e da matriz (`.in('clinic_id', groupIds)`).
+- **Herança de Identidade:** O arquivo BPA exportado utiliza o CNPJ e o CNES da clínica matriz no cabeçalho, conforme a regra de contrato unificado do grupo.
+
+### 🎨 Painel de Gestão e Formulários (UI/UX Premium)
+- **Formulário de Clínicas Inteligente:** Inclusão de seletor de "Clínica Matriz". Para filiais, o campo CNES passa a ser herdado e travado para edição, enquanto para matrizes a validação do CNES permanece obrigatória.
+- **Hierarquia Visual na Listagem:** A listagem de clínicas exibe a relação de parentesco com recuo visual (└), badges de "Matriz" e "Filial", e o nome da clínica matriz associada para fácil identificação.
+- **Gestão de Usuários:** Atualização das Server Actions de criação e edição de usuários para gravar na tabela `user_clinics`.
+
+---
+
 ## [1.3.0] - 2026-06-15
 
 Esta versão introduz uma matriz expandida de Controle de Acesso Baseado em Papéis (RBAC) no SisTEA para acomodar novas funções da Secretaria Municipal de Saúde (SMS) e dos prestadores clínicos.
