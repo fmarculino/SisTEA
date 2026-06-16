@@ -28,13 +28,25 @@ export default async function ReportsPage({
   const limit = Number(params.limit) || 20
   const offset = (page - 1) * limit
 
+  const isClinicUser = !['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'].includes(profile?.role || '')
+
+  let clinicsQuery = supabase.from('clinics').select('id, name, closing_day').order('name')
+  let patientsQuery = supabase.from('patients').select('id, name').order('name')
+  let competencesQuery = supabase.from('competences').select('*').order('year', { ascending: false }).order('month', { ascending: false }).limit(24)
+
+  if (isClinicUser && profile?.clinic_id) {
+    clinicsQuery = clinicsQuery.eq('id', profile.clinic_id)
+    patientsQuery = patientsQuery.eq('clinic_id', profile.clinic_id)
+    competencesQuery = competencesQuery.eq('clinic_id', profile.clinic_id)
+  }
+
   // Fetch filter options
   const [clinicsRes, professionalsRes, patientsRes, proceduresRes, competencesRes] = await Promise.all([
-    supabase.from('clinics').select('id, name, closing_day').order('name'),
+    clinicsQuery,
     supabase.from('professionals').select('id, name').order('name'),
-    supabase.from('patients').select('id, name').order('name'),
+    patientsQuery,
     supabase.from('procedures').select('id, code, name').order('name'),
-    supabase.from('competences').select('*').order('year', { ascending: false }).order('month', { ascending: false }).limit(24)
+    competencesQuery
   ])
 
   const clinics = clinicsRes.data || []
@@ -67,7 +79,7 @@ export default async function ReportsPage({
   const reportType = (params.type as any) || 'billing'
   const mode = params.mode || 'preview'
 
-  const selectedClinic = profile?.role === 'CLINIC_USER' ? profile.clinic_id : (params.clinic_id || null)
+  const selectedClinic = isClinicUser ? profile?.clinic_id : (params.clinic_id || null)
   const selectedProfessional = params.professional_id && params.professional_id !== '' ? params.professional_id : null
   const selectedPatient = params.patient_id && params.patient_id !== '' ? params.patient_id : null
   const selectedProcedure = params.procedure_id && params.procedure_id !== '' ? params.procedure_id : null

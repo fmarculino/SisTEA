@@ -507,10 +507,10 @@ export default function ReportsClient({
             <select 
               name="clinic_id" 
               defaultValue={selectedClinic}
-              disabled={userRole === 'CLINIC_USER'}
+              disabled={!['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'].includes(userRole)}
               className="w-full bg-muted/30 border border-border/50 rounded-2xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-primary/10 outline-none transition-all appearance-none"
             >
-              <option value="">Todas as Unidades</option>
+              {!['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'].includes(userRole) ? null : <option value="">Todas as Unidades</option>}
               {filters.clinics.map((c: any) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

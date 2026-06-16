@@ -89,7 +89,8 @@ export default async function PrintReportPage({
   const reportType = (reportFilters.type as any) || 'billing'
   const mode = reportFilters.mode || 'official'
 
-  const selectedClinic = profile.role === 'CLINIC_USER' ? profile.clinic_id : (reportFilters.clinic_id || null)
+  const isClinicUser = !['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'].includes(profile.role)
+  const selectedClinic = isClinicUser ? profile.clinic_id : (reportFilters.clinic_id || null)
   const selectedProfessional = reportFilters.professional_id && reportFilters.professional_id !== '' ? reportFilters.professional_id : null
   const selectedPatient = reportFilters.patient_id && reportFilters.patient_id !== '' ? reportFilters.patient_id : null
   const selectedProcedure = reportFilters.procedure_id && reportFilters.procedure_id !== '' ? reportFilters.procedure_id : null
