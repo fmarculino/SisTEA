@@ -18,7 +18,7 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
   if (!patient) notFound()
 
   let clinics: any[] = []
-  if (profile.role === 'SMS_ADMIN') {
+  if (profile.role === 'SMS_ADMIN' || profile.role === 'GERENTE') {
     const { data } = await supabase.from('clinics').select('id, name').order('name')
     clinics = data || []
   }

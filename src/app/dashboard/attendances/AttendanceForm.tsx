@@ -249,7 +249,7 @@ export function AttendanceForm({
 
   // METADATA LOCK logic:
   // Same as identity, but allows SMS_ADMIN to adjust fields for BPA validation even if sessions are validated.
-  const isMetadataLocked = isCompetenceLocked || (userRole === 'CLINIC_USER' && hasValidatedSession);
+  const isMetadataLocked = isCompetenceLocked || (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(userRole) && hasValidatedSession);
 
   // CLINIC LOCK logic:
   // 1. All Identity Lock rules
@@ -564,15 +564,15 @@ export function AttendanceForm({
     }
   }, [errors]);
 
-  // Filter patients and professionals by selected clinic if SMS_ADMIN
-  const filteredPatients = userRole === 'SMS_ADMIN' && selectedClinicId
+  // Filter patients and professionals by selected clinic
+  const filteredPatients = selectedClinicId
     ? patients.filter(p =>
       p.clinic_id === selectedClinicId ||
       (p.patient_clinics && p.patient_clinics.some((pc: any) => pc.clinic_id === selectedClinicId))
     )
     : patients
 
-  const filteredProfessionals = userRole === 'SMS_ADMIN' && selectedClinicId
+  const filteredProfessionals = selectedClinicId
     ? professionals.filter(p =>
       p.professional_clinics?.some((pc: any) => pc.clinic_id === selectedClinicId)
     )
@@ -759,7 +759,7 @@ export function AttendanceForm({
         )}
 
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-          {userRole === 'SMS_ADMIN' && (
+          {(userRole === 'SMS_ADMIN' || ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(userRole)) && (
             <div className="sm:col-span-2 bg-amber-500/5 p-6 rounded-2xl border border-amber-500/10 mb-2">
               <label className="block text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2">Unidade de Saúde (Clínica)</label>
               <select
@@ -781,8 +781,8 @@ export function AttendanceForm({
             </div>
           )}
 
-          {/* hidden input if not admin */}
-          {userRole !== 'SMS_ADMIN' && (
+          {/* hidden input if not admin and not clinic role */}
+          {!(userRole === 'SMS_ADMIN' || ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(userRole)) && (
             <input type="hidden" {...register('clinic_id')} />
           )}
 
@@ -1471,7 +1471,7 @@ export function AttendanceForm({
                     </div>
                   ) : (
                     <div className="sm:col-span-1 flex flex-col items-end justify-center gap-2">
-                      {userRole === 'CLINIC_USER' && (watch(`sessions.${index}.status`) === 'Pendente' || watch(`sessions.${index}.status`) === 'Não Realizado') && id && watch(`sessions.${index}.id`) && !isCompetenceLocked && (
+                      {['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(userRole) && (watch(`sessions.${index}.status`) === 'Pendente' || watch(`sessions.${index}.status`) === 'Não Realizado') && id && watch(`sessions.${index}.id`) && !isCompetenceLocked && (
                         <button
                           type="button"
                           onClick={() => setQrModalSession({ index, sessionId: watch(`sessions.${index}.id`)! })}
@@ -1484,7 +1484,7 @@ export function AttendanceForm({
                       {!isCompetenceLocked && (
                         !watch(`sessions.${index}.id`) ||
                         (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`)) ||
-                        (userRole === 'CLINIC_USER' && (watch(`sessions.${index}.status` as any) === 'Pendente' || watch(`sessions.${index}.status` as any) === 'Não Realizado') && !watch(`sessions.${index}.validated_at`))
+                        (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(userRole) && (watch(`sessions.${index}.status` as any) === 'Pendente' || watch(`sessions.${index}.status` as any) === 'Não Realizado') && !watch(`sessions.${index}.validated_at`))
                       ) && (
                           <button
                             type="button"

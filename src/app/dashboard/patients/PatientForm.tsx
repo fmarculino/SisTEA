@@ -108,16 +108,16 @@ export function PatientForm({
       state: initialData?.state || '',
       medical_record_number: initialData?.medical_record_number || '',
       active: initialData?.active ?? true,
-      clinic_id: userRole === 'SMS_ADMIN' ? (initialData?.clinic_id || '') : (userClinicId || ''),
+      clinic_id: ['SMS_ADMIN', 'GERENTE'].includes(userRole) ? (initialData?.clinic_id || '') : (userClinicId || ''),
       clinic_ids: initialData?.clinic_ids || (userClinicId ? [userClinicId] : []),
     },
   })
 
   const clinicIds = watch('clinic_ids') || []
 
-  // Sincroniza localLinkedClinics com clinicIds do formulário se o usuário for SMS_ADMIN
+  // Sincroniza localLinkedClinics com clinicIds do formulário se o usuário for SMS_ADMIN ou GERENTE
   useEffect(() => {
-    if (userRole === 'SMS_ADMIN') {
+    if (['SMS_ADMIN', 'GERENTE'].includes(userRole)) {
       setLocalLinkedClinics(prev => {
         const activeMap = new Map(prev.map(lc => [lc.clinic_id, lc.active]))
         
@@ -197,7 +197,7 @@ export function PatientForm({
 
     // Sync with form state if the toggled clinic is the currently selected one
     const currentSelectedClinic = watch('clinic_id');
-    if (clinicId === currentSelectedClinic || (userRole !== 'SMS_ADMIN' && clinicId === userClinicId)) {
+    if (clinicId === currentSelectedClinic || (!['SMS_ADMIN', 'GERENTE'].includes(userRole) && clinicId === userClinicId)) {
       setValue('active', newStatus);
     }
 
@@ -494,7 +494,7 @@ export function PatientForm({
         <section className="space-y-8 pt-4">
           <SectionTitle icon={CreditCard} title="Configurações e Vínculo" />
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-6 pl-2">
-            {userRole === 'SMS_ADMIN' ? (
+            {['SMS_ADMIN', 'GERENTE'].includes(userRole) ? (
               <div className="sm:col-span-6">
                 <Controller
                   name="clinic_ids"

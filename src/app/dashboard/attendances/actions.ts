@@ -141,6 +141,15 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   const compError = await checkCompetenceLock(supabase, rawAttendanceData.clinic_id, rawAttendanceData.attendance_date)
   if (compError) return compError
 
+  // --- CLINIC GROUP ACCESS CHECK ---
+  const isClinicRole = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '')
+  if (isClinicRole) {
+    const hasAccess = profile?.linked_clinics?.some((c: any) => c.clinic_id === rawAttendanceData.clinic_id)
+    if (!hasAccess) {
+      return { error: 'Você não tem permissão para criar atendimentos nesta clínica.' }
+    }
+  }
+
   // --- QUANTITY LIMIT CHECK (BR-004) ---
   const qtyLimitError = await validateProcedureQuantityLimit(
     supabase,
@@ -312,10 +321,20 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
 
   if (!currentAttendance) return { error: 'Atendimento não encontrado' }
 
+  // --- CLINIC GROUP ACCESS CHECK ---
+  const isClinicRole = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '')
+  if (isClinicRole) {
+    const hasCurrentAccess = profile?.linked_clinics?.some((c: any) => c.clinic_id === currentAttendance.clinic_id)
+    const hasNewAccess = profile?.linked_clinics?.some((c: any) => c.clinic_id === rawAttendanceData.clinic_id)
+    if (!hasCurrentAccess || !hasNewAccess) {
+      return { error: 'Você não tem permissão para editar atendimentos desta clínica.' }
+    }
+  }
+
   const dbSessions = (currentAttendance as any).sessions as any[] || []
   const hasValidatedInDb = dbSessions.some((s: any) => s.status === 'Realizada' || s.status === 'Glosado' || s.status === 'Faltou')
 
-  if (profile?.role === 'CLINIC_USER' && hasValidatedInDb) {
+  if (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '') && hasValidatedInDb) {
     // If ANY session is validated, critical header fields become IMMUTABLE
     const patientChanged = rawAttendanceData.patient_id !== currentAttendance.patient_id
     const professionalChanged = rawAttendanceData.professional_id !== currentAttendance.professional_id
@@ -336,7 +355,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     for (const s of dbSessions) {
       if (!incomingIds.has(s.id)) {
         // Rule 1: Clinic User can only delete sessions that are "Pendente" or "Não Realizado" and NOT validated
-        if (profile?.role === 'CLINIC_USER' && ((s.status !== 'Pendente' && s.status !== 'Não Realizado') || s.validated_at)) {
+        if (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '') && ((s.status !== 'Pendente' && s.status !== 'Não Realizado') || s.validated_at)) {
           return { error: 'Clínicas não têm permissão para remover frequências que já foram realizadas, validadas ou registradas como "Faltou".' };
         }
         // Rule 2: Admin cannot delete a session validated by patient (digital signature)
@@ -348,7 +367,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   }
 
   // --- SECURITY: Check session status consistency ---
-  if (profile?.role === 'CLINIC_USER' && sessions) {
+  if (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '') && sessions) {
     const existingSessionsMap = new Map<string, any>((dbSessions || []).map((s: any) => [s.id, s]))
 
     // 1. Block reverting or modifying a session that was originally marked as Faltou
@@ -595,7 +614,11 @@ export async function deleteAttendanceAction(id: string) {
   if (!attendance) return { error: 'Atendimento não encontrado' }
 
   // --- SECURITY: Deletion rules ---
-  if (profile?.role === 'CLINIC_USER') {
+  if (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '')) {
+    const hasAccess = profile?.linked_clinics?.some((c: any) => c.clinic_id === attendance.clinic_id)
+    if (!hasAccess) {
+      return { error: 'Você não tem permissão para excluir atendimentos desta clínica.' }
+    }
     const sessions = (attendance as any).sessions || []
     if (sessions.length > 0) {
       return { error: 'Clínicas não têm permissão para excluir atendimentos que já possuem frequências registradas. Caso necessário, entre em contato com a administração.' }
@@ -1084,7 +1107,7 @@ export async function getAttachmentSignedUrlAction(filePath: string) {
     return null
   }
 
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id !== (attachment as any).attendances?.clinic_id) {
+  if (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '') && !profile?.linked_clinics?.some((c: any) => c.clinic_id === (attachment as any).attendances?.clinic_id)) {
     console.error('Unauthorized access to attachment:', filePath)
     return null
   }
@@ -1115,7 +1138,7 @@ export async function deleteAttachmentAction(id: string, filePath: string) {
 
   if (!attachment) return { error: 'Anexo não encontrado' }
 
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id !== (attachment as any).attendances?.clinic_id) {
+  if (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '') && !profile?.linked_clinics?.some((c: any) => c.clinic_id === (attachment as any).attendances?.clinic_id)) {
     return { error: 'Você não tem permissão para excluir anexos de outra clínica.' }
   }
 
@@ -1163,7 +1186,7 @@ export async function saveAttachmentRecordAction(
 
   if (!attendance) return { error: 'Atendimento não encontrado' }
 
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id !== attendance.clinic_id) {
+  if (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '') && !profile?.linked_clinics?.some((c: any) => c.clinic_id === attendance.clinic_id)) {
     return { error: 'Você não tem permissão para adicionar anexos a esta clínica.' }
   }
 

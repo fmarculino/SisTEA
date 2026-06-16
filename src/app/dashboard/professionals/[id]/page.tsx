@@ -13,7 +13,7 @@ export default async function EditProfessionalPage({ params }: { params: Promise
   
   let selectQuery = '*, professional_clinics(clinic_id, active), professional_specialties(specialty_id)'
   
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
+  if (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role) && profile.clinic_id) {
     selectQuery = '*, professional_clinics!inner(clinic_id, active), professional_specialties(specialty_id)'
   }
 
@@ -22,7 +22,7 @@ export default async function EditProfessionalPage({ params }: { params: Promise
     .select(selectQuery)
     .eq('id', id)
 
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
+  if (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role) && profile.clinic_id) {
     query = query.eq('professional_clinics.clinic_id', profile.clinic_id)
   }
 

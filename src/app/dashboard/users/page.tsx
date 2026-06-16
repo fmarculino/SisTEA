@@ -46,11 +46,16 @@ export default async function UsersPage({
     .eq('active', true)
     .order('name')
 
-  let query = supabase.from('users').select('*, clinics(name)', { count: 'exact' })
+  const hasClinicFilter = queryParams.clinic && queryParams.clinic !== 'all'
+  const selectQuery = hasClinicFilter
+    ? '*, user_clinics!inner(is_default, clinics(id, name))'
+    : '*, user_clinics(is_default, clinics(id, name))'
 
-  // If GERENTE, restrict to their clinic
-  if (profile?.role === 'GERENTE') {
-    query = query.eq('clinic_id', profile.clinic_id)
+  let query = supabase.from('users').select(selectQuery, { count: 'exact' })
+
+  // Apply Clinic Filter
+  if (hasClinicFilter) {
+    query = query.eq('user_clinics.clinic_id', queryParams.clinic)
   }
 
   // Apply Search Filter
@@ -61,11 +66,6 @@ export default async function UsersPage({
   // Apply Status Filter
   if (queryParams.status && queryParams.status !== 'all') {
     query = query.eq('active', queryParams.status === 'true')
-  }
-
-  // Apply Clinic Filter (only if SMS_ADMIN)
-  if (profile?.role === 'SMS_ADMIN' && queryParams.clinic && queryParams.clinic !== 'all') {
-    query = query.eq('clinic_id', queryParams.clinic)
   }
 
   const { data: users, count } = await query
@@ -95,15 +95,13 @@ export default async function UsersPage({
       <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
         <DataTableFilters 
           placeholder="Pesquisar por nome ou e-mail..." 
-          extraFilters={
-            profile?.role === 'SMS_ADMIN' ? [
-              {
-                paramName: 'clinic',
-                placeholder: 'Todas as Clínicas',
-                options: (clinicsList || []).map(c => ({ value: c.id, label: c.name }))
-              }
-            ] : []
-          }
+          extraFilters={[
+            {
+              paramName: 'clinic',
+              placeholder: 'Todas as Clínicas',
+              options: (clinicsList || []).map(c => ({ value: c.id, label: c.name }))
+            }
+          ]}
         />
       </div>
 
@@ -158,10 +156,27 @@ export default async function UsersPage({
                    </td>
                   <td className="whitespace-nowrap px-3 py-6">
                     {CLINIC_ROLES.includes(user.role) ? (
-                      <span className="inline-flex items-center text-xs font-bold text-foreground/70 bg-secondary/30 px-3 py-1.5 rounded-xl border border-border/50">
-                        {/* @ts-ignore */}
-                        {user.clinics?.name || 'Não vinculada'}
-                      </span>
+                      <div className="flex flex-wrap gap-1.5 max-w-xs">
+                        {user.user_clinics && user.user_clinics.length > 0 ? (
+                          user.user_clinics.map((uc: any) => (
+                            <span 
+                              key={uc.clinics?.id} 
+                              className={`inline-flex items-center text-[10px] font-black px-2.5 py-1 rounded-xl border uppercase tracking-wider ${
+                                uc.is_default 
+                                  ? 'text-primary bg-primary/10 border-primary/20 shadow-sm' 
+                                  : 'text-foreground/70 bg-secondary/30 border-border/50'
+                              }`}
+                              title={uc.is_default ? 'Unidade Padrão' : ''}
+                            >
+                              {uc.clinics?.name} {uc.is_default && '⭐'}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="inline-flex items-center text-xs font-bold text-muted-foreground bg-muted px-2.5 py-1.5 rounded-xl border border-border">
+                            Não vinculada
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-[10px] uppercase font-black text-muted-foreground/40 italic tracking-widest">Global</span>
                     )}

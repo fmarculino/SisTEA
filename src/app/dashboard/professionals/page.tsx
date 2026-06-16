@@ -29,13 +29,13 @@ export default async function ProfessionalsPage({
   // Fetch filter options
   const [{ data: specialties }, { data: clinics }] = await Promise.all([
     supabase.from('specialties').select('id, name').order('name'),
-    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name').order('name') : Promise.resolve({ data: [] })
+    (['SMS_ADMIN', 'GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '')) ? supabase.from('clinics').select('id, name').order('name') : Promise.resolve({ data: [] })
   ])
 
   let selectQuery = '*, professional_clinics(clinics(name)), professional_specialties(specialties(name))'
   
   // Conditionally use inner joins for filtering to only return professionals matching the criteria
-  const shouldFilterClinic = profile?.role === 'CLINIC_USER' || queryParams.clinic
+  const shouldFilterClinic = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role) || queryParams.clinic
   const shouldFilterSpecialty = queryParams.specialty
 
   if (shouldFilterClinic && shouldFilterSpecialty) {
@@ -50,9 +50,7 @@ export default async function ProfessionalsPage({
     .from('professionals')
     .select(selectQuery, { count: 'exact' })
 
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    query = query.eq('professional_clinics.clinic_id', profile.clinic_id)
-  } else if (queryParams.clinic) {
+  if (queryParams.clinic) {
     query = query.eq('professional_clinics.clinic_id', queryParams.clinic)
   }
 
@@ -85,7 +83,7 @@ export default async function ProfessionalsPage({
     })
   }
   
-  if (profile?.role === 'SMS_ADMIN' && clinics && clinics.length > 0) {
+  if ((profile?.role === 'SMS_ADMIN' || ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '')) && clinics && clinics.length > 0) {
     extraFilters.push({
       paramName: 'clinic',
       placeholder: 'Todas Clínicas',

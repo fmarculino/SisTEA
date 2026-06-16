@@ -74,11 +74,23 @@ export async function togglePatientClinicStatusAction(patientId: string, clinicI
 
 export async function createPatientAction(data: PatientFormData) {
   const supabase = await createClient()
+  const { getUserProfile } = await import('@/lib/dal')
+  const profile = await getUserProfile()
   
   const validatedFields = patientSchema.safeParse(data)
   if (!validatedFields.success) return { error: 'Validação falhou' }
 
   const { clinic_ids, clinic_id: formClinicId, ...patientData } = validatedFields.data
+
+  const isClinicRole = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '')
+  if (isClinicRole) {
+    const userClinicIds = new Set(profile?.linked_clinics?.map((c: any) => c.clinic_id) || [])
+    const hasInvalidClinic = clinic_ids.some(cid => !userClinicIds.has(cid))
+    if (hasInvalidClinic) {
+      return { error: 'Você não tem permissão para vincular pacientes a clínicas fora do seu grupo.' }
+    }
+  }
+
   const primaryClinicId = clinic_ids[0]
 
   // Generate a unique 6-digit token for the patient
@@ -145,11 +157,35 @@ export async function createPatientAction(data: PatientFormData) {
 
 export async function updatePatientAction(id: string, data: PatientFormData) {
   const supabase = await createClient()
+  const { getUserProfile } = await import('@/lib/dal')
+  const profile = await getUserProfile()
   
   const validatedFields = patientSchema.safeParse(data)
   if (!validatedFields.success) return { error: 'Validação falhou' }
 
   const { active, clinic_ids, clinic_id: formClinicId, ...patientData } = validatedFields.data
+
+  const isClinicRole = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '')
+  if (isClinicRole) {
+    const { data: patientLinks } = await supabase
+      .from('patient_clinics')
+      .select('clinic_id')
+      .eq('patient_id', id)
+    
+    const patientClinicIds = patientLinks?.map(pl => pl.clinic_id) || []
+    const userClinicIds = profile?.linked_clinics?.map((c: any) => c.clinic_id) || []
+    const hasAccessToPatient = patientClinicIds.some(cid => userClinicIds.includes(cid))
+    if (!hasAccessToPatient && patientClinicIds.length > 0) {
+      return { error: 'Você não tem permissão para editar este paciente.' }
+    }
+
+    const userClinicSet = new Set(userClinicIds)
+    const hasInvalidClinic = clinic_ids.some(cid => !userClinicSet.has(cid))
+    if (hasInvalidClinic) {
+      return { error: 'Você não tem permissão para vincular pacientes a clínicas fora do seu grupo.' }
+    }
+  }
+
   const patientId = id
   const primaryClinicId = clinic_ids[0]
 
@@ -255,6 +291,24 @@ export async function resetPatientTokenAction(patientId: string) {
 
 export async function deletePatientAction(id: string) {
   const supabase = await createClient()
+  const { getUserProfile } = await import('@/lib/dal')
+  const profile = await getUserProfile()
+
+  const isClinicRole = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '')
+  if (isClinicRole) {
+    const { data: patientLinks } = await supabase
+      .from('patient_clinics')
+      .select('clinic_id')
+      .eq('patient_id', id)
+    
+    const patientClinicIds = patientLinks?.map(pl => pl.clinic_id) || []
+    const userClinicIds = profile?.linked_clinics?.map((c: any) => c.clinic_id) || []
+    const hasAccess = patientClinicIds.some(cid => userClinicIds.includes(cid))
+    if (!hasAccess && patientClinicIds.length > 0) {
+      return { error: 'Você não tem permissão para excluir este paciente.' }
+    }
+  }
+
   const { error } = await supabase.from('patients').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/dashboard/patients')

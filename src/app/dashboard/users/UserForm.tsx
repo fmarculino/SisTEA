@@ -31,6 +31,7 @@ export function UserForm({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
@@ -39,14 +40,39 @@ export function UserForm({
       email: initialData?.email || '',
       role: initialData?.role || 'GERENTE',
       clinic_id: initialData?.clinic_id || userClinicId || '',
+      clinic_ids: (initialData as any)?.clinic_ids || (initialData?.clinic_id ? [initialData.clinic_id] : userClinicId ? [userClinicId] : []),
+      default_clinic_id: (initialData as any)?.default_clinic_id || initialData?.clinic_id || userClinicId || '',
     },
   })
 
   const selectedRole = watch('role')
+  const selectedClinicIds = watch('clinic_ids') || []
+  const selectedDefaultClinicId = watch('default_clinic_id')
+
+  const handleClinicChange = (clinicId: string, checked: boolean) => {
+    let newClinicIds = [...selectedClinicIds]
+    if (checked) {
+      if (!newClinicIds.includes(clinicId)) {
+        newClinicIds.push(clinicId)
+      }
+    } else {
+      newClinicIds = newClinicIds.filter(id => id !== clinicId)
+    }
+    setValue('clinic_ids', newClinicIds, { shouldValidate: true })
+
+    if (selectedDefaultClinicId === clinicId && !checked) {
+      setValue('default_clinic_id', newClinicIds[0] || '', { shouldValidate: true })
+    } else if (!selectedDefaultClinicId && newClinicIds.length > 0) {
+      setValue('default_clinic_id', newClinicIds[0], { shouldValidate: true })
+    }
+  }
 
   const onSubmit = async (data: UserFormData) => {
     setIsPending(true)
     setErrorMsg('')
+
+    // Set clinic_id for legacy compatibility
+    data.clinic_id = data.default_clinic_id
 
     let result
     if (id) {
@@ -159,24 +185,50 @@ export function UserForm({
             {errors.role && <p className="mt-1 text-xs text-destructive font-medium">{errors.role.message}</p>}
           </div>
 
-          {userRole === 'SMS_ADMIN' && ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(selectedRole) && (
-            <div>
-              <label className="block text-sm font-semibold text-foreground mb-1">Clínica Vinculada *</label>
-              <select
-                {...register('clinic_id')}
-                className="block w-full rounded-lg border-input bg-background px-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-primary/20 focus:border-primary border"
-              >
-                <option value="">Selecione a clínica...</option>
-                {clinics.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              {errors.clinic_id && <p className="mt-1 text-xs text-destructive font-medium">{errors.clinic_id.message}</p>}
+          {['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(selectedRole) && (
+            <div className="sm:col-span-2 space-y-3">
+              <label className="block text-sm font-semibold text-foreground">Clínicas Vinculadas *</label>
+              <div className="grid grid-cols-1 gap-3 border border-border p-4 rounded-2xl bg-muted/10 max-h-60 overflow-y-auto">
+                {clinics.map((c) => {
+                  const isChecked = selectedClinicIds.includes(c.id)
+                  return (
+                    <div key={c.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      isChecked 
+                        ? 'bg-primary/5 border-primary/20 text-primary' 
+                        : 'border-transparent text-foreground/80 hover:bg-muted/30'
+                    }`}>
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id={`clinic-${c.id}`}
+                          checked={isChecked}
+                          onChange={(e) => handleClinicChange(c.id, e.target.checked)}
+                          className="h-4.5 w-4.5 rounded border-input text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                        />
+                        <label htmlFor={`clinic-${c.id}`} className="text-sm font-semibold cursor-pointer select-none">
+                          {c.name}
+                        </label>
+                      </div>
+                      {isChecked && (
+                        <button
+                          type="button"
+                          onClick={() => setValue('default_clinic_id', c.id, { shouldValidate: true })}
+                          className={`text-xs px-2.5 py-1 rounded-lg font-black transition-all ${
+                            selectedDefaultClinicId === c.id
+                              ? 'bg-primary text-primary-foreground shadow-sm'
+                              : 'bg-secondary text-foreground hover:bg-secondary/80'
+                          }`}
+                        >
+                          {selectedDefaultClinicId === c.id ? 'Padrão ⭐' : 'Definir Padrão'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              {errors.clinic_ids && <p className="mt-1 text-xs text-destructive font-medium">{errors.clinic_ids.message}</p>}
+              {errors.default_clinic_id && <p className="mt-1 text-xs text-destructive font-medium">{errors.default_clinic_id.message}</p>}
             </div>
-          )}
-
-          {userRole === 'GERENTE' && (
-            <input type="hidden" {...register('clinic_id')} />
           )}
         </div>
       </section>

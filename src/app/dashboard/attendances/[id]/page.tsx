@@ -43,11 +43,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   // Buscando os dados necessários para os selects e para a geração do PDF
   let patientsQuery = supabase.from('patients').select('id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color').order('name')
   
-  // Use professional_clinics for many-to-many join, and professional_specialties for specialties
   let profSelect = 'id, name, cns, professional_specialties(specialty_id, specialties(name, cbo)), professional_clinics(clinic_id)'
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    profSelect = 'id, name, cns, professional_specialties(specialty_id, specialties(name, cbo)), professional_clinics!inner(clinic_id)'
-  }
 
   let professionalsQuery = supabase
     .from('professionals')
@@ -57,7 +53,6 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   // No Edit, não filtramos por clinic_id para garantir que o paciente/profissional do atendimento
   // seja encontrado mesmo que tenha sido cadastrado em outra unidade ou tenha mudado de unidade.
   // A própria consulta do atendimento já garante a segurança do acesso.
-
 
   const [
     { data: patients },
@@ -69,7 +64,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
     patientsQuery,
     professionalsQuery,
     supabase.from('procedures').select('id, name, code, active, valor_total, min_age, max_age, max_quantity, procedure_specialties(specialty_id)').order('name'),
-    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : supabase.from('clinics').select('id, name, cnes').eq('id', profile?.clinic_id || '').order('name'),
+    supabase.from('clinics').select('id, name, cnes').order('name'),
     supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single()
   ])
 

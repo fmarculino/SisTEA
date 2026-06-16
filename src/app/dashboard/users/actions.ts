@@ -36,21 +36,33 @@ export async function createUser(data: UserFormData) {
       return { error: 'Dados inválidos' }
     }
 
-    let { name, email, password, role, clinic_id } = validatedFields.data
+    let { name, email, password, role, clinic_ids, default_clinic_id } = validatedFields.data
 
     if (!password) {
       return { error: 'Senha é obrigatória para novos usuários' }
     }
 
+    const isClinicRole = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(role)
+    const supabase = createAdminClient()
+
     // Security check for GERENTE
     if (profile.role === 'GERENTE') {
-      if (!['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(role)) {
+      if (!isClinicRole) {
         return { error: 'Não autorizado a criar usuários com este papel' }
       }
-      clinic_id = profile.clinic_id
-    }
 
-    const supabase = createAdminClient()
+      // Fetch accessible clinics for GERENTE via RPC
+      const { data: accessibleClinicIds, error: rpcErr } = await supabase.rpc('get_user_accessible_clinic_ids')
+      if (rpcErr || !accessibleClinicIds) {
+        console.error('Error fetching accessible clinics for GERENTE:', rpcErr)
+        return { error: 'Erro ao verificar permissões de clínicas' }
+      }
+
+      const isAllAccessible = clinic_ids?.every((cid: string) => accessibleClinicIds.includes(cid))
+      if (!isAllAccessible) {
+        return { error: 'Não autorizado a vincular usuário a clínicas fora de seu grupo' }
+      }
+    }
 
     // 1. Create user in Auth
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
@@ -66,7 +78,7 @@ export async function createUser(data: UserFormData) {
     }
 
     // 2. Create user record in public.users
-    const isClinicRole = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(role)
+    const legacyClinicId = isClinicRole ? default_clinic_id : null
     const { error: profileError } = await supabase
       .from('users')
       .insert({
@@ -74,7 +86,7 @@ export async function createUser(data: UserFormData) {
         name,
         email,
         role,
-        clinic_id: isClinicRole ? clinic_id : null,
+        clinic_id: legacyClinicId,
       })
 
     if (profileError) {
@@ -84,15 +96,16 @@ export async function createUser(data: UserFormData) {
       return { error: `Erro ao criar perfil: ${profileError.message}` }
     }
 
-    // 3. Create user_clinics record (multi-unidade)
-    if (isClinicRole && clinic_id) {
+    // 3. Create user_clinics records (multi-unidade)
+    if (isClinicRole && clinic_ids && clinic_ids.length > 0) {
+      const records = clinic_ids.map(cid => ({
+        user_id: authUser.user.id,
+        clinic_id: cid,
+        is_default: cid === default_clinic_id,
+      }))
       const { error: ucError } = await supabase
         .from('user_clinics')
-        .insert({
-          user_id: authUser.user.id,
-          clinic_id: clinic_id,
-          is_default: true,
-        })
+        .insert(records)
       if (ucError) {
         console.error('UserClinics Error:', ucError)
       }
@@ -105,7 +118,7 @@ export async function createUser(data: UserFormData) {
       action: 'CREATE',
       table_name: 'users',
       record_id: authUser.user.id,
-      new_data: { name, email, role, clinic_id },
+      new_data: { name, email, role, clinic_ids, default_clinic_id },
       description: `Criou novo usuário: ${name} <${email}> (${role}).`
     })
 
@@ -125,18 +138,26 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
 
     const supabase = createAdminClient()
 
+    // Fetch accessible clinics for the logged-in user
+    const { data: accessibleClinicIds, error: rpcErr } = await supabase.rpc('get_user_accessible_clinic_ids')
+    if (rpcErr) {
+      console.error('Error fetching accessible clinics:', rpcErr)
+      return { error: 'Erro ao verificar permissões de clínicas' }
+    }
+
     // Security check for GERENTE
     if (profile.role === 'GERENTE') {
-      // Verificar via user_clinics se o usuário pertence à mesma clínica
+      // Verificar via user_clinics se o usuário a ser editado pertence a alguma clínica do grupo do gerente
       const { data: userClinics } = await supabase
         .from('user_clinics')
         .select('clinic_id')
         .eq('user_id', id)
 
       const userClinicIds = (userClinics || []).map((uc: any) => uc.clinic_id)
-      const hasAccess = userClinicIds.includes(profile.clinic_id)
+      const hasAccess = userClinicIds.some((cid: string) => accessibleClinicIds?.includes(cid))
 
       // Fallback: verificar campo legado
+      let hasLegacyAccess = false
       if (!hasAccess) {
         const { data: userToEdit } = await supabase
           .from('users')
@@ -144,16 +165,24 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
           .eq('id', id)
           .single()
 
-        if (!userToEdit || userToEdit.clinic_id !== profile.clinic_id) {
-          return { error: 'Não autorizado a alterar usuários de outra clínica' }
-        }
+        hasLegacyAccess = !!(userToEdit && userToEdit.clinic_id && accessibleClinicIds?.includes(userToEdit.clinic_id))
+      }
+
+      if (!hasAccess && !hasLegacyAccess) {
+        return { error: 'Não autorizado a alterar usuários de outra clínica / grupo' }
       }
 
       if (data.role && !['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(data.role)) {
         return { error: 'Não autorizado a definir este papel' }
       }
 
-      data.clinic_id = profile.clinic_id
+      // Se for gerente, validar que todas as clínicas que ele quer vincular pertencem ao seu grupo
+      if (data.clinic_ids) {
+        const isAllAccessible = data.clinic_ids.every((cid: string) => accessibleClinicIds?.includes(cid))
+        if (!isAllAccessible) {
+          return { error: 'Não autorizado a vincular usuário a clínicas fora de seu grupo' }
+        }
+      }
     }
 
     // 1. Update Auth email/password if provided
@@ -171,13 +200,14 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
 
     // 2. Update public profile
     const isClinicRole = data.role && ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(data.role)
+    const legacyClinicId = isClinicRole ? data.default_clinic_id : null
     const { error: profileError } = await supabase
       .from('users')
       .update({
         name: data.name,
         email: data.email,
         role: data.role,
-        clinic_id: isClinicRole ? data.clinic_id : null,
+        clinic_id: legacyClinicId,
       })
       .eq('id', id)
 
@@ -186,17 +216,32 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
     }
 
     // 3. Sync user_clinics
-    if (isClinicRole && data.clinic_id) {
-      // Upsert: garante que o vínculo existe na user_clinics
+    if (isClinicRole && data.clinic_ids && data.clinic_ids.length > 0) {
+      // A. Delete existing user_clinics for this user
       await supabase
         .from('user_clinics')
-        .upsert({
-          user_id: id,
-          clinic_id: data.clinic_id,
-          is_default: true,
-        }, {
-          onConflict: 'user_id,clinic_id'
-        })
+        .delete()
+        .eq('user_id', id)
+
+      // B. Insert new records
+      const records = data.clinic_ids.map(cid => ({
+        user_id: id,
+        clinic_id: cid,
+        is_default: cid === data.default_clinic_id,
+      }))
+      const { error: ucError } = await supabase
+        .from('user_clinics')
+        .insert(records)
+      if (ucError) {
+        console.error('UserClinics Sync Error:', ucError)
+        return { error: `Erro ao atualizar vínculos de clínica: ${ucError.message}` }
+      }
+    } else if (data.role && !isClinicRole) {
+      // Se alterou para um papel global, remove todos os vínculos de clínica
+      await supabase
+        .from('user_clinics')
+        .delete()
+        .eq('user_id', id)
     }
 
     revalidatePath('/dashboard/users')
@@ -206,7 +251,7 @@ export async function updateUser(id: string, data: Partial<UserFormData>) {
       action: 'UPDATE',
       table_name: 'users',
       record_id: id,
-      new_data: { name: data.name, email: data.email, role: data.role, clinic_id: data.clinic_id },
+      new_data: { name: data.name, email: data.email, role: data.role, clinic_ids: data.clinic_ids, default_clinic_id: data.default_clinic_id },
       description: `Atualizou dados do usuário: ${data.name || data.email || id}.`
     })
 

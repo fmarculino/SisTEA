@@ -55,15 +55,6 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   let patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color, patient_clinics(clinic_id)'
   let profSelect = 'id, name, cns, professional_specialties(specialty_id, specialties(name, cbo)), professional_clinics(clinic_id)'
 
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    // Note: We use !inner only if we want to filter in the query itself.
-    // In Edit, we want to see the patient/professional of the attendance even if they are not in the current filter list of the user's clinic.
-    // However, for professionals, the system previously used !inner in some places.
-    // For now, we fetch all associations to allow the client-side filter to work.
-    patientsSelect = 'id, name, clinic_id, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color, patient_clinics(clinic_id)'
-    profSelect = 'id, name, cns, professional_specialties(specialty_id, specialties(name, cbo)), professional_clinics(clinic_id)'
-  }
-
   let patientsQuery = supabase
     .from('patients')
     .select(patientsSelect)
@@ -78,7 +69,6 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   // seja encontrado mesmo que tenha sido cadastrado em outra unidade ou tenha mudado de unidade.
   // A própria consulta do atendimento já garante a segurança do acesso.
 
-
   const [
     { data: patients },
     { data: professionalsRaw },
@@ -92,7 +82,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
     patientsQuery,
     professionalsQuery,
     supabase.from('procedures').select('id, name, code, active, valor_total, procedure_specialties(specialty_id), procedure_cid(cid_id, cid(code, name)), procedure_service_classifications(service_classifications(*))').order('name'),
-    profile?.role === 'SMS_ADMIN' ? supabase.from('clinics').select('id, name, cnes').order('name') : supabase.from('clinics').select('id, name, cnes').eq('id', profile?.clinic_id || '').order('name'),
+    supabase.from('clinics').select('id, name, cnes').order('name'),
     supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single(),
     supabase.from('clinics').select('competence_end_day').eq('id', attendance.clinic_id).single(),
     supabase.from('clinic_procedure_prices').select('clinic_id, procedure_id, valor_total, valid_from, valid_to, active, contract_id, quantidade_contratada, quantidade_saldo').eq('active', true),

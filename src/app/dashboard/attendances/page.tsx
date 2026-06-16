@@ -18,8 +18,6 @@ export default async function AttendancesPage({
   const supabase = await createClient()
 
   // Fetch filter options in parallel
-  const isAdmin = profile?.role === 'SMS_ADMIN'
-
   const professionalQuery = supabase
     .from('professionals')
     .select('id, name')
@@ -32,24 +30,19 @@ export default async function AttendancesPage({
     .eq('active', true)
     .order('name')
 
-  const queries: PromiseLike<any>[] = [professionalQuery, procedureQuery]
+  const clinicQuery = supabase
+    .from('clinics')
+    .select('id, name')
+    .eq('active', true)
+    .order('name')
 
-  if (isAdmin) {
-    const clinicQuery = supabase
-      .from('clinics')
-      .select('id, name')
-      .eq('active', true)
-      .order('name')
-    queries.push(clinicQuery)
-  }
-
-  const results = await Promise.all(queries)
+  const results = await Promise.all([professionalQuery, procedureQuery, clinicQuery])
   const professionals = results[0].data || []
   const procedures = results[1].data || []
-  const clinics = isAdmin ? (results[2]?.data || []) : []
+  const clinicsList = results[2].data || []
 
   // Build extra filters
-  const extraFilters: { paramName: string; placeholder: string; options: { value: string; label: string }[] }[] = [
+  const extraFilters = [
     {
       paramName: 'professional',
       placeholder: 'Todos Profissionais',
@@ -62,11 +55,11 @@ export default async function AttendancesPage({
     },
   ]
 
-  if (isAdmin) {
+  if (clinicsList.length > 0) {
     extraFilters.push({
       paramName: 'clinic',
       placeholder: 'Todas Clínicas',
-      options: clinics.map((c: any) => ({ value: c.id, label: c.name })),
+      options: clinicsList.map((c: any) => ({ value: c.id, label: c.name })),
     })
   }
 
@@ -96,12 +89,8 @@ export default async function AttendancesPage({
   if (queryParams.procedure && queryParams.procedure !== 'all') {
     query = query.eq('procedure_id', queryParams.procedure)
   }
-  if (isAdmin && queryParams.clinic && queryParams.clinic !== 'all') {
+  if (queryParams.clinic && queryParams.clinic !== 'all') {
     query = query.eq('clinic_id', queryParams.clinic)
-  }
-
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    query = query.eq('clinic_id', profile.clinic_id)
   }
 
   const { data: attendances } = await query.order('attendance_date', { ascending: false })
@@ -130,7 +119,7 @@ export default async function AttendancesPage({
         placeholder="Pesquisar por paciente ou profissional..." 
         showStatus={false}
         extraFilters={extraFilters}
-      />      <div className="bento-card overflow-hidden">
+      />      <div className="bento-card overflow-hidden">
         <div className="overflow-x-auto overflow-y-hidden">
           <table className="min-w-full divide-y divide-border/40">
             <thead>
@@ -139,9 +128,7 @@ export default async function AttendancesPage({
                 <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Paciente</th>
                 <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Profissional</th>
                 <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Procedimento</th>
-                {isAdmin && (
-                  <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Clínica</th>
-                )}
+                <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Clínica</th>
                 <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Sessões</th>
                 <th scope="col" className="px-3 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right pr-6">Valor</th>
                 <th scope="col" className="relative py-4 pl-3 pr-6">
@@ -174,11 +161,9 @@ export default async function AttendancesPage({
                     <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground truncate max-w-[150px]">
                       {att.procedure?.name || '-'}
                     </td>
-                    {isAdmin && (
-                      <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground max-w-[200px] truncate">
-                        {att.clinic?.name || '-'}
-                      </td>
-                    )}
+                    <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground max-w-[200px] truncate">
+                      {att.clinic?.name || '-'}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-5 text-sm">
                       <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/5 text-primary border border-primary/10">
                         {doneSessions} / {sessionsCount} <span className="ml-1 opacity-70">Sessões</span>
@@ -208,7 +193,7 @@ export default async function AttendancesPage({
               })}
               {(!attendances || attendances.length === 0) && (
                 <tr>
-                  <td colSpan={isAdmin ? 8 : 7} className="py-12 text-center text-sm text-muted-foreground italic">
+                  <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground italic">
                     Nenhum atendimento registrado.
                   </td>
                 </tr>

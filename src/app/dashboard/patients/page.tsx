@@ -33,9 +33,7 @@ export default async function PatientsPage({
     .select('*, patient_clinics!inner(clinic_id, active, clinics(name))', { count: 'exact' })
 
   // Apply Clinic Filter
-  if (profile?.role === 'CLINIC_USER' && profile.clinic_id) {
-    query = query.eq('patient_clinics.clinic_id', profile.clinic_id)
-  } else if (queryParams.clinic && queryParams.clinic !== 'all') {
+  if (queryParams.clinic && queryParams.clinic !== 'all') {
     query = query.eq('patient_clinics.clinic_id', queryParams.clinic)
   }
 

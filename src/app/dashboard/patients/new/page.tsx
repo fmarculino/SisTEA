@@ -10,7 +10,7 @@ export default async function NewPatientPage() {
   const supabase = await createClient()
   
   let clinics: any[] = []
-  if (profile.role === 'SMS_ADMIN') {
+  if (profile.role === 'SMS_ADMIN' || profile.role === 'GERENTE') {
     const { data } = await supabase.from('clinics').select('id, name').order('name')
     clinics = data || []
   }
