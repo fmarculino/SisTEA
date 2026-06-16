@@ -13,7 +13,8 @@ export default async function ContractsPage({
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
-  if (profile?.role !== 'SMS_ADMIN') {
+  const GLOBAL_ROLES = ['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR']
+  if (!profile || !GLOBAL_ROLES.includes(profile.role)) {
     redirect('/dashboard')
   }
 
@@ -67,13 +68,15 @@ export default async function ContractsPage({
             Gerencie os contratos de prestação de serviços, tetos financeiros e saldos de competência.
           </p>
         </div>
-        <Link
-          href="/dashboard/contracts/new"
-          className="inline-flex items-center rounded-2xl bg-primary px-6 py-3.5 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary/10 transition-all active:scale-95 group uppercase tracking-widest"
-        >
-          <Plus className="-ml-1 mr-2 h-5 w-5 stroke-[3]" aria-hidden="true" />
-          Novo Contrato
-        </Link>
+        {profile?.role === 'SMS_ADMIN' && (
+          <Link
+            href="/dashboard/contracts/new"
+            className="inline-flex items-center rounded-2xl bg-primary px-6 py-3.5 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-4 focus-visible:outline-primary/10 transition-all active:scale-95 group uppercase tracking-widest"
+          >
+            <Plus className="-ml-1 mr-2 h-5 w-5 stroke-[3]" aria-hidden="true" />
+            Novo Contrato
+          </Link>
+        )}
       </div>
 
       <div className="bg-card/50 backdrop-blur-sm border border-border/40 p-6 rounded-3xl shadow-sm">
@@ -142,16 +145,20 @@ export default async function ContractsPage({
                   {contract.items_count} itens cadastrados
                 </td>
                 <td className="relative whitespace-nowrap py-6 pl-3 pr-8 text-right text-sm font-medium">
-                  <div className="flex items-center justify-end space-x-3">
-                    <Link 
-                      href={`/dashboard/contracts/${Buffer.from(`${contract.clinic_id}_${contract.contract_number}`).toString('base64url')}/edit`} 
-                      className="p-2.5 rounded-xl text-primary bg-primary/5 hover:bg-primary/20 transition-all border border-primary/10 shadow-sm"
-                      title="Editar Contrato"
-                    >
-                      <Edit2 className="h-4 w-4 stroke-[2.5]" />
-                    </Link>
-                    <ContractActions clinicId={contract.clinic_id} contractNumber={contract.contract_number} />
-                  </div>
+                  {profile?.role === 'SMS_ADMIN' ? (
+                    <div className="flex items-center justify-end space-x-3">
+                      <Link 
+                        href={`/dashboard/contracts/${Buffer.from(`${contract.clinic_id}_${contract.contract_number}`).toString('base64url')}/edit`} 
+                        className="p-2.5 rounded-xl text-primary bg-primary/5 hover:bg-primary/20 transition-all border border-primary/10 shadow-sm"
+                        title="Editar Contrato"
+                      >
+                        <Edit2 className="h-4 w-4 stroke-[2.5]" />
+                      </Link>
+                      <ContractActions clinicId={contract.clinic_id} contractNumber={contract.contract_number} />
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">-</span>
+                  )}
                 </td>
               </tr>
             ))}
