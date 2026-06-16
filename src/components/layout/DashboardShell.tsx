@@ -9,12 +9,14 @@ export function DashboardShell({
   children, 
   role, 
   email,
-  clinicName
+  clinicName,
+  clinicLogoUrl
 }: { 
   children: React.ReactNode
   role: string
   email: string
   clinicName?: string
+  clinicLogoUrl?: string
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -46,6 +48,7 @@ export function DashboardShell({
             email={email} 
             role={role} 
             clinicName={clinicName}
+            clinicLogoUrl={clinicLogoUrl}
             onMenuClick={() => setSidebarOpen(true)} 
           />
         </div>

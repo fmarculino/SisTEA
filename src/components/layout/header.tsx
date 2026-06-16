@@ -9,11 +9,13 @@ export function Header({
   email,
   role,
   clinicName,
+  clinicLogoUrl,
   onMenuClick
 }: {
   email: string;
   role: string;
   clinicName?: string;
+  clinicLogoUrl?: string;
   onMenuClick?: () => void;
 }) {
   const router = useRouter()
@@ -33,12 +35,22 @@ export function Header({
         >
           <Menu className="h-6 w-6 stroke-[2.5]" />
         </button>
-        <div className="hidden sm:flex flex-col">
-          <h1 className="text-xl md:text-2xl font-black text-foreground tracking-tighter uppercase">
-            Visão <span className="text-primary italic">Geral</span>
-          </h1>
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-50 mt-1">SMS-Secretaria Municipal de Saúde - Marabá</p>
-        </div>
+        {role !== 'SMS_ADMIN' && clinicLogoUrl ? (
+          <div className="hidden sm:flex h-14 items-center overflow-hidden">
+            <img 
+              src={clinicLogoUrl} 
+              alt={`Logo ${clinicName || 'Clínica'}`} 
+              className="max-h-full object-contain"
+            />
+          </div>
+        ) : (
+          <div className="hidden sm:flex flex-col">
+            <h1 className="text-xl md:text-2xl font-black text-foreground tracking-tighter uppercase">
+              Visão <span className="text-primary italic">Geral</span>
+            </h1>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-50 mt-1">SMS-Secretaria Municipal de Saúde - Marabá</p>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4 md:gap-8">

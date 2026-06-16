@@ -37,6 +37,7 @@ export default async function DashboardLayout({
         role={profile.role} 
         email={profile.email || ''} 
         clinicName={profile.clinic_name}
+        clinicLogoUrl={profile.clinic_logo_url || undefined}
       >
         {children}
       </DashboardShell>

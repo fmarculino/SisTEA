@@ -11,7 +11,7 @@ export async function getUserProfile() {
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('*, clinic:clinics(name, active)')
+    .select('*, clinic:clinics(name, active, logo_url)')
     .eq('id', auth.user.id)
     .single()
 
@@ -28,6 +28,7 @@ export async function getUserProfile() {
     role: profile.role, 
     clinic_id: profile.clinic_id, 
     clinic_name: profile.clinic?.name,
+    clinic_logo_url: profile.clinic?.logo_url,
     clinic_active: profile.role === 'SMS_ADMIN' ? true : (profile.clinic?.active ?? true),
     active: profile.active 
   }
