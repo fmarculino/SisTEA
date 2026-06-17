@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    const publicRoutes = ['/login', '/forgot-password', '/validar', '/manifest.json', '/sw.js']
+    const publicRoutes = ['/login', '/forgot-password', '/validar', '/manifest.json', '/sw.js', '/api/run-migration-temp']
     const authRoutes = ['/auth/callback', '/auth/update-password']
     const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname.startsWith(route))
     const isAuthRoute = authRoutes.some(route => request.nextUrl.pathname.startsWith(route))
