@@ -42,10 +42,29 @@ export default async function ClinicsPage({
     query = query.eq('active', queryParams.status === 'true')
   }
 
-  const { data: clinics, count } = await query
-    .order('parent_clinic_id', { ascending: true, nullsFirst: true })
-    .order('name')
-    .range(from, to)
+  const { data: rawClinics } = await query.order('name')
+
+  // Organizar hierarquicamente (Matriz seguido de suas Filiais)
+  const parents = (rawClinics || []).filter((c: any) => !c.parent_clinic_id)
+  const children = (rawClinics || []).filter((c: any) => c.parent_clinic_id)
+
+  const orderedClinics: any[] = []
+  parents.forEach(parent => {
+    orderedClinics.push(parent)
+    const parentChildren = children.filter(child => child.parent_clinic_id === parent.id)
+    orderedClinics.push(...parentChildren)
+  })
+
+  // Adiciona filiais "órfãs" (caso a matriz tenha sido filtrada na busca mas a filial não)
+  const addedIds = new Set(orderedClinics.map(c => c.id))
+  children.forEach(child => {
+    if (!addedIds.has(child.id)) {
+      orderedClinics.push(child)
+    }
+  })
+
+  const count = orderedClinics.length
+  const clinics = orderedClinics.slice(from, to + 1)
 
   return (
     <div className="space-y-10">
