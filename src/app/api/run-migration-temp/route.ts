@@ -13,7 +13,8 @@ export async function GET() {
     
     const migrations = [
       '20260616214000_fix_patient_clinics_rls.sql',
-      '20260616215000_fix_users_view_group_policy.sql'
+      '20260616215000_fix_users_view_group_policy.sql',
+      '20260616216000_fix_user_clinics_select_rls.sql'
     ]
 
     const results: string[] = []
