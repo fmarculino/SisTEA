@@ -4,10 +4,7 @@ import fs from 'fs'
 import path from 'path'
 
 export async function GET() {
-  const connectionString = process.env.DATABASE_URL
-  if (!connectionString) {
-    return NextResponse.json({ error: 'DATABASE_URL not set' }, { status: 500 })
-  }
+  const connectionString = 'postgresql://postgres:CCleZ76UxdWFNpawjelk7qijo67vUt9i@supabase-sistea.coolify.vps.atb.app.br:5432/postgres'
 
   const client = new Client({ connectionString })
   
