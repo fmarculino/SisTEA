@@ -499,7 +499,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
         // we DON'T keep the old validated version so it can be updated.
         // We block reverting to 'Não Realizado' to enforce immutability of signed sessions.
         if (incoming && (incoming.status !== s.status || incoming.justification !== s.justification)) {
-          if (['Pendente', 'Glosado', 'Realizada'].includes(incoming.status)) {
+          if (['Pendente', 'Glosado', 'Realizada', 'Não Realizado', 'Faltou'].includes(incoming.status)) {
             return false
           }
         }
