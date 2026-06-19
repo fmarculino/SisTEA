@@ -152,12 +152,18 @@ export function PatientForm({
       if (!id && rawCNS?.length === 15 && rawCNS !== lastCheckedCNS) {
         setLastCheckedCNS(rawCNS)
         setIsPending(true)
-        const result = await checkPatientByCNSAction(cnsValue)
-        setIsPending(false)
-
-        if (result?.patient) {
-          setExistingPatient(result.patient)
-          setShowLinkModal(true)
+        try {
+          const result = await checkPatientByCNSAction(cnsValue)
+          if (result && 'error' in result) {
+            console.error('Erro ao verificar CNS:', result.error)
+          } else if (result?.patient) {
+            setExistingPatient(result.patient)
+            setShowLinkModal(true)
+          }
+        } catch (err) {
+          console.error('Erro na ação de verificar CNS:', err)
+        } finally {
+          setIsPending(false)
         }
       }
     }
