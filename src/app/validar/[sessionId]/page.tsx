@@ -37,6 +37,8 @@ export default async function ValidarPage({
       status, 
       validated_at,
       attendance:attendances(
+        patient_id,
+        clinic_id,
         patient:patients(name),
         professional:professionals(name),
         procedure:procedures(name)
@@ -48,6 +50,49 @@ export default async function ValidarPage({
   if (!session) notFound()
 
   const attendance = (session as any).attendance
+  const patientId = attendance?.patient_id
+  const clinicId = attendance?.clinic_id
+
+  let allowsMultipleSignatures = false
+  let otherPendingSessions: { sessionId: string; startTime: string; endTime: string; professionalName: string; procedureName: string }[] = []
+
+  if (clinicId) {
+    const { data: clinic } = await supabase
+      .from('clinics')
+      .select('allows_multiple_signatures')
+      .eq('id', clinicId)
+      .single()
+    
+    allowsMultipleSignatures = !!clinic?.allows_multiple_signatures
+  }
+
+  if (allowsMultipleSignatures && clinicId && patientId) {
+    const { data: otherSessions } = await supabase
+      .from('attendance_sessions')
+      .select(`
+        id,
+        start_time,
+        end_time,
+        session_date,
+        status,
+        validated_at,
+        attendances!inner(patient_id, clinic_id, professional:professionals(name), procedure:procedures(name))
+      `)
+      .eq('session_date', session.session_date)
+      .is('validated_at', null)
+      .neq('id', sessionId)
+      .eq('attendances.patient_id', patientId)
+      .eq('attendances.clinic_id', clinicId)
+
+    otherPendingSessions = (otherSessions || []).map((s: any) => ({
+      sessionId: s.id,
+      startTime: s.start_time,
+      endTime: s.end_time,
+      professionalName: s.attendances?.professional?.name || 'Profissional',
+      procedureName: s.attendances?.procedure?.name || 'Procedimento'
+    }))
+  }
+
   const sessionInfo = {
     sessionId: session.id,
     sessionDate: session.session_date,
@@ -58,6 +103,8 @@ export default async function ValidarPage({
     patientName: attendance?.patient?.name || 'Paciente',
     professionalName: attendance?.professional?.name || 'Profissional',
     procedureName: attendance?.procedure?.name || 'Procedimento',
+    allowsMultipleSignatures,
+    otherPendingSessions,
   }
 
   return (

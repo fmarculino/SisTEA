@@ -38,6 +38,7 @@ export function ClinicForm({ initialData, id, matrixClinics = [] }: { initialDat
       phone: initialData?.phone || '',
       email: initialData?.email || '',
       active: initialData?.active ?? true,
+      allows_multiple_signatures: initialData?.allows_multiple_signatures ?? false,
       competence_end_day: initialData?.competence_end_day || 31,
       competence_deadline_day: initialData?.competence_deadline_day || 5,
       latitude: initialData?.latitude || null,
@@ -419,6 +420,20 @@ export function ClinicForm({ initialData, id, matrixClinics = [] }: { initialDat
             <div className="space-y-0.5">
               <span className="text-[11px] font-black text-foreground uppercase tracking-widest group-hover:text-primary transition-colors">Clínica Ativa</span>
               <p className="text-[10px] text-muted-foreground font-medium">Define se a clínica aparecerá nos novos atendimentos e relatórios.</p>
+            </div>
+          </label>
+        </div>
+
+        <div className="sm:col-span-2 bg-muted/20 p-6 rounded-2xl border border-border/40">
+          <label className="flex items-center space-x-3 group cursor-pointer">
+            <input
+              type="checkbox"
+              {...register('allows_multiple_signatures')}
+              className="w-5 h-5 rounded-lg border-border/60 text-primary focus:ring-primary/10 bg-background transition-all"
+            />
+            <div className="space-y-0.5">
+              <span className="text-[11px] font-black text-foreground uppercase tracking-widest group-hover:text-primary transition-colors">Permitir Múltiplas Assinaturas</span>
+              <p className="text-[10px] text-muted-foreground font-medium">Se ativado, permite que pacientes com múltiplos atendimentos agendados no mesmo dia assinem todos de uma vez.</p>
             </div>
           </label>
         </div>

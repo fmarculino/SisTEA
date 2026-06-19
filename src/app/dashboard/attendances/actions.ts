@@ -765,8 +765,9 @@ export async function validateSessionAction(data: {
   hmac: string
   timestamp: number
   geo?: { lat: number; lng: number; accuracy: number } | null
+  validateAllToday?: boolean
 }) {
-  const { sessionId, token, hmac, timestamp, geo } = data
+  const { sessionId, token, hmac, timestamp, geo, validateAllToday } = data
 
   if (!sessionId || !token || !hmac || !timestamp) {
     return { error: 'Dados incompletos' }
@@ -921,7 +922,39 @@ export async function validateSessionAction(data: {
     }
   }
 
-  // 10. SUCCESS — Update session status
+  // 10. SUCCESS — Prepare sessions to update
+  const sessionsToUpdate = [{ id: sessionId, attendance_id: session.attendance_id }]
+
+  if (validateAllToday) {
+    const { data: clinicConfig } = await supabase
+      .from('clinics')
+      .select('allows_multiple_signatures')
+      .eq('id', attendance.clinic_id)
+      .single()
+
+    if (clinicConfig?.allows_multiple_signatures) {
+      const { data: otherSessions } = await supabase
+        .from('attendance_sessions')
+        .select(`
+          id,
+          attendance_id,
+          attendances!inner(patient_id, clinic_id)
+        `)
+        .eq('session_date', session.session_date)
+        .is('validated_at', null)
+        .neq('id', sessionId)
+        .eq('attendances.patient_id', attendance.patient_id)
+        .eq('attendances.clinic_id', attendance.clinic_id)
+
+      if (otherSessions && otherSessions.length > 0) {
+        otherSessions.forEach((s: any) => {
+          sessionsToUpdate.push({ id: s.id, attendance_id: s.attendance_id })
+        })
+      }
+    }
+  }
+
+  const sessionIds = sessionsToUpdate.map(s => s.id)
   const { error: updateError } = await supabase
     .from('attendance_sessions')
     .update({
@@ -933,11 +966,12 @@ export async function validateSessionAction(data: {
       validation_distance,
       is_out_of_range: is_out_of_range,
       validation_nonce: null,
+      validation_type: 'QR_CODE'
     })
-    .eq('id', sessionId)
+    .in('id', sessionIds)
 
   if (updateError) {
-    return { error: 'Erro ao atualizar sessão' }
+    return { error: 'Erro ao atualizar sessões' }
   }
 
   // 10. TOKEN ROTATION — Optional based on settings
@@ -952,58 +986,76 @@ export async function validateSessionAction(data: {
       .eq('id', attendance.patient_id)
   }
 
-  // 11. RECALCULATE TOTAL VALUE
-  const { data: allSessions } = await supabase
-    .from('attendance_sessions')
-    .select('status')
-    .eq('attendance_id', session.attendance_id)
+  // 11. RECALCULATE TOTAL VALUES FOR ALL AFFECTED ATTENDANCES
+  const uniqueAttendanceIds = Array.from(new Set(sessionsToUpdate.map(s => s.attendance_id)))
+  
+  for (const attId of uniqueAttendanceIds) {
+    const { data: att } = await supabase
+      .from('attendances')
+      .select('patient_id, clinic_id, procedure_id, attendance_date')
+      .eq('id', attId)
+      .single()
 
-  const realizedCount = (allSessions || []).filter((s: any) => s.status === 'Realizada').length
+    if (!att) continue
 
-  const { data: contractPrice } = await supabase
-    .from('clinic_procedure_prices')
-    .select('valor_total')
-    .eq('clinic_id', attendance.clinic_id)
-    .eq('procedure_id', attendance.procedure_id)
-    .eq('active', true)
-    .lte('valid_from', attendance.attendance_date)
-    .or(`valid_to.is.null,valid_to.gte.${attendance.attendance_date}`)
-    .order('valid_from', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    const { data: allSessions } = await supabase
+      .from('attendance_sessions')
+      .select('status')
+      .eq('attendance_id', attId)
 
-  let unitValue = 0
-  if (contractPrice) {
-    unitValue = Number(contractPrice.valor_total)
-  } else {
-    const { data: proc } = await supabase.from('procedures').select('valor_total').eq('id', attendance.procedure_id).single()
-    unitValue = Number(proc?.valor_total) || 0
+    const realizedCount = (allSessions || []).filter((s: any) => s.status === 'Realizada').length
+
+    const { data: contractPrice } = await supabase
+      .from('clinic_procedure_prices')
+      .select('valor_total')
+      .eq('clinic_id', att.clinic_id)
+      .eq('procedure_id', att.procedure_id)
+      .eq('active', true)
+      .lte('valid_from', att.attendance_date)
+      .or(`valid_to.is.null,valid_to.gte.${att.attendance_date}`)
+      .order('valid_from', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    let unitValue = 0
+    if (contractPrice) {
+      unitValue = Number(contractPrice.valor_total)
+    } else {
+      const { data: proc } = await supabase.from('procedures').select('valor_total').eq('id', att.procedure_id).single()
+      unitValue = Number(proc?.valor_total) || 0
+    }
+
+    await supabase
+      .from('attendances')
+      .update({
+        value_applied: realizedCount * unitValue,
+        quantity: realizedCount,
+        status: realizedCount > 0 ? 'Realizada' : 'Pendente'
+      })
+      .eq('id', attId)
   }
 
-  await supabase
-    .from('attendances')
-    .update({
-      value_applied: realizedCount * unitValue,
-      quantity: realizedCount,
-      status: realizedCount > 0 ? 'Realizada' : 'Pendente'
+  // 12. AUDIT LOGGING FOR EACH UPDATED SESSION
+  for (const s of sessionsToUpdate) {
+    const isMain = s.id === sessionId
+    await logAudit({
+      action: 'UPDATE',
+      table_name: 'attendance_sessions',
+      record_id: s.id,
+      new_data: {
+        status: 'Realizada',
+        validation_method: 'Digital',
+        ip,
+        is_out_of_range,
+        distance: validation_distance,
+        validation_geo: geo,
+        unified_signature: !isMain
+      },
+      description: isMain 
+        ? `Paciente assinou digitalmente a sessão ID: ${s.id} (Atendimento: ${s.attendance_id}).`
+        : `Paciente assinou digitalmente via assinatura unificada a sessão ID: ${s.id} (Atendimento: ${s.attendance_id}).`
     })
-    .eq('id', session.attendance_id)
-
-  // Log audit
-  await logAudit({
-    action: 'UPDATE',
-    table_name: 'attendance_sessions',
-    record_id: sessionId,
-    new_data: {
-      status: 'Realizada',
-      validation_method: 'Digital',
-      ip,
-      is_out_of_range,
-      distance: validation_distance,
-      validation_geo: geo
-    },
-    description: `Paciente assinou digitalmente a sessão ID: ${sessionId} (Atendimento: ${session.attendance_id}).`
-  })
+  }
 
   return { success: true }
 }

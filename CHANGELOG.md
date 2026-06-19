@@ -2,6 +2,22 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.5.0] - 2026-06-18
+
+Esta versão introduz a **Assinatura Unificada / Coletiva de Atendimentos** por clínica, facilitando o fluxo de validação digital para pacientes com múltiplos agendamentos no mesmo dia, além de trazer melhorias de RLS e migração das regras de atendimentos para Server Actions robustas.
+
+### 🔑 Assinatura Unificada de Frequências (QR Code)
+- **Flag nas Clínicas:** Adição do campo `allows_multiple_signatures` no cadastro de clínicas com validação correspondente no Zod (`schema.ts`) e interface administrativa (`ClinicForm.tsx`).
+- **Modal de Confirmação Coletiva:** Nova interface modal premium/glassmorphic no fluxo do paciente (`ValidationClient.tsx`) que detecta outras sessões pendentes no mesmo dia da clínica e permite a confirmação unificada com o mesmo PIN/token.
+- **Validação Massiva com Recálculo:** Ajuste na Server Action `validateSessionAction` para tratar o parâmetro `validateAllToday` e registrar a presença digital de todas as sessões do dia, recalculando os valores aplicados e saldos nas respectivas guias de atendimentos (`attendances`).
+- **Rastro de Auditoria Detalhado:** Geração automática de logs de auditoria individuais para cada sessão confirmada de forma coletiva.
+
+### 🛡️ Segurança & Refatoração das Regras de Atendimento
+- **Server Actions de Atendimentos:** Refatoração completa das ações de criação, edição e exclusão de atendimentos, movendo a lógica de negócio do cliente para o servidor (`actions.ts`).
+- **Políticas de Segurança do Grupo:** Atualização das políticas de RLS em `attendance_sessions` para aplicar controle de acesso baseado em grupos e permissões delegadas de clínicas associadas.
+
+---
+
 ## [1.4.0] - 2026-06-16
 
 Esta versão introduz o suporte completo a **Clínicas Filiais (Unidades Vinculadas)**, permitindo a gestão hierárquica de clínicas, herança automática de CNES e consolidação unificada do faturamento BPA e competências para todo o grupo.

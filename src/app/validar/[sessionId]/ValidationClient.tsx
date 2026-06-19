@@ -13,6 +13,14 @@ interface SessionInfo {
   patientName: string
   professionalName: string
   procedureName: string
+  allowsMultipleSignatures?: boolean
+  otherPendingSessions?: {
+    sessionId: string
+    startTime: string
+    endTime: string
+    professionalName: string
+    procedureName: string
+  }[]
 }
 
 export function ValidationClient({
@@ -30,6 +38,7 @@ export function ValidationClient({
   const [loading, setLoading] = useState(false)
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null)
   const [blocked, setBlocked] = useState(false)
+  const [showUnifiedModal, setShowUnifiedModal] = useState(false)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   // Auto-focus first input on mount
@@ -76,6 +85,17 @@ export function ValidationClient({
       return
     }
 
+    if (sessionInfo.allowsMultipleSignatures && sessionInfo.otherPendingSessions && sessionInfo.otherPendingSessions.length > 0) {
+      setShowUnifiedModal(true)
+    } else {
+      await executeValidation(false)
+    }
+  }
+
+  const executeValidation = async (validateAllToday: boolean) => {
+    setShowUnifiedModal(false)
+    const token = tokenDigits.join('')
+    
     setLoading(true)
     setError('')
 
@@ -104,6 +124,7 @@ export function ValidationClient({
         hmac,
         timestamp: Number(timestamp),
         geo,
+        validateAllToday,
       })
 
       if (result.success) {
@@ -306,6 +327,63 @@ export function ValidationClient({
           SisTEA — Sistema de Terapia Especializada em Autismo
         </p>
       </div>
+
+      {/* Unified Signature Modal */}
+      {showUnifiedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 text-center">
+            <div className="w-14 h-14 mx-auto bg-amber-500/10 rounded-2xl flex items-center justify-center mb-4">
+              <span className="text-2xl text-amber-400">✨</span>
+            </div>
+            
+            <h3 className="text-lg font-black text-white mb-2 uppercase tracking-wide">
+              Assinatura Coletiva
+            </h3>
+            
+            <p className="text-white/70 text-xs mb-4 leading-relaxed">
+              Identificamos outros atendimentos pendentes agendados para você hoje na mesma clínica:
+            </p>
+
+            <div className="max-h-40 overflow-y-auto mb-5 space-y-2 pr-1 text-left">
+              {sessionInfo.otherPendingSessions?.map((session, idx) => (
+                <div key={idx} className="bg-white/5 rounded-xl p-3 border border-white/5">
+                  <p className="text-white text-xs font-bold truncate">
+                    {session.procedureName}
+                  </p>
+                  <p className="text-white/50 text-[10px] mt-0.5 font-medium">
+                    Horário: {session.startTime.substring(0, 5)} | {session.professionalName}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-amber-400/90 text-[11px] font-bold mb-5 leading-normal">
+              Deseja realizar a assinatura unificada para confirmar todos esses atendimentos de uma vez?
+            </p>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => executeValidation(true)}
+                className="w-full bg-sky-500 hover:bg-sky-400 text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-[0.98]"
+              >
+                ✓ Sim, assinar todos
+              </button>
+              <button
+                onClick={() => executeValidation(false)}
+                className="w-full bg-white/5 hover:bg-white/10 text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all border border-white/10 active:scale-[0.98]"
+              >
+                Não, apenas o atual
+              </button>
+              <button
+                onClick={() => setShowUnifiedModal(false)}
+                className="w-full text-white/40 hover:text-white/60 font-bold py-2 text-xs transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

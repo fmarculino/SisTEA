@@ -14,6 +14,7 @@ export const clinicSchema = z.object({
   phone: z.string().optional().nullable(),
   email: z.string().email('E-mail inválido').optional().nullable().or(z.literal('')),
   active: z.boolean().default(true),
+  allows_multiple_signatures: z.boolean().default(false),
   competence_end_day: z.coerce.number().min(1).max(31).default(31),
   competence_deadline_day: z.coerce.number().min(1).max(31).default(5),
   latitude: z.coerce.number().optional().nullable(),
