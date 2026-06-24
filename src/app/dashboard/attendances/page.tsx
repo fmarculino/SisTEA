@@ -79,7 +79,35 @@ export default async function AttendancesPage({
 
   // Apply Search Filter
   if (queryParams.q) {
-    query = query.or(`patients.name.ilike.%${queryParams.q}%,professionals.name.ilike.%${queryParams.q}%`)
+    // 1. Fetch matching patient IDs
+    const { data: matchedPatients } = await supabase
+      .from('patients')
+      .select('id')
+      .or(`name.ilike.%${queryParams.q}%,cns_patient.ilike.%${queryParams.q}%`)
+
+    // 2. Fetch matching professional IDs
+    const { data: matchedProfessionals } = await supabase
+      .from('professionals')
+      .select('id')
+      .or(`name.ilike.%${queryParams.q}%,cns.ilike.%${queryParams.q}%`)
+
+    const patientIds = matchedPatients?.map((p: any) => p.id) || []
+    const professionalIds = matchedProfessionals?.map((p: any) => p.id) || []
+
+    const orConditions = []
+    if (patientIds.length > 0) {
+      orConditions.push(`patient_id.in.(${patientIds.map(id => `"${id}"`).join(',')})`)
+    }
+    if (professionalIds.length > 0) {
+      orConditions.push(`professional_id.in.(${professionalIds.map(id => `"${id}"`).join(',')})`)
+    }
+
+    if (orConditions.length > 0) {
+      query = query.or(orConditions.join(','))
+    } else {
+      // Force empty result if nothing matched the name search
+      query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+    }
   }
 
   // Apply dropdown filters
