@@ -4,7 +4,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { attendanceSchema, type AttendanceFormData } from './schema'
 import { createAttendanceAction, updateAttendanceAction, deleteAttachmentAction, saveAttachmentRecordAction, getAttachmentSignedUrlAction } from './actions'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
@@ -279,53 +279,61 @@ export function AttendanceForm({
   const selectedAttendanceDate = watch('attendance_date')
 
   // Filter procedures based on professional specialties AND patient age AND clinic contract
-  const filteredProcedures = selectedProfessionalId
-    ? procedures.filter(proc => {
-      // Permitir sempre o procedimento original do atendimento (para fins de visualização na edição de legados)
-      if (initialData?.procedure_id === proc.id) return true
+  const filteredProcedures = useMemo(() => {
+    return selectedProfessionalId
+      ? procedures.filter(proc => {
+        // Permitir sempre o procedimento original do atendimento (para fins de visualização na edição de legados)
+        if (initialData?.procedure_id === proc.id) return true
 
-      const professional = professionals.find(p => p.id === selectedProfessionalId)
-      if (!professional || !professional.specialty_ids) return false
+        const professional = professionals.find(p => p.id === selectedProfessionalId)
+        if (!professional || !professional.specialty_ids) return false
 
-      // 1. Specialty Filter
-      // Se o procedimento não tem especialidades vinculadas, mostramos para todos (regra de segurança)
-      const hasSpecialtyMatch = (!proc.specialty_ids || proc.specialty_ids.length === 0)
-        ? true
-        : proc.specialty_ids.some((id: string) => professional.specialty_ids.includes(id))
+        // 1. Specialty Filter
+        // Se o procedimento não tem especialidades vinculadas, mostramos para todos (regra de segurança)
+        const hasSpecialtyMatch = (!proc.specialty_ids || proc.specialty_ids.length === 0)
+          ? true
+          : proc.specialty_ids.some((id: string) => professional.specialty_ids.includes(id))
 
-      if (!hasSpecialtyMatch) return false
+        if (!hasSpecialtyMatch) return false
 
-      // 2. Age Filter (Restrição de Idade)
-      if (patientAge !== null) {
-        if (proc.min_age !== null && proc.min_age !== undefined && patientAge < proc.min_age) return false
-        if (proc.max_age !== null && proc.max_age !== undefined && patientAge > proc.max_age) return false
-      }
+        // 2. Age Filter (Restrição de Idade)
+        if (patientAge !== null) {
+          if (proc.min_age !== null && proc.min_age !== undefined && patientAge < proc.min_age) return false
+          if (proc.max_age !== null && proc.max_age !== undefined && patientAge > proc.max_age) return false
+        }
 
-      // 3. Contract Filter (Governança de Vínculos Contratuais de Clínicas)
-      if (selectedClinicId) {
-        const hasContract = clinicProcedurePrices.some(price => {
-          if (price.clinic_id !== selectedClinicId || price.procedure_id !== proc.id || !price.active) return false
+        // 3. Contract Filter (Governança de Vínculos Contratuais de Clínicas)
+        if (selectedClinicId) {
+          const hasContract = clinicProcedurePrices.some(price => {
+            if (price.clinic_id !== selectedClinicId || price.procedure_id !== proc.id || !price.active) return false
 
-          // Se houver datas de vigência, validar contra a data do atendimento
-          if (selectedAttendanceDate) {
-            const attDate = new Date(selectedAttendanceDate)
-            const fromDate = new Date(price.valid_from)
-            if (attDate < fromDate) return false
+            // Se houver datas de vigência, validar contra a data do atendimento
+            if (selectedAttendanceDate) {
+              if (selectedAttendanceDate < price.valid_from) return false
 
-            if (price.valid_to) {
-              const toDate = new Date(price.valid_to)
-              if (attDate > toDate) return false
+              if (price.valid_to) {
+                if (selectedAttendanceDate > price.valid_to) return false
+              }
             }
-          }
-          return true
-        })
+            return true
+          })
 
-        if (!hasContract) return false
-      }
+          if (!hasContract) return false
+        }
 
-      return true
-    })
-    : []
+        return true
+      })
+      : []
+  }, [
+    selectedProfessionalId,
+    procedures,
+    initialData?.procedure_id,
+    professionals,
+    patientAge,
+    selectedClinicId,
+    clinicProcedurePrices,
+    selectedAttendanceDate
+  ])
 
   // Filter CIDs based on selected procedure
   const filteredCids = selectedProcedureId
@@ -382,12 +390,9 @@ export function AttendanceForm({
             const contract = clinicProcedurePrices.find(price => {
               if (price.clinic_id !== selectedClinicId || price.procedure_id !== selectedProcedureId || !price.active) return false
               if (selectedAttendanceDate) {
-                const attDate = new Date(selectedAttendanceDate)
-                const fromDate = new Date(price.valid_from)
-                if (attDate < fromDate) return false
+                if (selectedAttendanceDate < price.valid_from) return false
                 if (price.valid_to) {
-                  const toDate = new Date(price.valid_to)
-                  if (attDate > toDate) return false
+                  if (selectedAttendanceDate > price.valid_to) return false
                 }
               }
               return true

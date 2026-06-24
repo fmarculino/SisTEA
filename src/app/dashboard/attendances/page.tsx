@@ -79,7 +79,7 @@ export default async function AttendancesPage({
 
   // Apply Search Filter
   if (queryParams.q) {
-    query = query.or(`patient.name.ilike.%${queryParams.q}%,professional.name.ilike.%${queryParams.q}%`)
+    query = query.or(`patients.name.ilike.%${queryParams.q}%,professionals.name.ilike.%${queryParams.q}%`)
   }
 
   // Apply dropdown filters
@@ -93,7 +93,10 @@ export default async function AttendancesPage({
     query = query.eq('clinic_id', queryParams.clinic)
   }
 
-  const { data: attendances } = await query.order('attendance_date', { ascending: false })
+  const { data: attendances, error: fetchError } = await query.order('attendance_date', { ascending: false })
+  if (fetchError) {
+    console.error('Erro ao buscar atendimentos:', fetchError)
+  }
 
   return (
     <div className="space-y-6">
