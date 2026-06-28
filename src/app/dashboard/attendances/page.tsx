@@ -7,15 +7,30 @@ import { formatCurrency } from '@/utils/format'
 import { DeleteAttendanceButton } from './DeleteAttendanceButton'
 
 import { DataTableFilters } from '@/components/ui/DataTableFilters'
+import { Pagination } from '@/components/ui/Pagination'
 
 export default async function AttendancesPage({
   searchParams,
 }: {
-  searchParams: { q?: string; professional?: string; procedure?: string; clinic?: string }
+  searchParams: {
+    q?: string;
+    professional?: string;
+    procedure?: string;
+    clinic?: string;
+    page?: string;
+    limit?: string;
+    show_unvalidated?: string;
+  }
 }) {
   const queryParams = await searchParams
   const profile = await getUserProfile()
   const supabase = await createClient()
+
+  const page = Number(queryParams.page) || 1
+  const limit = Number(queryParams.limit) || 20
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+  const showUnvalidated = queryParams.show_unvalidated === 'true'
 
   // Fetch filter options in parallel
   const professionalQuery = supabase
@@ -64,18 +79,25 @@ export default async function AttendancesPage({
   }
 
   // Build main query
+  let selectFields = `
+    id,
+    attendance_date,
+    value_applied,
+    patient:patients(name),
+    professional:professionals(name),
+    procedure:procedures(name),
+    clinic:clinics(name),
+    sessions:attendance_sessions(id, status, validated_at)
+  `
+
+  if (!showUnvalidated) {
+    selectFields += `,
+    validated_sessions:attendance_sessions!inner(id, validated_at)`
+  }
+
   let query = supabase
     .from('attendances')
-    .select(`
-      id,
-      attendance_date,
-      value_applied,
-      patient:patients(name),
-      professional:professionals(name),
-      procedure:procedures(name),
-      clinic:clinics(name),
-      sessions:attendance_sessions(id, status)
-    `)
+    .select(selectFields, { count: 'exact' })
 
   // Apply Search Filter
   if (queryParams.q) {
@@ -121,7 +143,15 @@ export default async function AttendancesPage({
     query = query.eq('clinic_id', queryParams.clinic)
   }
 
-  const { data: attendances, error: fetchError } = await query.order('attendance_date', { ascending: false })
+  // Filter out unvalidated attendances if not showUnvalidated
+  if (!showUnvalidated) {
+    query = query.not('validated_sessions.validated_at', 'is', null)
+  }
+
+  const { data: attendances, count, error: fetchError } = await query
+    .order('attendance_date', { ascending: false })
+    .range(from, to)
+
   if (fetchError) {
     console.error('Erro ao buscar atendimentos:', fetchError)
   }
@@ -150,7 +180,12 @@ export default async function AttendancesPage({
         placeholder="Pesquisar por paciente ou profissional..." 
         showStatus={false}
         extraFilters={extraFilters}
-      />      <div className="bento-card overflow-hidden">
+        checkboxFilter={{
+          paramName: 'show_unvalidated',
+          label: 'Exibir sem validação'
+        }}
+      />
+      <div className="bento-card overflow-hidden">
         <div className="overflow-x-auto overflow-y-hidden">
           <table className="min-w-full divide-y divide-border/40">
             <thead>
@@ -232,6 +267,7 @@ export default async function AttendancesPage({
             </tbody>
           </table>
         </div>
+        <Pagination totalItems={count || 0} itemsPerPage={limit} currentPage={page} />
       </div>
     </div>
   )

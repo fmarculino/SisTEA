@@ -15,6 +15,10 @@ interface DataTableFiltersProps {
     placeholder: string;
     options: { value: string; label: string }[];
   }[];
+  checkboxFilter?: {
+    paramName: string;
+    label: string;
+  };
 }
 
 export function DataTableFilters({ 
@@ -22,7 +26,8 @@ export function DataTableFilters({
   showStatus = true,
   className = "mb-8",
   searchType = 'none',
-  extraFilters = []
+  extraFilters = [],
+  checkboxFilter
 }: DataTableFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -119,6 +124,18 @@ export function DataTableFilters({
             <option value="true">Ativos</option>
             <option value="false">Inativos</option>
           </select>
+        )}
+
+        {checkboxFilter && (
+          <label className="flex items-center gap-2 px-3 py-2 bg-card/80 border border-border rounded-xl text-sm cursor-pointer hover:bg-card hover:border-primary/30 transition-all select-none h-10">
+            <input
+              type="checkbox"
+              className="accent-primary h-4 w-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+              checked={searchParams.get(checkboxFilter.paramName) === 'true'}
+              onChange={(e) => updateParams(checkboxFilter.paramName, e.target.checked ? 'true' : 'false')}
+            />
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{checkboxFilter.label}</span>
+          </label>
         )}
       </div>
     </div>
