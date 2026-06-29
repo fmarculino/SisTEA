@@ -18,6 +18,7 @@ interface DataTableFiltersProps {
   checkboxFilter?: {
     paramName: string;
     label: string;
+    defaultValue?: boolean;
   };
 }
 
@@ -131,7 +132,11 @@ export function DataTableFilters({
             <input
               type="checkbox"
               className="accent-primary h-4 w-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
-              checked={searchParams.get(checkboxFilter.paramName) === 'true'}
+              checked={
+                checkboxFilter.defaultValue
+                  ? searchParams.get(checkboxFilter.paramName) !== 'false'
+                  : searchParams.get(checkboxFilter.paramName) === 'true'
+              }
               onChange={(e) => updateParams(checkboxFilter.paramName, e.target.checked ? 'true' : 'false')}
             />
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{checkboxFilter.label}</span>

@@ -30,7 +30,7 @@ export default async function AttendancesPage({
   const limit = Number(queryParams.limit) || 20
   const from = (page - 1) * limit
   const to = from + limit - 1
-  const showUnvalidated = queryParams.show_unvalidated === 'true'
+  const showUnvalidated = queryParams.show_unvalidated !== 'false'
 
   // Fetch filter options in parallel
   const professionalQuery = supabase
@@ -182,7 +182,8 @@ export default async function AttendancesPage({
         extraFilters={extraFilters}
         checkboxFilter={{
           paramName: 'show_unvalidated',
-          label: 'Exibir sem validação'
+          label: 'Exibir sem validação',
+          defaultValue: true
         }}
       />
       <div className="bento-card overflow-hidden">
