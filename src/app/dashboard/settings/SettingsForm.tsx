@@ -5,9 +5,10 @@ import {
   ShieldAlert, RefreshCw, MapPin, 
   ClipboardList, Activity, Lock, 
   Clock, Globe, Save, Loader2,
-  Settings, Image as ImageIcon
+  Settings, Image as ImageIcon, MessageSquare, Send, CheckCircle2, AlertCircle, X
 } from 'lucide-react'
 import { updateAllSettingsAction } from './actions'
+import { testWhatsAppConnectionAction } from '@/app/actions/communication'
 import { useRouter } from 'next/navigation'
 import { StatusModal } from '@/components/ui/StatusModal'
 import { createClient } from '@/utils/supabase/client'
@@ -23,6 +24,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [showStatus, setShowStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
 
+  // State para modal de teste de WhatsApp
+  const [showWATestModal, setShowWATestModal] = useState(false)
+  const [testPhone, setTestPhone] = useState('')
+  const [isTestingWA, setIsTestingWA] = useState(false)
+  const [waTestResult, setWaTestResult] = useState<{ success: boolean; message: string; mode?: string } | null>(null)
+
   // State for all settings
   const [values, setValues] = useState(() => {
     const obj: Record<string, any> = {}
@@ -36,6 +43,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     if (obj['signature_window_hours'] === undefined) obj['signature_window_hours'] = 1
     if (obj['system_timezone'] === undefined) obj['system_timezone'] = 'America/Sao_Paulo'
     if (obj['system_timezone_offset'] === undefined) obj['system_timezone_offset'] = '-03:00'
+    if (obj['whatsapp_modo'] === undefined) obj['whatsapp_modo'] = 'api_chatwoot'
+    if (obj['whatsapp_chatwoot_url'] === undefined) obj['whatsapp_chatwoot_url'] = ''
+    if (obj['whatsapp_chatwoot_account_id'] === undefined) obj['whatsapp_chatwoot_account_id'] = ''
+    if (obj['whatsapp_chatwoot_inbox_id'] === undefined) obj['whatsapp_chatwoot_inbox_id'] = ''
+    if (obj['whatsapp_chatwoot_token'] === undefined) obj['whatsapp_chatwoot_token'] = ''
+    if (obj['whatsapp_permitir_fallback'] === undefined) obj['whatsapp_permitir_fallback'] = true
     return obj
   })
 
@@ -173,6 +186,121 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                   </p>
                 </>
               )}
+            </div>
+          </div>
+        </section>
+
+        {/* Comunicação & WhatsApp (Chatwoot) Section */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+            <MessageSquare className="h-5 w-5 text-emerald-500" />
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Comunicação & WhatsApp (Chatwoot)</h3>
+          </div>
+
+          <div className="bento-card p-6 group hover:border-primary/30 transition-all space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/20 pb-4">
+              <div className="space-y-1">
+                <h4 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-emerald-500" />
+                  Modo de Integração do WhatsApp
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Selecione o provedor utilizado para envio automático de mensagens e tokens para pacientes.
+                </p>
+              </div>
+
+              <select
+                value={values.whatsapp_modo || 'api_chatwoot'}
+                onChange={(e) => handleChange('whatsapp_modo', e.target.value)}
+                className="px-4 py-2 bg-background border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary outline-none"
+              >
+                <option value="api_chatwoot">API Chatwoot (Recomendado)</option>
+                <option value="manual">Manual (WhatsApp Web)</option>
+                <option value="api_astracall">API AstraCalls</option>
+                <option value="api_custom">API Customizada (Webhook)</option>
+              </select>
+            </div>
+
+            {/* Configurações específicas para Chatwoot */}
+            {values.whatsapp_modo === 'api_chatwoot' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/20 p-5 rounded-2xl border border-border/40 animate-in fade-in">
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">URL da Instância Chatwoot</label>
+                  <input
+                    type="url"
+                    placeholder="https://chatwoot.suaempresa.com.br"
+                    value={values.whatsapp_chatwoot_url || ''}
+                    onChange={(e) => handleChange('whatsapp_chatwoot_url', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Account ID (ID da Conta)</label>
+                  <input
+                    type="text"
+                    placeholder="1"
+                    value={values.whatsapp_chatwoot_account_id || ''}
+                    onChange={(e) => handleChange('whatsapp_chatwoot_account_id', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Inbox ID (ID da Caixa de Entrada - Opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="1"
+                    value={values.whatsapp_chatwoot_inbox_id || ''}
+                    onChange={(e) => handleChange('whatsapp_chatwoot_inbox_id', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">API Access Token (Token do Agente/Bot)</label>
+                  <input
+                    type="password"
+                    placeholder="Cole o api_access_token do Chatwoot"
+                    value={values.whatsapp_chatwoot_token || ''}
+                    onChange={(e) => handleChange('whatsapp_chatwoot_token', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-mono font-medium focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Toggle de Fallback */}
+            <div className="flex items-center justify-between pt-2">
+              <div className="space-y-1">
+                <span className="text-sm font-bold text-foreground">Permitir Fallback via WhatsApp Web</span>
+                <p className="text-xs text-muted-foreground">
+                  Se a API de envio falhar, exibe botão para que o operador envie via WhatsApp Web.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleChange('whatsapp_permitir_fallback', !(values.whatsapp_permitir_fallback !== false))}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${values.whatsapp_permitir_fallback !== false ? 'bg-primary' : 'bg-muted'}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${values.whatsapp_permitir_fallback !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Botão de Testar Conexão */}
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setWaTestResult(null)
+                  setShowWATestModal(true)
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-emerald-500/20 transition-all"
+              >
+                <Send className="w-4 h-4" />
+                Testar Conexão do WhatsApp
+              </button>
             </div>
           </div>
         </section>
@@ -340,6 +468,96 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           message={showStatus.message}
           onClose={() => setShowStatus(null)}
         />
+      )}
+
+      {/* Modal de Teste de Conexão WhatsApp */}
+      {showWATestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-md rounded-3xl shadow-2xl border border-border p-6 space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border/40 pb-4">
+              <div className="flex items-center gap-3 text-emerald-500">
+                <div className="p-2.5 bg-emerald-500/10 rounded-2xl">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <h3 className="font-black text-foreground uppercase tracking-tight">Testar Envio via WhatsApp</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWATestModal(false)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Informe um número de telefone com DDD para testar a comunicação com a API configurada ({values.whatsapp_modo || 'api_chatwoot'}).
+              </p>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Telefone de Destino</label>
+                <input
+                  type="text"
+                  placeholder="(94) 99999-9999"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={isTestingWA || !testPhone.trim()}
+                onClick={async () => {
+                  setIsTestingWA(true)
+                  setWaTestResult(null)
+                  try {
+                    const result = await testWhatsAppConnectionAction(testPhone, values)
+                    setIsTestingWA(false)
+                    if (result.success) {
+                      setWaTestResult({
+                        success: true,
+                        message: 'Mensagem de teste disparada com sucesso via WhatsApp!',
+                        mode: result.mode
+                      })
+                    } else {
+                      setWaTestResult({
+                        success: false,
+                        message: result.error || 'Falha ao conectar com a API de WhatsApp.',
+                        mode: result.mode
+                      })
+                    }
+                  } catch (err: any) {
+                    setIsTestingWA(false)
+                    setWaTestResult({
+                      success: false,
+                      message: 'Erro inesperado: ' + err.message
+                    })
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-emerald-600 text-white font-black text-xs uppercase tracking-wider rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+              >
+                {isTestingWA ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isTestingWA ? 'Disparando Teste...' : 'Enviar Mensagem de Teste'}
+              </button>
+
+              {waTestResult && (
+                <div className={`p-4 rounded-2xl border text-xs font-medium space-y-2 animate-in fade-in ${
+                  waTestResult.success 
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-300'
+                    : 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/40 text-rose-800 dark:text-rose-300'
+                }`}>
+                  <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
+                    {waTestResult.success ? <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" /> : <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />}
+                    {waTestResult.success ? 'Conexão Confirmada!' : 'Falha na Comunicação'}
+                  </div>
+                  <p className="text-[11px] leading-relaxed">{waTestResult.message}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

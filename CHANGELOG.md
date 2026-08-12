@@ -2,6 +2,22 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.6.0] - 2026-08-12
+
+Esta versão introduz a **Integração com Chatwoot e Envio Automático de Mensagens via WhatsApp**, permitindo o disparo automatizado do Token de Validação Digital do paciente diretamente para o seu WhatsApp, com suporte a múltiplos provedores, validação de número e fallback elegante para o WhatsApp Web.
+
+### 📱 Envio Automático do Token por WhatsApp & Chatwoot API
+- **Motor Server-Side de Comunicação:** Criação de `src/app/actions/communication.ts` com funções server-side para gerenciamento de envio via Chatwoot REST API (`POST /api/v1/accounts/:account_id/conversations`), AstraCalls, Webhook Customizado e Modo Manual.
+- **Tratamento de Telefone Brasil (DDI 55 & 9º Dígito):** Implementação do utilitário `getWhatsAppPhoneVariants` para formatar números com DDD e tratar variantes do 9º dígito para DDDs >= 31.
+- **Integração no Cadastro de Paciente:** Atualização da tela de pacientes (`PatientForm.tsx`) na seção de *Token de Validação Digital* para disparar o token via Server Action com estado visual de carregamento.
+- **Modal de Fallback Inteligente:** Caso a API do Chatwoot não esteja configurada ou ocorra qualquer erro na transmissão automática, o sistema apresenta notificação informativa e disponibiliza o botão **Abrir Web** com a mensagem pré-formatada no WhatsApp Web.
+
+### ⚙️ Painel de Comunicação em Configurações do Sistema
+- **Seção de Configuração de Comunicação:** Inclusão do painel "Comunicação & WhatsApp (Chatwoot)" em `/dashboard/settings` (`SettingsForm.tsx`), permitindo aos administradores (`SMS_ADMIN`) definir a URL da instância, Account ID, Inbox ID, API Access Token e controle de Fallback.
+- **Validador de Conexão em Tempo Real:** Adicionado modal interativo no formulário de configurações para realizar testes de disparo direto para um WhatsApp cadastrado.
+
+---
+
 ## [1.5.0] - 2026-06-18
 
 Esta versão introduz a **Assinatura Unificada / Coletiva de Atendimentos** por clínica, facilitando o fluxo de validação digital para pacientes com múltiplos agendamentos no mesmo dia, além de trazer melhorias de RLS e migração das regras de atendimentos para Server Actions robustas.

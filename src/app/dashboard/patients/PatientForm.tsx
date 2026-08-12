@@ -4,9 +4,10 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { patientSchema, type PatientFormData } from './schema'
 import { createPatientAction, updatePatientAction, resetPatientTokenAction, checkPatientByCNSAction, linkPatientToClinicAction, togglePatientClinicStatusAction } from './actions'
+import { sendPatientTokenWhatsAppAction } from '@/app/actions/communication'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw, Building, X } from 'lucide-react'
+import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw, Building, X, Loader2, ExternalLink, MessageSquare, AlertTriangle } from 'lucide-react'
 import { StatusModal } from '@/components/ui/StatusModal'
 import { MultiSearchSelect } from '@/components/ui/MultiSearchSelect'
 
@@ -37,6 +38,7 @@ export function PatientForm({
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
   const [isPending, setIsPending] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [currentToken, setCurrentToken] = useState(authToken || '')
@@ -46,6 +48,10 @@ export function PatientForm({
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [lastCheckedCNS, setLastCheckedCNS] = useState('')
+  
+  // Estado para envio de WhatsApp / Chatwoot
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false)
+  const [waFallbackData, setWaFallbackData] = useState<{ show: boolean; reason: string; fallbackUrl: string } | null>(null)
 
   // Funções de máscara aprimoradas (Live Masking)
   const maskCNS = (value: string) => {
@@ -701,20 +707,51 @@ export function PatientForm({
 
                     <button
                       type="button"
-                      onClick={() => {
-                        const phone = watch('phone')?.replace(/\D/g, '')
+                      disabled={isSendingWhatsApp}
+                      onClick={async () => {
+                        const phone = watch('phone')
                         const name = watch('name')
-                        if (!phone || phone.length < 10) {
+                        if (!phone || phone.replace(/\D/g, '').length < 10) {
                           setErrorMsg('O paciente não possui um telefone válido cadastrado para envio.')
                           return
                         }
-                        const message = `Olá, *${name}*! Esta é uma mensagem da *Central de Regulação da SMS (SisTEA)*. \n\nO seu token de validação digital para confirmar seus atendimentos via QR Code é: *${currentToken}* \n\nEste código é pessoal e deve ser utilizado *APENAS por você* no momento da assinatura digital. \n\n⚠️ *ATENÇÃO:* Não forneça este código para funcionários da clínica. Guarde-o com segurança para garantir o registro correto das suas sessões.`
-                        window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                        setIsSendingWhatsApp(true)
+                        setErrorMsg('')
+                        setSuccessMsg('')
+                        try {
+                          const res = await sendPatientTokenWhatsAppAction({
+                            patientId: id!,
+                            phone,
+                            patientName: name,
+                            token: currentToken
+                          })
+                          if (res.success) {
+                            setSuccessMsg('Token do paciente enviado com sucesso via WhatsApp!')
+                          } else {
+                            if (res.fallbackUrl || res.isManualMode || res.canFallback) {
+                              setWaFallbackData({
+                                show: true,
+                                reason: res.error || 'Envio automático via API não foi concluído.',
+                                fallbackUrl: res.fallbackUrl || `https://api.whatsapp.com/send?phone=55${phone.replace(/\D/g, '')}`
+                              })
+                            } else {
+                              setErrorMsg(res.error || 'Falha ao enviar mensagem de WhatsApp.')
+                            }
+                          }
+                        } catch (err: any) {
+                          setErrorMsg('Erro ao disparar mensagem: ' + err.message)
+                        } finally {
+                          setIsSendingWhatsApp(false)
+                        }
                       }}
-                      className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 text-white px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                      className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 text-white px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                     >
-                      <Phone className="w-4 h-4" />
-                      Enviar WhatsApp
+                      {isSendingWhatsApp ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Phone className="w-4 h-4" />
+                      )}
+                      {isSendingWhatsApp ? 'Enviando...' : 'Enviar WhatsApp'}
                     </button>
                   </div>
                 </div>
@@ -817,6 +854,69 @@ export function PatientForm({
                   )}
                   Sim, Vincular
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Sucesso */}
+        {successMsg && (
+          <StatusModal
+            isOpen={!!successMsg}
+            type="success"
+            title="Sucesso"
+            message={successMsg}
+            onClose={() => setSuccessMsg('')}
+          />
+        )}
+
+        {/* Modal de Fallback de WhatsApp Web */}
+        {waFallbackData && waFallbackData.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-card w-full max-w-md rounded-3xl shadow-2xl border border-border p-6 space-y-6 animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between border-b border-border/40 pb-4">
+                <div className="flex items-center gap-3 text-amber-500">
+                  <div className="p-2.5 bg-amber-500/10 rounded-2xl">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-black text-foreground uppercase tracking-tight">Envio via WhatsApp Web</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWaFallbackData(null)}
+                  className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {waFallbackData.reason}
+                </p>
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-700 dark:text-amber-400 text-xs font-medium">
+                  Você pode abrir o <strong>WhatsApp Web</strong> diretamente com a mensagem pré-formatada contendo o token do paciente.
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setWaFallbackData(null)}
+                    className="flex-1 px-4 py-3 rounded-xl border border-border text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-muted"
+                  >
+                    Fechar
+                  </button>
+                  <a
+                    href={waFallbackData.fallbackUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setWaFallbackData(null)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Abrir Web
+                  </a>
+                </div>
               </div>
             </div>
           </div>

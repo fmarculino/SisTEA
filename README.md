@@ -1,5 +1,5 @@
 # SisTEA - Sistema Inteligente de Gestão Integrada
-![Version](https://img.shields.io/badge/version-1.0.0-green.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.6.0-green.svg?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-active-success.svg?style=for-the-badge)
 
 > **SisTEA** é uma plataforma enterprise de alta densidade projetada para a gestão especializada de acompanhamento multiprofissional em casos de **Autismo (TEA)** e **TDAH**. O sistema foca em três pilares fundamentais: **Transparência Forense**, **Eficiência Operacional** e **Segurança Jurídica**.
@@ -7,6 +7,9 @@
 ---
 
 ## 🚀 Diferenciais Estratégicos
+
+### 💬 Envio Automático por WhatsApp & Integração Chatwoot
+Disparo automatizado de mensagens e tokens de validação digital para o paciente/responsável via API do Chatwoot (ou provedores AstraCalls/Custom). O sistema possui tratamento inteligente de DDD, variação do 9º dígito e modal de fallback elegante para WhatsApp Web em caso de falha de conexão.
 
 ### 📱 Assinatura Digital & Geofencing
 Validação de presença via QR Code dinâmico com rastreamento de geolocalização. O sistema garante que a sessão ocorreu de fato na unidade de saúde através do cálculo de distância entre o paciente e a clínica em tempo real.
