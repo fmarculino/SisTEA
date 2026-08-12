@@ -233,24 +233,26 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                     onChange={(e) => handleChange('whatsapp_chatwoot_url', e.target.value)}
                     className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
                   />
+                  <p className="text-[10px] text-muted-foreground">Exemplo de URL do Chatwoot: https://chatwoot.suaempresa.com.br</p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Account ID (ID da Conta)</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Account ID (ID Numérico da Conta)</label>
                   <input
                     type="text"
-                    placeholder="1"
+                    placeholder="Ex: 1 (Número inteiro)"
                     value={values.whatsapp_chatwoot_account_id || ''}
                     onChange={(e) => handleChange('whatsapp_chatwoot_account_id', e.target.value)}
                     className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
                   />
+                  <p className="text-[10px] text-muted-foreground">O ID da conta no Chatwoot é um número (ex: 1). Não utilize e-mail.</p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Inbox ID (ID da Caixa de Entrada - Opcional)</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Inbox ID (ID da Caixa - Opcional)</label>
                   <input
                     type="text"
-                    placeholder="1"
+                    placeholder="Ex: 1"
                     value={values.whatsapp_chatwoot_inbox_id || ''}
                     onChange={(e) => handleChange('whatsapp_chatwoot_inbox_id', e.target.value)}
                     className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
@@ -258,13 +260,91 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 </div>
 
                 <div className="sm:col-span-2 space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">API Access Token (Token do Agente/Bot)</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">API Access Token (Token do Usuário/Bot)</label>
                   <input
                     type="password"
-                    placeholder="Cole o api_access_token do Chatwoot"
+                    placeholder="Cole o api_access_token obtido nas configurações de perfil do Chatwoot"
                     value={values.whatsapp_chatwoot_token || ''}
                     onChange={(e) => handleChange('whatsapp_chatwoot_token', e.target.value)}
                     className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-mono font-medium focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Configurações específicas para AstraCalls */}
+            {values.whatsapp_modo === 'api_astracall' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/20 p-5 rounded-2xl border border-border/40 animate-in fade-in">
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">URL da Instância AstraCalls</label>
+                  <input
+                    type="url"
+                    placeholder="https://astracall.atb.app.br"
+                    value={values.whatsapp_astracall_url || 'https://astracall.atb.app.br'}
+                    onChange={(e) => handleChange('whatsapp_astracall_url', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sessão / SID (Session ID)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: default ou ID da sessão"
+                    value={values.whatsapp_astracall_sid || ''}
+                    onChange={(e) => handleChange('whatsapp_astracall_sid', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Chave de API (X-API-Key)</label>
+                  <input
+                    type="password"
+                    placeholder="Chave de API do AstraCalls"
+                    value={values.whatsapp_astracall_key || ''}
+                    onChange={(e) => handleChange('whatsapp_astracall_key', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-mono font-medium focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Configurações específicas para API Customizada */}
+            {values.whatsapp_modo === 'api_custom' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/20 p-5 rounded-2xl border border-border/40 animate-in fade-in">
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">URL da API Customizada</label>
+                  <input
+                    type="url"
+                    placeholder="https://api.suaempresa.com/v1/send-message"
+                    value={values.whatsapp_custom_url || ''}
+                    onChange={(e) => handleChange('whatsapp_custom_url', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Método HTTP</label>
+                  <select
+                    value={values.whatsapp_custom_method || 'POST'}
+                    onChange={(e) => handleChange('whatsapp_custom_method', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary outline-none"
+                  >
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="GET">GET</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Payload JSON (Use {'{{phone}}'} e {'{{message}}'})</label>
+                  <textarea
+                    rows={3}
+                    placeholder='{"to": "{{phone}}", "text": "{{message}}"}'
+                    value={values.whatsapp_custom_payload || ''}
+                    onChange={(e) => handleChange('whatsapp_custom_payload', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-mono focus:ring-2 focus:ring-primary outline-none"
                   />
                 </div>
               </div>
