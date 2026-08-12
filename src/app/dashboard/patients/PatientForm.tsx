@@ -7,7 +7,7 @@ import { createPatientAction, updatePatientAction, resetPatientTokenAction, chec
 import { sendPatientTokenWhatsAppAction } from '@/app/actions/communication'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw, Building, X, Loader2, ExternalLink, MessageSquare, AlertTriangle } from 'lucide-react'
+import { User, Phone, MapPin, Calendar, CreditCard, ChevronDown, CheckCircle, KeyRound, Eye, EyeOff, RotateCw, Building, X, Loader2, ExternalLink, MessageSquare, AlertTriangle, Copy } from 'lucide-react'
 import { StatusModal } from '@/components/ui/StatusModal'
 import { MultiSearchSelect } from '@/components/ui/MultiSearchSelect'
 
@@ -718,6 +718,9 @@ export function PatientForm({
                         setIsSendingWhatsApp(true)
                         setErrorMsg('')
                         setSuccessMsg('')
+                        const cleanPhone = phone.replace(/\D/g, '')
+                        const fallbackUrl = `https://api.whatsapp.com/send?phone=${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}&text=${encodeURIComponent(`Olá, *${name}*! Esta é uma mensagem da *Central de Regulação da SMS (SisTEA)*.\n\nO seu token de validação digital para confirmar seus atendimentos via QR Code é: *${currentToken}*\n\nEste código é pessoal e deve ser utilizado *APENAS por você* no momento da assinatura digital.\n\n⚠️ *ATENÇÃO:* Não forneça este código para funcionários da clínica. Guarde-o com segurança para garantir o registro correto das suas sessões.`)}`
+
                         try {
                           const res = await sendPatientTokenWhatsAppAction({
                             patientId: id!,
@@ -728,18 +731,18 @@ export function PatientForm({
                           if (res.success) {
                             setSuccessMsg('Token do paciente enviado com sucesso via WhatsApp!')
                           } else {
-                            if (res.fallbackUrl || res.isManualMode || res.canFallback) {
-                              setWaFallbackData({
-                                show: true,
-                                reason: res.error || 'Envio automático via API não foi concluído.',
-                                fallbackUrl: res.fallbackUrl || `https://api.whatsapp.com/send?phone=55${phone.replace(/\D/g, '')}`
-                              })
-                            } else {
-                              setErrorMsg(res.error || 'Falha ao enviar mensagem de WhatsApp.')
-                            }
+                            setWaFallbackData({
+                              show: true,
+                              reason: res.error || 'O envio automático via API não pôde ser concluído.',
+                              fallbackUrl: res.fallbackUrl || fallbackUrl
+                            })
                           }
                         } catch (err: any) {
-                          setErrorMsg('Erro ao disparar mensagem: ' + err.message)
+                          setWaFallbackData({
+                            show: true,
+                            reason: 'Erro de conexão/servidor: ' + (err.message || 'Falha ao conectar na API'),
+                            fallbackUrl
+                          })
                         } finally {
                           setIsSendingWhatsApp(false)
                         }
@@ -751,8 +754,20 @@ export function PatientForm({
                       ) : (
                         <Phone className="w-4 h-4" />
                       )}
-                      {isSendingWhatsApp ? 'Enviando...' : 'Enviar WhatsApp'}
+                      {isSendingWhatsApp ? 'Enviando...' : 'Enviar WhatsApp (Automático)'}
                     </button>
+
+                    {/* Botão Direto de Contingência (WhatsApp Web) */}
+                    <a
+                      href={`https://api.whatsapp.com/send?phone=${(watch('phone') || '').replace(/\D/g, '').startsWith('55') ? (watch('phone') || '').replace(/\D/g, '') : '55' + (watch('phone') || '').replace(/\D/g, '')}&text=${encodeURIComponent(`Olá, *${watch('name')}*! Esta é uma mensagem da *Central de Regulação da SMS (SisTEA)*.\n\nO seu token de validação digital para confirmar seus atendimentos via QR Code é: *${currentToken}*\n\nEste código é pessoal e deve ser utilizado *APENAS por você* no momento da assinatura digital.\n\n⚠️ *ATENÇÃO:* Não forneça este código para funcionários da clínica. Guarde-o com segurança para garantir o registro correto das suas sessões.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-5 py-3.5 text-xs font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all active:scale-95"
+                      title="Abrir diretamente no WhatsApp Web como contingência"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      WhatsApp Web (Contingência)
+                    </a>
                   </div>
                 </div>
                 <p className="mt-4 text-[9px] text-muted-foreground font-medium italic">
