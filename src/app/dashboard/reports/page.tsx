@@ -87,7 +87,7 @@ export default async function ReportsPage({
   let reportData: any[] = []
   let totalCount = 0
 
-  if (reportType === 'billing') {
+  if (reportType === 'billing' || reportType === 'grouped_billing') {
     const { data, error } = await supabase.rpc('get_billing_report', {
       p_start_date: startDate,
       p_end_date: endDate,
@@ -96,8 +96,8 @@ export default async function ReportsPage({
       p_patient_id: selectedPatient,
       p_procedure_id: selectedProcedure,
       p_mode: mode,
-      p_limit: limit,
-      p_offset: offset
+      p_limit: reportType === 'grouped_billing' ? 500 : limit,
+      p_offset: reportType === 'grouped_billing' ? 0 : offset
     })
     if (error) console.error('RPC Error Billing:', error)
     reportData = data?.data || []

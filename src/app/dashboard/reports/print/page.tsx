@@ -115,7 +115,7 @@ export default async function PrintReportPage({
 
   let reportData: any[] = []
 
-  if (reportType === 'billing') {
+  if (reportType === 'billing' || reportType === 'grouped_billing') {
     const { data } = await supabase.rpc('get_billing_report', {
       p_start_date: startDate,
       p_end_date: endDate,

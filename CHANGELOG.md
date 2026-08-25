@@ -2,6 +2,26 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.7.0] - 2026-08-25
+
+Esta versão adiciona o **Relatório Hierárquico de Produção por Profissional e Paciente**, com totalizações em cascata, número de autorização (APAC), exportação avançada para Excel em todos os relatórios e calibração de impressão A4.
+
+### 📊 Relatório Hierárquico por Profissional e Paciente (`grouped_billing`)
+- **Agrupamento em Cascata:** Criação de `src/utils/reportGrouping.ts` que organiza os atendimentos por `Profissional ➔ Paciente ➔ Sessões Realizadas`.
+- **Subtotais e Totais Automáticos:**
+  - **Subtotal do Paciente:** Quantidade de sessões do paciente, total de recurso SUS (Federal), recurso próprio (Municipal) e valor total faturado.
+  - **Subtotal do Profissional:** Total de pacientes atendidos, total de sessões do profissional e somatórios financeiros.
+  - **Total Geral Consolidado:** Resumo de todos os profissionais, pacientes únicos, total de sessões e faturamento total da competência.
+- **Número da Autorização (APAC):** Exibição explícita do número da guia/autorização no cabeçalho de cada paciente.
+- **Visualização Web & Dashboard:** Nova aba dedicada *"Por Profissional & Paciente"* em `/dashboard/reports` (`ReportsClient.tsx`) com cards responsivos e KPIs executivos.
+- **Impressão A4 Calibrada:** Suporte completo em `/dashboard/reports/print` (`PrintReportClient.tsx`) com paginação limpa (`page-break-inside: avoid` por paciente) e ajuste perfeito às margens de impressão sem cortes.
+
+### 📑 Exportação para Excel (.xlsx) Enriquecida
+- **Exportação Padrão em Todos os Relatórios:** Suporte a download em Excel em todas as abas (`grouped_billing`, `billing`, `performance`, `consistency`).
+- **Planilha Estruturada com Subtotais:** O relatório agrupado exporta para Excel com linhas discriminadas para cada atendimento, além de linhas dedicadas de Subtotal do Paciente, Subtotal do Profissional e Total Geral da Competência.
+
+---
+
 ## [1.6.1] - 2026-08-25
 
 Esta versão corrige a governança do período de competência por dia de fechamento (`competence_end_day`) da clínica, alinhando perfeitamente o Fechamento do BPA, o Painel de Competências e o Relatório de Produção.

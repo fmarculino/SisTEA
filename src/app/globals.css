@@ -203,8 +203,8 @@
   .no-print, 
   nav, 
   header, 
-  button, 
-  form,
+  button.no-print, 
+  form.no-print,
   .sidebar-container {
     display: none !important;
   }
@@ -223,28 +223,11 @@
   }
 
   table {
-    border-collapse: collapse !important;
-    width: 100% !important;
-  }
-
-  th, td {
-    border: 1px solid #ddd !important;
-    padding: 8px !important;
-    font-size: 10pt !important;
-    color: black !important;
+    border-collapse: collapse;
+    width: 100%;
   }
 
   tr {
-    page-break-inside: avoid !important;
-  }
-
-  .bg-card, .bg-muted, .bg-primary {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-
-  .text-primary, .text-muted-foreground, .text-foreground {
-    color: black !important;
+    page-break-inside: avoid;
   }
 }

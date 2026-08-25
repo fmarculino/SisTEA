@@ -6,26 +6,29 @@ import {
   FileText, 
   BarChart3, 
   ShieldAlert, 
-  Search,
-  Building2,
-  Users,
-  User,
-  Calendar,
-  Filter,
-  Download,
-  Settings2
+  Search, 
+  Building2, 
+  Users, 
+  User, 
+  Calendar, 
+  Filter, 
+  Download, 
+  Settings2,
+  ChevronDown,
+  Layers
 } from 'lucide-react'
 import { formatCurrency } from '@/utils/format'
 import { Pagination } from '@/components/ui/Pagination'
 import * as XLSX from 'xlsx'
 import { createReportRequest } from './actions'
+import { groupBillingData } from '@/utils/reportGrouping'
 
 interface ReportsClientProps {
   initialData: any[]
   totalCount: number
   currentPage: number
   itemsPerPage: number
-  type: 'conference' | 'billing' | 'performance' | 'consistency'
+  type: 'conference' | 'billing' | 'grouped_billing' | 'performance' | 'consistency'
   filters: {
     clinics: any[]
     professionals: any[]
@@ -83,7 +86,117 @@ export default function ReportsClient({
   const handleExport = () => {
     if (!initialData || initialData.length === 0) return
 
-    const worksheet = XLSX.utils.json_to_sheet(initialData)
+    let exportData: any[] = []
+
+    if (type === 'grouped_billing') {
+      const grouped = groupBillingData(initialData)
+      grouped.professionals.forEach(prof => {
+        prof.patients.forEach(pat => {
+          pat.sessions.forEach(s => {
+            exportData.push({
+              'Profissional': prof.professional_name,
+              'CNS Profissional': prof.professional_cns,
+              'CBO': prof.professional_cbo,
+              'Paciente': pat.patient_name,
+              'CNS Paciente': pat.patient_cns,
+              'Nº Autorização (APAC)': pat.auth_number,
+              'Data Sessão': new Date(s.session_date).toLocaleDateString('pt-BR'),
+              'Código Procedimento': s.procedure_code || '',
+              'Procedimento': s.procedure_name || '',
+              'Status': s.status,
+              'SUS (Fed.) R$': s.valor_sus,
+              'RP (Mun.) R$': s.valor_rp,
+              'Total R$': s.value,
+            })
+          })
+          // Linha de Subtotal do Paciente
+          exportData.push({
+            'Profissional': '',
+            'CNS Profissional': '',
+            'CBO': '',
+            'Paciente': `SUBTOTAL - ${pat.patient_name} (${pat.total_sessions} sessões)`,
+            'CNS Paciente': '',
+            'Nº Autorização (APAC)': '',
+            'Data Sessão': '',
+            'Código Procedimento': '',
+            'Procedimento': '',
+            'Status': '',
+            'SUS (Fed.) R$': pat.total_sus,
+            'RP (Mun.) R$': pat.total_rp,
+            'Total R$': pat.total_value,
+          })
+        })
+        // Linha de Subtotal do Profissional
+        exportData.push({
+          'Profissional': `SUBTOTAL - ${prof.professional_name} (${prof.total_patients} pacientes / ${prof.total_sessions} sessões)`,
+          'CNS Profissional': '',
+          'CBO': '',
+          'Paciente': '',
+          'CNS Paciente': '',
+          'Nº Autorização (APAC)': '',
+          'Data Sessão': '',
+          'Código Procedimento': '',
+          'Procedimento': '',
+          'Status': '',
+          'SUS (Fed.) R$': prof.total_sus,
+          'RP (Mun.) R$': prof.total_rp,
+          'Total R$': prof.total_value,
+        })
+      })
+      // Linha de Total Geral
+      exportData.push({
+        'Profissional': `TOTAL GERAL DA COMPETÊNCIA (${grouped.overall.total_professionals} profissionais / ${grouped.overall.total_sessions} sessões)`,
+        'CNS Profissional': '',
+        'CBO': '',
+        'Paciente': '',
+        'CNS Paciente': '',
+        'Nº Autorização (APAC)': '',
+        'Data Sessão': '',
+        'Código Procedimento': '',
+        'Procedimento': '',
+        'Status': '',
+        'SUS (Fed.) R$': grouped.overall.total_sus,
+        'RP (Mun.) R$': grouped.overall.total_rp,
+        'Total R$': grouped.overall.total_value,
+      })
+    } else if (type === 'billing' || type === 'conference') {
+      exportData = initialData.map(r => ({
+        'Clínica': r.clinic_name,
+        'Paciente': r.patient_name,
+        'CNS Paciente': r.patient_cns,
+        'Nº Autorização': r.auth_number || '',
+        'Profissional': r.professional_name,
+        'CNS Profissional': r.professional_cns,
+        'CBO': r.professional_cbo,
+        'Código Procedimento': r.procedure_code,
+        'Procedimento': r.procedure_name,
+        'Data Sessão': new Date(r.session_date).toLocaleDateString('pt-BR'),
+        'Status': r.status,
+        'SUS (Fed.) R$': Number(r.valor_sus) || 0,
+        'RP (Mun.) R$': Number(r.valor_rp) || 0,
+        'Total R$': Number(r.value) || 0
+      }))
+    } else if (type === 'performance') {
+      exportData = initialData.map(r => ({
+        'Profissional': r.professional_name,
+        'Clínica': r.clinic_name,
+        'Sessões Realizadas': r.completed_sessions || 0,
+        'Faltas': r.missed_sessions || 0,
+        'Glosadas': r.denied_sessions || 0,
+        'Pendentes': r.pending_sessions || 0,
+        'Taxa de Glosa (%)': ((r.denied_sessions || 0) / Math.max(1, (r.completed_sessions || 0) + (r.missed_sessions || 0) + (r.pending_sessions || 0) + (r.denied_sessions || 0)) * 100).toFixed(1),
+        'Valor Total R$': Number(r.total_value) || 0
+      }))
+    } else if (type === 'consistency') {
+      exportData = initialData.map(r => ({
+        'Paciente': r.patient_name,
+        'Data Sessão': new Date(r.session_date).toLocaleDateString('pt-BR'),
+        'Profissional': r.professional_name,
+        'Inconsistência Identificada': r.issue_type
+      }))
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Relatório')
     
@@ -273,6 +386,207 @@ export default function ReportsClient({
       )
     }
 
+    if (type === 'grouped_billing') {
+      const grouped = groupBillingData(initialData)
+      return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+          {/* Summary KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Profissionais</p>
+                <p className="text-2xl font-black text-foreground mt-1">{grouped.overall.total_professionals}</p>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <Users className="h-6 w-6" />
+              </div>
+            </div>
+            <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pacientes Únicos</p>
+                <p className="text-2xl font-black text-foreground mt-1">{grouped.overall.total_patients}</p>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                <User className="h-6 w-6" />
+              </div>
+            </div>
+            <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sessões Realizadas</p>
+                <p className="text-2xl font-black text-foreground mt-1">{grouped.overall.total_sessions}</p>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <Calendar className="h-6 w-6" />
+              </div>
+            </div>
+            <div className="bg-card border border-border/50 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Faturamento Total</p>
+                <p className="text-2xl font-black text-primary mt-1">{formatCurrency(grouped.overall.total_value)}</p>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <FileText className="h-6 w-6" />
+              </div>
+            </div>
+          </div>
+
+          {/* Grouped Professionals List */}
+          <div className="space-y-6">
+            {grouped.professionals.map((prof) => (
+              <div key={prof.key} className="bg-card border border-border/50 rounded-[32px] overflow-hidden shadow-sm">
+                {/* Professional Header Banner */}
+                <div className="bg-muted/40 border-b border-border/40 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-black">
+                      <Users className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-black text-foreground tracking-tight">{prof.professional_name}</h3>
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                          CBO: {prof.professional_cbo}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                        CNS: {prof.professional_cns} {prof.clinic_name && `• Unidade: ${prof.clinic_name}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-6 self-end md:self-auto">
+                    <div className="text-right">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Produção</span>
+                      <p className="text-sm font-bold text-foreground">{prof.total_patients} pacientes | {prof.total_sessions} sessões</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Profissional</span>
+                      <p className="text-base font-black text-primary">{formatCurrency(prof.total_value)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Patients List of this professional */}
+                <div className="p-6 space-y-6">
+                  {prof.patients.map((pat) => (
+                    <div key={pat.key} className="border border-border/40 rounded-2xl overflow-hidden bg-background/50">
+                      {/* Patient Info Bar */}
+                      <div className="bg-muted/20 px-6 py-3.5 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <User className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-bold text-foreground">{pat.patient_name}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">CNS: {pat.patient_cns}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-muted-foreground">
+                            Autorização (APAC): <strong className="text-foreground font-mono font-black">{pat.auth_number}</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Sessions Table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-border/30 bg-muted/10 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                              <th className="py-3 px-6 text-center w-[120px]">Data</th>
+                              <th className="py-3 px-6">Procedimento</th>
+                              <th className="py-3 px-6 text-center w-[120px]">Status</th>
+                              <th className="py-3 px-6 text-right w-[130px]">SUS (Fed.)</th>
+                              <th className="py-3 px-6 text-right w-[130px]">RP (Mun.)</th>
+                              <th className="py-3 px-6 text-right w-[140px]">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/20 text-xs">
+                            {pat.sessions.map((s, sIdx) => (
+                              <tr key={sIdx} className="hover:bg-muted/10 transition-colors">
+                                <td className="py-3 px-6 text-center font-medium text-foreground whitespace-nowrap">
+                                  {new Date(s.session_date).toLocaleDateString('pt-BR')}
+                                </td>
+                                <td className="py-3 px-6">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-foreground">{s.procedure_name}</span>
+                                    <span className="text-[10px] text-muted-foreground font-mono">{s.procedure_code || 'SEM CÓDIGO'}</span>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-6 text-center">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${
+                                    s.status === 'Realizada' ? 'bg-emerald-500/10 text-emerald-500' :
+                                    s.status === 'Pendente' ? 'bg-amber-500/10 text-amber-500' :
+                                    'bg-rose-500/10 text-rose-500'
+                                  }`}>
+                                    {s.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-6 text-right text-foreground font-medium whitespace-nowrap">
+                                  {formatCurrency(s.valor_sus || 0)}
+                                </td>
+                                <td className="py-3 px-6 text-right text-foreground font-medium whitespace-nowrap">
+                                  {formatCurrency(s.valor_rp || 0)}
+                                </td>
+                                <td className="py-3 px-6 text-right font-black text-foreground whitespace-nowrap">
+                                  {formatCurrency(s.value)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-muted/30 font-black border-t border-border/40 text-xs">
+                              <td colSpan={3} className="py-3 px-6 text-right text-[10px] uppercase tracking-widest text-muted-foreground">
+                                Subtotal Paciente ({pat.total_sessions} {pat.total_sessions === 1 ? 'sessão' : 'sessões'}):
+                              </td>
+                              <td className="py-3 px-6 text-right text-foreground/80 whitespace-nowrap">{formatCurrency(pat.total_sus)}</td>
+                              <td className="py-3 px-6 text-right text-foreground/80 whitespace-nowrap">{formatCurrency(pat.total_rp)}</td>
+                              <td className="py-3 px-6 text-right text-primary font-black whitespace-nowrap">{formatCurrency(pat.total_value)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Professional Subtotal Banner */}
+                  <div className="bg-muted/40 border border-border/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 font-bold text-xs">
+                    <span className="text-foreground uppercase tracking-tight">
+                      🏅 Subtotal do Profissional: <strong>{prof.professional_name}</strong> ({prof.total_patients} {prof.total_patients === 1 ? 'paciente' : 'pacientes'} | {prof.total_sessions} {prof.total_sessions === 1 ? 'sessão' : 'sessões'})
+                    </span>
+                    <div className="flex items-center gap-4 text-xs font-mono font-bold">
+                      <span className="text-muted-foreground">SUS: <strong className="text-foreground">{formatCurrency(prof.total_sus)}</strong></span>
+                      <span className="text-muted-foreground">RP: <strong className="text-foreground">{formatCurrency(prof.total_rp)}</strong></span>
+                      <span className="text-primary font-black text-sm">Total: {formatCurrency(prof.total_value)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Grand Total Banner */}
+            <div className="bg-card border-2 border-primary/30 rounded-[32px] p-6 shadow-xl shadow-primary/5 flex flex-col lg:flex-row items-center justify-between gap-4">
+              <div>
+                <h4 className="text-lg font-black text-foreground tracking-tight">Total Geral Consolidado da Competência</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {grouped.overall.total_professionals} profissionais • {grouped.overall.total_patients} pacientes atendidos • {grouped.overall.total_sessions} sessões realizadas
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-6 font-mono font-bold">
+                <div className="text-right">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Recurso SUS (Fed.)</span>
+                  <span className="text-sm font-bold text-foreground">{formatCurrency(grouped.overall.total_sus)}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Recurso Próprio (Mun.)</span>
+                  <span className="text-sm font-bold text-foreground">{formatCurrency(grouped.overall.total_rp)}</span>
+                </div>
+                <div className="text-right pl-4 border-l border-border/50">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary block">Faturamento Total</span>
+                  <span className="text-xl font-black text-primary">{formatCurrency(grouped.overall.total_value)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     // Default: Billing or Conference
     return (
       <div className="bg-card border border-border/50 rounded-[40px] shadow-sm overflow-hidden animate-in fade-in duration-700">
@@ -406,7 +720,8 @@ export default function ReportsClient({
       {/* Tabs */}
       <div className="flex items-center gap-4 bg-card border border-border/50 p-4 rounded-[32px] shadow-sm overflow-x-auto no-scrollbar no-print">
         {[
-          { id: 'billing', label: 'Produção / Faturamento', icon: FileText },
+          { id: 'grouped_billing', label: 'Por Profissional & Paciente', icon: Users },
+          { id: 'billing', label: 'Produção Geral (Linear)', icon: FileText },
           { id: 'consistency', label: 'Inconsistências (Audit)', icon: ShieldAlert },
           { id: 'performance', label: 'Produtividade & Absenteísmo', icon: BarChart3 }
         ].map((t) => (
