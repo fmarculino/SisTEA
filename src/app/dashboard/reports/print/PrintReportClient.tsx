@@ -154,9 +154,9 @@ export default function PrintReportClient({
             return (
               <div className="space-y-6 print:space-y-3">
                 {grouped.professionals.map((prof) => (
-                  <div key={prof.key} className="border border-slate-300 rounded-xl overflow-hidden print:rounded-lg print:border-slate-400 bg-white">
+                  <div key={prof.key} className="prof-block border border-slate-300 rounded-xl overflow-visible print:rounded-lg print:border-slate-400 bg-white">
                     {/* Professional Header */}
-                    <div className="bg-slate-900 text-white px-3 py-2 print:px-2 print:py-1 flex justify-between items-center text-xs print:text-[6.5pt] font-black">
+                    <div className="bg-slate-900 text-white px-3 py-2 print:px-2 print:py-1 flex justify-between items-center text-xs print:text-[6.5pt] font-black rounded-t-xl print:rounded-t-lg">
                       <div className="flex items-center gap-3">
                         <span className="uppercase tracking-tight font-black">👨‍⚕️ PROFISSIONAL: {prof.professional_name}</span>
                         <span className="text-slate-300 font-mono text-[10px] print:text-[5.5pt] font-normal">CNS: {prof.professional_cns}</span>
@@ -168,11 +168,11 @@ export default function PrintReportClient({
                     </div>
 
                     {/* Patients List */}
-                    <div className="p-3 print:p-1.5 space-y-4 print:space-y-2 bg-slate-50/60">
+                    <div className="p-3 print:p-1.5 space-y-4 print:space-y-2 bg-slate-50/60 rounded-b-xl print:rounded-b-lg">
                       {prof.patients.map((pat) => (
-                        <div key={pat.key} className="bg-white border border-slate-300 rounded-lg overflow-hidden print:rounded-md shadow-2xs print:shadow-none" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                        <div key={pat.key} className="pat-block bg-white border border-slate-300 rounded-lg overflow-visible print:rounded-md shadow-2xs print:shadow-none">
                           {/* Patient Header */}
-                          <div className="bg-slate-100 border-b border-slate-300 px-2.5 py-1.5 print:px-1.5 print:py-0.5 text-xs print:text-[6pt] font-bold text-slate-800 flex justify-between items-center">
+                          <div className="bg-slate-100 border-b border-slate-300 px-2.5 py-1.5 print:px-1.5 print:py-0.5 text-xs print:text-[6pt] font-bold text-slate-800 flex justify-between items-center rounded-t-lg print:rounded-t-md">
                             <div className="flex items-center gap-3">
                               <span>👤 PACIENTE: <strong className="text-slate-900 font-black">{pat.patient_name}</strong></span>
                               <span className="text-slate-600 font-mono text-[10px] print:text-[5pt]">CNS: {pat.patient_cns}</span>
@@ -241,7 +241,7 @@ export default function PrintReportClient({
                       ))}
 
                       {/* Subtotal of Professional */}
-                      <div className="bg-slate-200/90 border-t-2 border-slate-400 p-2 print:p-1 rounded-lg flex justify-between items-center text-xs print:text-[6.5pt] font-black text-slate-900" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                      <div className="prof-subtotal bg-slate-200/90 border-t-2 border-slate-400 p-2 print:p-1 rounded-lg flex justify-between items-center text-xs print:text-[6.5pt] font-black text-slate-900">
                         <span>🏅 SUBTOTAL PROFISSIONAL - {prof.professional_name} ({prof.total_patients} {prof.total_patients === 1 ? 'Paciente' : 'Pacientes'} | {prof.total_sessions} {prof.total_sessions === 1 ? 'Sessão' : 'Sessões'})</span>
                         <div className="flex gap-4 print:gap-3">
                           <span>SUS: {formatCurrency(prof.total_sus)}</span>
@@ -254,7 +254,7 @@ export default function PrintReportClient({
                 ))}
 
                 {/* Grand Total Footer */}
-                <div className="bg-slate-900 text-white p-3 print:p-2 rounded-xl mt-4 print:mt-2 text-xs print:text-[7pt] font-bold" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                <div className="grand-total bg-slate-900 text-white p-3 print:p-2 rounded-xl mt-4 print:mt-2 text-xs print:text-[7pt] font-bold">
                   <div className="flex justify-between items-center">
                     <span className="uppercase tracking-tight font-black">
                       🏛️ TOTAL GERAL CONSOLIDADO DA COMPETÊNCIA ({grouped.overall.total_professionals} {grouped.overall.total_professionals === 1 ? 'Profissional' : 'Profissionais'} | {grouped.overall.total_patients} Pacientes | {grouped.overall.total_sessions} Sessões)
@@ -439,16 +439,37 @@ export default function PrintReportClient({
           }
           html, body {
             width: 100% !important;
+            height: auto !important;
+            min-height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             background: white !important;
             color: black !important;
             print-color-adjust: exact !important;
             -webkit-print-color-adjust: exact !important;
+            overflow: visible !important;
+            position: static !important;
           }
           @page {
             margin: 0.5cm !important;
             size: A4 portrait;
+          }
+          div, main, section, article {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+          }
+          .prof-block {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+          .pat-block {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .prof-subtotal, .grand-total {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           table {
             width: 100% !important;

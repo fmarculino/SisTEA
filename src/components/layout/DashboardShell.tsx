@@ -23,10 +23,10 @@ export function DashboardShell({
   const profile = { role, email, clinicName };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden relative">
+    <div className="flex h-screen bg-background overflow-hidden relative print:h-auto print:overflow-visible print:block print:bg-white">
       {/* Mobile Sidebar Overlay */}
       <div
-        className={`fixed inset-0 z-40 bg-background/80 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+        className={`fixed inset-0 z-40 bg-background/80 backdrop-blur-sm transition-opacity duration-300 lg:hidden no-print ${
           sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setSidebarOpen(false)}
@@ -42,7 +42,7 @@ export function DashboardShell({
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full lg:pl-72 print:pl-0 transition-all duration-300 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-muted/50 via-background to-background">
+      <div className="flex-1 flex flex-col min-w-0 h-full lg:pl-72 print:pl-0 print:h-auto print:overflow-visible print:block transition-all duration-300 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-muted/50 via-background to-background print:bg-none print:bg-white">
         <div className="no-print">
           <Header 
             email={email} 
@@ -52,8 +52,8 @@ export function DashboardShell({
             onMenuClick={() => setSidebarOpen(true)} 
           />
         </div>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 print:p-0 animate-in">
-          <div className="mx-auto max-w-7xl">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 print:p-0 print:overflow-visible print:h-auto print:block animate-in">
+          <div className="mx-auto max-w-7xl print:max-w-none print:w-full print:m-0 print:p-0">
             {children}
           </div>
         </main>

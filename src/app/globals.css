@@ -203,31 +203,45 @@
   .no-print, 
   nav, 
   header, 
+  aside,
   button.no-print, 
   form.no-print,
   .sidebar-container {
     display: none !important;
   }
 
-  body {
+  html, body {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
     background: white !important;
     color: black !important;
     padding: 0 !important;
     margin: 0 !important;
+    position: static !important;
+  }
+
+  div, main, section, article {
+    overflow: visible !important;
+    max-height: none !important;
   }
 
   .dashboard-container {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   table {
     border-collapse: collapse;
     width: 100%;
+    page-break-inside: auto;
   }
 
   tr {
     page-break-inside: avoid;
+    page-break-after: auto;
   }
 }
