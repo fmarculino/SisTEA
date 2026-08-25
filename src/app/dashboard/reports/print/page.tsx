@@ -69,9 +69,12 @@ export default async function PrintReportPage({
   let endDate = reportFilters.end_date || ''
   const selectedCompetenceId = reportFilters.competence_id || ''
 
-  if (selectedCompetenceId && (!reportFilters.start_date || !reportFilters.end_date)) {
+  let compClinicId: string | null = null
+
+  if (selectedCompetenceId) {
     const { data: comp } = await supabase.from('competences').select('*').eq('id', selectedCompetenceId).single()
     if (comp) {
+      compClinicId = comp.clinic_id
       const { data: clinic } = await supabase.from('clinics').select('competence_end_day').eq('id', comp.clinic_id || reportFilters.clinic_id || profile.clinic_id).single()
       const range = getCompetenceDateRange(comp.month, comp.year, clinic?.competence_end_day || 31)
       startDate = range.startDate
@@ -89,7 +92,7 @@ export default async function PrintReportPage({
   const mode = reportFilters.mode || 'official'
 
   const isClinicUser = !['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'].includes(profile.role)
-  const selectedClinic = isClinicUser ? profile.clinic_id : (reportFilters.clinic_id || null)
+  const selectedClinic = isClinicUser ? profile.clinic_id : (reportFilters.clinic_id || compClinicId || null)
   const selectedProfessional = reportFilters.professional_id && reportFilters.professional_id !== '' ? reportFilters.professional_id : null
   const selectedPatient = reportFilters.patient_id && reportFilters.patient_id !== '' ? reportFilters.patient_id : null
   const selectedProcedure = reportFilters.procedure_id && reportFilters.procedure_id !== '' ? reportFilters.procedure_id : null

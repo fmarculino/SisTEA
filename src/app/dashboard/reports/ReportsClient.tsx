@@ -752,12 +752,12 @@ export default function ReportsClient({
               defaultValue={selectedCompetenceId}
               onChange={handleCompetenceChange}
               disabled={isCustomPeriod}
-              className={`w-full bg-muted/30 border border-border/50 rounded-2xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-primary/10 outline-none transition-all appearance-none ${isCustomPeriod ? 'opacity-50' : ''}`}
+              className={`w-full bg-muted/30 border border-border/50 rounded-2xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-primary/10 outline-none transition-all appearance-none ${isCustomPeriod ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <option value="">Selecione...</option>
+              <option value="">Selecione a competência...</option>
               {filters.competences.map((c: any) => (
                 <option key={c.id} value={c.id}>
-                  {String(c.month).padStart(2, '0')}/{c.year} ({c.status})
+                  {String(c.month).padStart(2, '0')}/{c.year} ({c.status}){c.clinic?.name ? ` - ${c.clinic.name}` : ''}
                 </option>
               ))}
             </select>
@@ -795,7 +795,7 @@ export default function ReportsClient({
               type="date" 
               name="start_date" 
               defaultValue={startDate}
-              readOnly={!isCustomPeriod}
+              disabled={!isCustomPeriod}
               className={`w-full bg-muted/30 border border-border/50 rounded-2xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-primary/10 outline-none transition-all ${!isCustomPeriod ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
           </div>
@@ -809,7 +809,7 @@ export default function ReportsClient({
               type="date" 
               name="end_date" 
               defaultValue={endDate}
-              readOnly={!isCustomPeriod}
+              disabled={!isCustomPeriod}
               className={`w-full bg-muted/30 border border-border/50 rounded-2xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-primary/10 outline-none transition-all ${!isCustomPeriod ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
           </div>

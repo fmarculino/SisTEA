@@ -53,20 +53,19 @@ export default async function ReportsPage({
   const clinics = clinicsRes.data || []
   const competences = competencesRes.data || []
 
+  const selectedCompetenceId = params.competence_id || ''
+  const comp = competences.find(c => c.id === selectedCompetenceId)
+
   // Logic for dates
   let startDate = params.start_date || ''
   let endDate = params.end_date || ''
-  const selectedCompetenceId = params.competence_id || ''
 
-  if (selectedCompetenceId && (!params.start_date || !params.end_date)) {
-    const comp = competences.find(c => c.id === selectedCompetenceId)
-    if (comp) {
-      const clinicId = comp.clinic_id || params.clinic_id || profile?.clinic_id
-      const clinic = clinics.find(c => c.id === clinicId)
-      const range = getCompetenceDateRange(comp.month, comp.year, clinic?.competence_end_day || 31)
-      startDate = range.startDate
-      endDate = range.endDate
-    }
+  if (selectedCompetenceId && comp) {
+    const clinicId = comp.clinic_id || params.clinic_id || profile?.clinic_id
+    const clinic = clinics.find(c => c.id === clinicId)
+    const range = getCompetenceDateRange(comp.month, comp.year, clinic?.competence_end_day || 31)
+    startDate = range.startDate
+    endDate = range.endDate
   }
 
   if (!startDate || !endDate) {
@@ -75,10 +74,10 @@ export default async function ReportsPage({
     endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
   }
 
-  const reportType = (params.type as any) || 'billing'
-  const mode = params.mode || 'preview'
+  const reportType = (params.type as any) || 'grouped_billing'
+  const mode = params.mode || (comp?.status === 'FECHADA' || comp?.status === 'ENVIADA_MS' ? 'official' : 'preview')
 
-  const selectedClinic = isClinicUser ? profile?.clinic_id : (params.clinic_id || null)
+  const selectedClinic = isClinicUser ? profile?.clinic_id : (params.clinic_id || comp?.clinic_id || null)
   const selectedProfessional = params.professional_id && params.professional_id !== '' ? params.professional_id : null
   const selectedPatient = params.patient_id && params.patient_id !== '' ? params.patient_id : null
   const selectedProcedure = params.procedure_id && params.procedure_id !== '' ? params.procedure_id : null
