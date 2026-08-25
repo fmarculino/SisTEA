@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import { AttendanceForm } from '../../AttendanceForm'
 import { notFound } from 'next/navigation'
+import { getCompetenceForDate } from '@/utils/competence'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -92,16 +93,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
   const systemTimezone = settings?.value || 'America/Sao_Paulo'
   const endDay = clinicConfig?.competence_end_day || 31
 
-  const dateParts = attendance.attendance_date.split('-')
-  const day = parseInt(dateParts[2], 10)
-  let month = parseInt(dateParts[1], 10)
-  let year = parseInt(dateParts[0], 10)
-  if (day > endDay && endDay < 31) {
-    month += 1
-    if (month > 12) {
-      month = 1; year += 1;
-    }
-  }
+  const { month, year } = getCompetenceForDate(attendance.attendance_date, endDay)
 
   const { data: competence } = await supabase.from('competences').select('status').eq('clinic_id', attendance.clinic_id).eq('month', month).eq('year', year).maybeSingle()
   const competenceStatus = competence?.status || 'ABERTA'

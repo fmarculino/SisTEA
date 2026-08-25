@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit'
 import { buildValidationURL, generateValidationHMAC, isLinkExpired, verifyValidationHMAC } from '@/utils/token'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { getCompetenceForDate } from '@/utils/competence'
 
 async function validateProcedureQuantityLimit(
   supabase: any,
@@ -16,6 +17,7 @@ async function validateProcedureQuantityLimit(
   professionalId: string,
   procedureId: string,
   attendanceDate: string,
+  clinicEndDay: number,
   incomingSessionsCount: number
 ) {
   const { data: procedure } = await supabase
@@ -26,8 +28,7 @@ async function validateProcedureQuantityLimit(
 
   if (!procedure || !procedure.max_quantity) return null
 
-  const [year, month] = attendanceDate.split('-')
-  const monthYear = `${month}/${year}`
+  const { monthYear } = getCompetenceForDate(attendanceDate, clinicEndDay)
 
   // Count existing sessions in other attendances for this professional/patient/procedure in the same month
   const { count, error } = await supabase
@@ -55,18 +56,7 @@ export async function checkCompetenceLock(supabase: any, clinic_id: string, atte
   const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', clinic_id).single()
   const endDay = clinicConfig?.competence_end_day || 31
 
-  const dateParts = attendance_date.split('-')
-  const day = parseInt(dateParts[2], 10)
-  let month = parseInt(dateParts[1], 10)
-  let year = parseInt(dateParts[0], 10)
-
-  if (day > endDay && endDay < 31) {
-    month += 1
-    if (month > 12) {
-      month = 1
-      year += 1
-    }
-  }
+  const { month, year } = getCompetenceForDate(attendance_date, endDay)
 
   const { data: competence } = await supabase
     .from('competences')
@@ -150,6 +140,10 @@ export async function createAttendanceAction(data: AttendanceFormData) {
     }
   }
 
+  // --- CLINIC COMPETENCE CONFIG ---
+  const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', rawAttendanceData.clinic_id).single()
+  const endDay = clinicConfig?.competence_end_day || 31
+
   // --- QUANTITY LIMIT CHECK (BR-004) ---
   const qtyLimitError = await validateProcedureQuantityLimit(
     supabase,
@@ -158,6 +152,7 @@ export async function createAttendanceAction(data: AttendanceFormData) {
     rawAttendanceData.professional_id,
     rawAttendanceData.procedure_id,
     rawAttendanceData.attendance_date,
+    endDay,
     sessions?.length || 0
   )
   if (qtyLimitError) return qtyLimitError
@@ -193,8 +188,7 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   const realizedSessions = sessions?.filter(s => s.status === 'Realizada').length || 0
   const finalValue = realizedSessions * baseValue
 
-  const [year, month] = rawAttendanceData.attendance_date.split('-')
-  const month_year = `${month}/${year}`
+  const { monthYear: month_year } = getCompetenceForDate(rawAttendanceData.attendance_date, endDay)
 
   const attendanceData = {
     ...rawAttendanceData,
@@ -428,6 +422,10 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   const compError = await checkCompetenceLock(supabase, rawAttendanceData.clinic_id, rawAttendanceData.attendance_date)
   if (compError) return compError
 
+  // --- CLINIC COMPETENCE CONFIG ---
+  const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', rawAttendanceData.clinic_id).single()
+  const endDay = clinicConfig?.competence_end_day || 31
+
   // --- QUANTITY LIMIT CHECK (BR-004) ---
   const qtyLimitError = await validateProcedureQuantityLimit(
     supabase,
@@ -436,6 +434,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     rawAttendanceData.professional_id,
     rawAttendanceData.procedure_id,
     rawAttendanceData.attendance_date,
+    endDay,
     sessions?.length || 0
   )
   if (qtyLimitError) return qtyLimitError
@@ -471,8 +470,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   const realizedSessions = sessions?.filter(s => s.status === 'Realizada').length || 0
   const finalValue = realizedSessions * baseValue
 
-  const [year, month] = rawAttendanceData.attendance_date.split('-')
-  const month_year = `${month}/${year}`
+  const { monthYear: month_year } = getCompetenceForDate(rawAttendanceData.attendance_date, endDay)
 
   const attendanceData = {
     ...rawAttendanceData,

@@ -2,6 +2,19 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.6.1] - 2026-08-25
+
+Esta versão corrige a governança do período de competência por dia de fechamento (`competence_end_day`) da clínica, alinhando perfeitamente o Fechamento do BPA, o Painel de Competências e o Relatório de Produção.
+
+### 📅 Governança de Competências e Fechamento BPA
+- **Utilitário Centralizado de Competências:** Criação de `src/utils/competence.ts` com as funções `getCompetenceForDate` e `getCompetenceDateRange` para mapear com precisão o mês/ano de competência (`MM/YYYY`) a partir do `competence_end_day` da clínica (ex: fechamento dia 25 para competência de Julho abrangendo de 26/06 a 25/07).
+- **Consistência em Criação e Edição de Atendimentos:** Atualização de `createAttendanceAction` e `updateAttendanceAction` em `src/app/dashboard/attendances/actions.ts` para persistir o campo `month_year` alinhado à competência correta da clínica em vez do mês civil.
+- **Validação de Limites de Procedimento:** Atualização de `validateProcedureQuantityLimit` para checar os tetos e quantidades na competência real da clínica.
+- **Relatório de Produção:** Correção de `reports/page.tsx` e `reports/print/page.tsx` para consultar o campo `competence_end_day` e obter o intervalo exato de datas via `getCompetenceDateRange`.
+- **Migração e Trigger de Banco de Dados:** Criação da migração `20260825110000_fix_attendance_competence_end_day.sql` que inclui trigger de integridade automática `set_attendance_month_year_trg` e atualiza retroativamente todos os atendimentos já cadastrados no banco de dados.
+
+---
+
 ## [1.6.0] - 2026-08-12
 
 Esta versão introduz a **Integração com Chatwoot e Envio Automático de Mensagens via WhatsApp**, permitindo o disparo automatizado do Token de Validação Digital do paciente diretamente para o seu WhatsApp, com suporte a múltiplos provedores, validação de número e fallback elegante para o WhatsApp Web.

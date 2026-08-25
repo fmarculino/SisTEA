@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import PrintReportClient from './PrintReportClient'
 import { redirect } from 'next/navigation'
+import { getCompetenceDateRange } from '@/utils/competence'
 
 export default async function PrintReportPage({
   searchParams,
@@ -71,12 +72,10 @@ export default async function PrintReportPage({
   if (selectedCompetenceId && (!reportFilters.start_date || !reportFilters.end_date)) {
     const { data: comp } = await supabase.from('competences').select('*').eq('id', selectedCompetenceId).single()
     if (comp) {
-      const { data: clinic } = await supabase.from('clinics').select('closing_day').eq('id', comp.clinic_id || reportFilters.clinic_id || profile.clinic_id).single()
-      const closingDay = clinic?.closing_day || 25
-      const end = new Date(comp.year, comp.month - 1, closingDay)
-      const start = new Date(comp.year, comp.month - 2, closingDay + 1)
-      startDate = start.toISOString().split('T')[0]
-      endDate = end.toISOString().split('T')[0]
+      const { data: clinic } = await supabase.from('clinics').select('competence_end_day').eq('id', comp.clinic_id || reportFilters.clinic_id || profile.clinic_id).single()
+      const range = getCompetenceDateRange(comp.month, comp.year, clinic?.competence_end_day || 31)
+      startDate = range.startDate
+      endDate = range.endDate
     }
   }
 

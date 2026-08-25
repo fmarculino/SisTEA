@@ -8,6 +8,7 @@ import SendToMSButton from './SendToMSButton'
 import { CompetencesFilterPanel } from './CompetencesFilterPanel'
 import { Pagination } from '@/components/ui/Pagination'
 import { formatCurrency } from '@/utils/format'
+import { getCompetenceForDate } from '@/utils/competence'
 import { Fragment } from 'react'
 
 export default async function CompetencesPage({
@@ -75,20 +76,7 @@ export default async function CompetencesPage({
       const clinic = clinicsMap.get(a.clinic_id)
       if (!clinic) return
       
-      const dateParts = a.attendance_date.split('-')
-      const day = parseInt(dateParts[2], 10)
-      let month = parseInt(dateParts[1], 10)
-      let year = parseInt(dateParts[0], 10)
-      const endDay = clinic.competence_end_day || 31
-
-      if (day > endDay && endDay < 31) {
-        month += 1
-        if (month > 12) {
-          month = 1
-          year += 1
-        }
-      }
-      
+      const { month, year } = getCompetenceForDate(a.attendance_date, clinic.competence_end_day || 31)
       const key = `${a.clinic_id}_${year}_${month}`
       
       // Se já está fechada para esta clínica, ignora
@@ -173,18 +161,7 @@ export default async function CompetencesPage({
     const uniqueMonths = new Set<string>()
     
     attendances?.forEach(a => {
-      const dateParts = a.attendance_date.split('-')
-      const day = parseInt(dateParts[2], 10)
-      let month = parseInt(dateParts[1], 10)
-      let year = parseInt(dateParts[0], 10)
-
-      if (day > endDay && endDay < 31) {
-        month += 1
-        if (month > 12) {
-          month = 1
-          year += 1
-        }
-      }
+      const { month, year } = getCompetenceForDate(a.attendance_date, endDay)
       uniqueMonths.add(`${year}-${month}`)
     })
 

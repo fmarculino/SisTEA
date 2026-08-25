@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import ReportsClient from './ReportsClient'
+import { getCompetenceDateRange } from '@/utils/competence'
 
 export default async function ReportsPage({
   searchParams,
@@ -30,7 +31,7 @@ export default async function ReportsPage({
 
   const isClinicUser = !['SMS_ADMIN', 'REGULACAO', 'COORDENADOR', 'OPERADOR'].includes(profile?.role || '')
 
-  let clinicsQuery = supabase.from('clinics').select('id, name, closing_day').order('name')
+  let clinicsQuery = supabase.from('clinics').select('id, name, competence_end_day').order('name')
   let patientsQuery = supabase.from('patients').select('id, name').order('name')
   let competencesQuery = supabase.from('competences').select('*').order('year', { ascending: false }).order('month', { ascending: false }).limit(24)
 
@@ -62,11 +63,9 @@ export default async function ReportsPage({
     if (comp) {
       const clinicId = comp.clinic_id || params.clinic_id || profile?.clinic_id
       const clinic = clinics.find(c => c.id === clinicId)
-      const closingDay = clinic?.closing_day || 25
-      const end = new Date(comp.year, comp.month - 1, closingDay)
-      const start = new Date(comp.year, comp.month - 2, closingDay + 1)
-      startDate = start.toISOString().split('T')[0]
-      endDate = end.toISOString().split('T')[0]
+      const range = getCompetenceDateRange(comp.month, comp.year, clinic?.competence_end_day || 31)
+      startDate = range.startDate
+      endDate = range.endDate
     }
   }
 
