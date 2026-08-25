@@ -62,32 +62,34 @@ export default async function CompetencesPage({
       .order('name')
     clinicsList = clinicsData || []
 
-    // Buscar todos os meses com atendimento para calcular competências que continuam ABERTAS
-    const { data: attendances } = await supabase
-      .from('attendances')
-      .select('clinic_id, attendance_date')
+    // Buscar todas as sessões com data real para calcular competências que continuam ABERTAS
+    const { data: sessionsData } = await supabase
+      .from('attendance_sessions')
+      .select('session_date, attendance:attendances(clinic_id)')
 
     const clinicsMap = new Map()
     clinicsList.forEach(c => clinicsMap.set(c.id, c))
 
     const openCompetencesMap = new Map<string, any>()
 
-    attendances?.forEach(a => {
-      const clinic = clinicsMap.get(a.clinic_id)
+    sessionsData?.forEach((s: any) => {
+      const clinicId = s.attendance?.clinic_id
+      if (!clinicId) return
+      const clinic = clinicsMap.get(clinicId)
       if (!clinic) return
       
-      const { month, year } = getCompetenceForDate(a.attendance_date, clinic.competence_end_day || 31)
-      const key = `${a.clinic_id}_${year}_${month}`
+      const { month, year } = getCompetenceForDate(s.session_date, clinic.competence_end_day || 31)
+      const key = `${clinicId}_${year}_${month}`
       
       // Se já está fechada para esta clínica, ignora
-      if (closed.some(c => c.clinic_id === a.clinic_id && c.year === year && c.month === month)) {
+      if (closed.some(c => c.clinic_id === clinicId && c.year === year && c.month === month)) {
         return
       }
 
       if (!openCompetencesMap.has(key)) {
         openCompetencesMap.set(key, {
           id: `open_${key}`,
-          clinic_id: a.clinic_id,
+          clinic_id: clinicId,
           year,
           month,
           status: 'ABERTA',
@@ -120,9 +122,8 @@ export default async function CompetencesPage({
     if (queryParams.q) {
       const cleanQ = queryParams.q.toLowerCase()
       filteredList = filteredList.filter(c => {
-        const clinicName = (c.clinic as any)?.name?.toLowerCase() || ''
         const monthYear = `${String(c.month).padStart(2, '0')}/${c.year}`
-        return clinicName.includes(cleanQ) || monthYear.includes(cleanQ)
+        return c.clinic.name.toLowerCase().includes(cleanQ) || monthYear.includes(cleanQ)
       })
     }
 
@@ -152,16 +153,16 @@ export default async function CompetencesPage({
     const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', profile.clinic_id).single()
     const endDay = clinicConfig?.competence_end_day || 31
 
-    // Buscar meses distintos com atendimentos
-    const { data: attendances } = await supabase
-      .from('attendances')
-      .select('attendance_date')
-      .eq('clinic_id', profile.clinic_id)
+    // Buscar meses distintos com sessões
+    const { data: clinicSessions } = await supabase
+      .from('attendance_sessions')
+      .select('session_date, attendance:attendances!inner(clinic_id)')
+      .eq('attendance.clinic_id', profile.clinic_id)
 
     const uniqueMonths = new Set<string>()
     
-    attendances?.forEach(a => {
-      const { month, year } = getCompetenceForDate(a.attendance_date, endDay)
+    clinicSessions?.forEach((s: any) => {
+      const { month, year } = getCompetenceForDate(s.session_date, endDay)
       uniqueMonths.add(`${year}-${month}`)
     })
 

@@ -49,10 +49,13 @@ export default async function DashboardPage({
   const clinicId = profile?.role === 'SMS_ADMIN' ? null : profile?.clinic_id
 
   // Execute optimized stats query via RPC
+  const selectedMonthYear = selectedMonth && selectedYear ? `${String(selectedMonth).padStart(2, '0')}/${selectedYear}` : null
+
   const { data: statsData, error: statsError } = await supabase.rpc('get_dashboard_stats', {
     p_clinic_id: clinicId,
-    p_start_date: firstDay,
-    p_end_date: lastDay
+    p_start_date: selectedMonthYear ? null : firstDay,
+    p_end_date: selectedMonthYear ? null : lastDay,
+    p_month_year: selectedMonthYear
   })
 
   if (!statsError && statsData) {

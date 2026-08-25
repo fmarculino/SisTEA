@@ -105,18 +105,30 @@ export class BpaExportService {
         patients!inner ( name, cns_patient, ibge_code, gender, birth_date, cep, address_street, address_number, address_neighborhood ),
         professionals!inner ( name, cns ),
         procedures!inner ( name, code, bpa_type ),
-        clinics!inner ( cnes )
+        clinics!inner ( cnes, competence_end_day ),
+        sessions:attendance_sessions!inner ( id, session_date, status )
       `)
       .in('clinic_id', groupIds)
-      .eq('month_year', month_year)
-      .eq('status', 'Realizada');
+      .eq('sessions.status', 'Realizada');
 
     if (error) {
       throw new Error(`Erro ao buscar produções: ${error.message}`);
     }
 
+    const { getCompetenceForDate } = await import('@/utils/competence');
+
+    const validAttendances: any[] = [];
+    (attendances || []).forEach((att: any) => {
+      if (!att.procedures?.code || att.procedures.code.trim() === '') return;
+      const endDay = att.clinics?.competence_end_day || 31;
+      const sessions = att.sessions || [];
+      const hasMatchingSession = sessions.some((s: any) => s.status === 'Realizada' && getCompetenceForDate(s.session_date, endDay).monthYear === month_year);
+      if (hasMatchingSession) {
+        validAttendances.push(att);
+      }
+    });
+
     const errors: BpaValidationResult['errors'] = [];
-    const validAttendances = (attendances || []).filter((att: any) => att.procedures?.code && att.procedures.code.trim() !== '');
 
     // Validar CNES da matriz (usado no cabeçalho do BPA)
     if (!matrixClinic?.cnes) {
@@ -189,7 +201,7 @@ export class BpaExportService {
       throw new Error('Clínica matriz não encontrada.');
     }
 
-    // Buscar atendimentos de TODAS as unidades do grupo
+    // Buscar atendimentos e suas sessões realizadas de TODAS as unidades do grupo
     const { data: attendances, error } = await supabase
       .from('attendances')
       .select(`
@@ -198,19 +210,40 @@ export class BpaExportService {
         patients!inner ( name, cns_patient, birth_date, gender, ibge_code, race_color, nationality, ethnicity, cep, address_street, address_complement, address_neighborhood, address_number, city, phone ),
         professionals!inner ( name, cns ),
         procedures!inner ( name, code, bpa_type ),
-        clinics!inner ( name, cnes, cnpj, orgao_emissor )
+        clinics!inner ( name, cnes, cnpj, orgao_emissor, competence_end_day ),
+        sessions:attendance_sessions!inner ( id, session_date, status )
       `)
       .in('clinic_id', groupIds)
-      .eq('month_year', month_year)
-      .eq('status', 'Realizada');
+      .eq('sessions.status', 'Realizada');
 
     if (error || !attendances) {
-      throw new Error('Erro ao buscar dados para exportação.');
+      throw new Error(`Erro ao buscar dados para exportação: ${error?.message || ''}`);
     }
 
-    const validAttendances = (attendances || []).filter((att: any) => att.procedures?.code && att.procedures.code.trim() !== '');
+    const { getCompetenceForDate } = await import('@/utils/competence');
 
-    if (validAttendances.length === 0) {
+    // Desmembrar cada atendimento em suas sessões que pertencem exatamente à competência solicitada
+    const exportableItems: any[] = [];
+
+    (attendances || []).forEach((att: any) => {
+      if (!att.procedures?.code || att.procedures.code.trim() === '') return;
+      const endDay = att.clinics?.competence_end_day || 31;
+      const sessions = att.sessions || [];
+
+      sessions.forEach((s: any) => {
+        if (s.status !== 'Realizada') return;
+        const comp = getCompetenceForDate(s.session_date, endDay);
+        if (comp.monthYear === month_year) {
+          exportableItems.push({
+            ...att,
+            session_date: s.session_date,
+            quantity: 1
+          });
+        }
+      });
+    });
+
+    if (exportableItems.length === 0) {
       throw new Error('Nenhuma produção exportável encontrada para esta competência.');
     }
 
@@ -228,7 +261,7 @@ export class BpaExportService {
       '01' +                                      // 1-2: Identificador
       '#BPA#' +                                   // 3-7: Fixo
       compYYYYMM +                                // 8-13: Competência AAAAMM
-      padLeft(validAttendances.length.toString(), 6) + // 14-19: Quantidade de Registros (consolidado)
+      padLeft(exportableItems.length.toString(), 6) + // 14-19: Quantidade de Registros (consolidado)
       padLeft(clinic.cnes, 12) +                  // 20-31: CNES/Órgão Emissor (MATRIZ)
       padRight(normalizeText(clinic.name), 30) +  // 32-61: Nome do Órgão (MATRIZ)
       'NVM' +                                     // 62-64: Sigla (Nova Versão Magnético)
@@ -240,7 +273,7 @@ export class BpaExportService {
 
     // --- Linhas de Produção ---
     // Ordenar por Profissional + CBO para agrupar boletins
-    const sortedAttendances = [...(validAttendances as any[])].sort((a, b) => {
+    const sortedItems = [...exportableItems].sort((a, b) => {
       const keyA = `${a.professionals.cns}-${a.professional_cbo}`;
       const keyB = `${b.professionals.cns}-${b.professional_cbo}`;
       return keyA.localeCompare(keyB);
@@ -250,7 +283,7 @@ export class BpaExportService {
     let currentSeq = 1;
     let lastKey = '';
 
-    sortedAttendances.forEach((att: any) => {
+    sortedItems.forEach((att: any) => {
       const procCode = sanitize(att.procedures.code);
       const key = `${att.professionals.cns}-${att.professional_cbo}`;
 
@@ -273,7 +306,7 @@ export class BpaExportService {
         lines.push(padRight(line, 350));
       } else {
         // BPA-I (Individualizado) - 350 caracteres fixos
-        const attDate = sanitize(att.attendance_date); // YYYYMMDD
+        const attDate = sanitize(att.session_date || att.attendance_date); // YYYYMMDD com a data real da sessão
         const birthDate = sanitize(att.patients.birth_date); // YYYYMMDD
         const genderCode = att.patients.gender === 'Feminino' ? 'F' : (att.patients.gender === 'Indefinido' ? 'I' : 'M');
         const age = birthDate ? Math.floor((new Date().getTime() - new Date(att.patients.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;

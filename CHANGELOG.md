@@ -20,9 +20,10 @@ Esta versão adiciona o **Relatório Hierárquico de Produção por Profissional
 - **Exportação Padrão em Todos os Relatórios:** Suporte a download em Excel em todas as abas (`grouped_billing`, `billing`, `performance`, `consistency`).
 - **Planilha Estruturada com Subtotais:** O relatório agrupado exporta para Excel com linhas discriminadas para cada atendimento, além de linhas dedicadas de Subtotal do Paciente, Subtotal do Profissional e Total Geral da Competência.
 
-### 🔗 Alinhamento 100% de Dados entre Relatório de Produção e Fechamento BPA
-- **Filtragem por `month_year` na RPC:** Criação da migração `20260825123000_align_reports_with_competence_month_year.sql` que adiciona o parâmetro `p_month_year` às funções RPC `get_billing_report` e `get_performance_report`.
-- **Consistência Total:** Ao selecionar uma competência oficial (ex: `07/2026`), o relatório consulta a base exatamente pelo campo de integridade `month_year`, garantindo total concordância com os valores do Fechamento do BPA e Painel de Competências (`view_competence_billing_sums`).
+### 🔗 Normalização Integral de Competências por Data Real da Sessão (`session_date`)
+- **Governança por Data Efetiva de Atendimento:** Criação da migração `20260825130000_normalize_competence_by_session_date.sql`, recriando a view `view_competence_billing_sums` e atualizando as funções RPC `get_billing_report`, `get_performance_report` e `get_dashboard_stats` para calcular a competência individualmente pela data em que cada sessão foi efetivamente realizada (`s.session_date`) em vez da data de emissão da guia.
+- **Sincronização 100% Idêntica:** Alinhamento total entre o Painel de Controle (Dashboard), o Fechamento de Competências (BPA) e os Relatórios de Produção (Web, PDF e Excel), assegurando que o faturamento de sessões executadas em meses subsequentes (ex: sessões de Agosto em guias de Julho) seja alocado com rigor na sua respectiva competência real.
+- **Exportação DATASUS (BPA-I/BPA-C):** Atualização do serviço `BpaExportService.ts` para exportar para o arquivo magnético oficial as sessões cuja `session_date` pertença com exatidão à competência faturada.
 
 ---
 
