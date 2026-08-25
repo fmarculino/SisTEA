@@ -86,28 +86,32 @@ export default async function ReportsPage({
   let reportData: any[] = []
   let totalCount = 0
 
+  const competenceMonthYear = comp ? `${String(comp.month).padStart(2, '0')}/${comp.year}` : null
+
   if (reportType === 'billing' || reportType === 'grouped_billing') {
     const { data, error } = await supabase.rpc('get_billing_report', {
-      p_start_date: startDate,
-      p_end_date: endDate,
+      p_start_date: competenceMonthYear ? null : startDate,
+      p_end_date: competenceMonthYear ? null : endDate,
       p_clinic_id: selectedClinic,
       p_professional_id: selectedProfessional,
       p_patient_id: selectedPatient,
       p_procedure_id: selectedProcedure,
       p_mode: mode,
-      p_limit: reportType === 'grouped_billing' ? 500 : limit,
-      p_offset: reportType === 'grouped_billing' ? 0 : offset
+      p_limit: reportType === 'grouped_billing' ? 10000 : limit,
+      p_offset: reportType === 'grouped_billing' ? 0 : offset,
+      p_month_year: competenceMonthYear
     })
     if (error) console.error('RPC Error Billing:', error)
     reportData = data?.data || []
     totalCount = data?.total || 0
   } else if (reportType === 'performance') {
     const { data, error } = await supabase.rpc('get_performance_report', {
-      p_start_date: startDate,
-      p_end_date: endDate,
+      p_start_date: competenceMonthYear ? null : startDate,
+      p_end_date: competenceMonthYear ? null : endDate,
       p_clinic_id: selectedClinic,
       p_limit: limit,
-      p_offset: offset
+      p_offset: offset,
+      p_month_year: competenceMonthYear
     })
     if (error) console.error('RPC Error Performance:', error)
     reportData = data?.data || []

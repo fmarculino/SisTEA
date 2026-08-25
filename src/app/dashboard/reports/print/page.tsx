@@ -70,10 +70,12 @@ export default async function PrintReportPage({
   const selectedCompetenceId = reportFilters.competence_id || ''
 
   let compClinicId: string | null = null
+  let compInfo: any = null
 
   if (selectedCompetenceId) {
     const { data: comp } = await supabase.from('competences').select('*').eq('id', selectedCompetenceId).single()
     if (comp) {
+      compInfo = comp
       compClinicId = comp.clinic_id
       const { data: clinic } = await supabase.from('clinics').select('competence_end_day').eq('id', comp.clinic_id || reportFilters.clinic_id || profile.clinic_id).single()
       const range = getCompetenceDateRange(comp.month, comp.year, clinic?.competence_end_day || 31)
@@ -118,26 +120,30 @@ export default async function PrintReportPage({
 
   let reportData: any[] = []
 
+  const compMonthYear = compInfo ? `${String(compInfo.month).padStart(2, '0')}/${compInfo.year}` : null
+
   if (reportType === 'billing' || reportType === 'grouped_billing') {
     const { data } = await supabase.rpc('get_billing_report', {
-      p_start_date: startDate,
-      p_end_date: endDate,
+      p_start_date: compMonthYear ? null : startDate,
+      p_end_date: compMonthYear ? null : endDate,
       p_clinic_id: selectedClinic,
       p_professional_id: selectedProfessional,
       p_patient_id: selectedPatient,
       p_procedure_id: selectedProcedure,
       p_mode: mode,
       p_limit: limit,
-      p_offset: offset
+      p_offset: offset,
+      p_month_year: compMonthYear
     })
     reportData = data?.data || []
   } else if (reportType === 'performance') {
     const { data } = await supabase.rpc('get_performance_report', {
-      p_start_date: startDate,
-      p_end_date: endDate,
+      p_start_date: compMonthYear ? null : startDate,
+      p_end_date: compMonthYear ? null : endDate,
       p_clinic_id: selectedClinic,
       p_limit: limit,
-      p_offset: offset
+      p_offset: offset,
+      p_month_year: compMonthYear
     })
     reportData = data?.data || []
   } else if (reportType === 'consistency') {

@@ -20,6 +20,10 @@ Esta versão adiciona o **Relatório Hierárquico de Produção por Profissional
 - **Exportação Padrão em Todos os Relatórios:** Suporte a download em Excel em todas as abas (`grouped_billing`, `billing`, `performance`, `consistency`).
 - **Planilha Estruturada com Subtotais:** O relatório agrupado exporta para Excel com linhas discriminadas para cada atendimento, além de linhas dedicadas de Subtotal do Paciente, Subtotal do Profissional e Total Geral da Competência.
 
+### 🔗 Alinhamento 100% de Dados entre Relatório de Produção e Fechamento BPA
+- **Filtragem por `month_year` na RPC:** Criação da migração `20260825123000_align_reports_with_competence_month_year.sql` que adiciona o parâmetro `p_month_year` às funções RPC `get_billing_report` e `get_performance_report`.
+- **Consistência Total:** Ao selecionar uma competência oficial (ex: `07/2026`), o relatório consulta a base exatamente pelo campo de integridade `month_year`, garantindo total concordância com os valores do Fechamento do BPA e Painel de Competências (`view_competence_billing_sums`).
+
 ---
 
 ## [1.6.1] - 2026-08-25
