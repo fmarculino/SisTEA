@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getUserProfile } from '@/lib/dal'
 import { logAudit } from '@/lib/audit'
+import { getEffectiveContractForClinic } from '@/lib/contracts'
 
 export async function closeCompetenceAction(clinic_id: string, month: number, year: number) {
   const supabase = await createClient()
@@ -63,16 +64,7 @@ export async function reopenCompetenceAction(id: string) {
     const lastDayDate = new Date(comp.year, comp.month, 0)
     const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth() + 1).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`
 
-    const { data: contract } = await supabase
-      .from('contracts')
-      .select('id')
-      .eq('clinic_id', comp.clinic_id)
-      .eq('active', true)
-      .lte('valid_from', lastDay)
-      .or(`valid_to.is.null,valid_to.gte.${firstDay}`)
-      .order('valid_from', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    const contract = await getEffectiveContractForClinic(supabase, comp.clinic_id, firstDay, lastDay)
 
     if (contract) {
       // Buscar produções que haviam sido faturadas
@@ -150,23 +142,10 @@ export async function sendToMSCompetenceAction(id: string) {
   const lastDayDate = new Date(comp.year, comp.month, 0)
   const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth() + 1).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`
 
-  const { data: contract, error: contractError } = await supabase
-    .from('contracts')
-    .select('*')
-    .eq('clinic_id', comp.clinic_id)
-    .eq('active', true)
-    .lte('valid_from', lastDay)
-    .or(`valid_to.is.null,valid_to.gte.${firstDay}`)
-    .order('valid_from', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (contractError) {
-    return { error: `Erro ao buscar contrato correspondente: ${contractError.message}` }
-  }
+  const contract = await getEffectiveContractForClinic(supabase, comp.clinic_id, firstDay, lastDay)
 
   if (!contract) {
-    return { error: '❌ Bloqueio Contratual: Não foi encontrado nenhum contrato ativo configurado para esta clínica no período desta competência. Cadastre um contrato correspondente antes de fechar a competência.' }
+    return { error: '❌ Bloqueio Contratual: Não foi encontrado nenhum contrato ativo configurado ou compartilhado para esta clínica no período desta competência. Cadastre ou vincule um contrato correspondente antes de fechar a competência.' }
   }
 
   // 2. BUSCAR AS PRODUÇÕES FATURADAS E CALCULAR OS VALORES/QUANTIDADES

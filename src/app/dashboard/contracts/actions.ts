@@ -24,6 +24,7 @@ const contractSchema = z.object({
   valid_to: z.string().optional().nullable(),
   valor_total: z.coerce.number().min(0).default(0),
   items: z.array(contractItemSchema).min(1, "O contrato deve ter pelo menos um procedimento"),
+  covered_clinic_ids: z.array(z.string().uuid()).optional().nullable(),
   original_clinic_id: z.string().uuid().optional().nullable(),
   original_contract_number: z.string().optional().nullable()
 })
@@ -47,15 +48,18 @@ export async function saveContractBulkAction(data: ContractFormData) {
   const targetClinicId = data.original_clinic_id || data.clinic_id
   const targetContractNumber = data.original_contract_number || data.contract_number
 
+  // Lista de todas as clínicas cobertas por este contrato (Matriz + filiais selecionadas)
+  const coveredClinics = Array.from(new Set([data.clinic_id, ...(data.covered_clinic_ids || [])]))
+
   // NOVA TRAVA DE VALIDAÇÃO DE VIGÊNCIAS POR PROCEDIMENTO (Apenas para procedimentos ativos)
   const activeItems = data.items.filter(item => item.active)
 
   if (activeItems.length > 0) {
-    // Buscar todos os preços ativos da mesma clínica em outros contratos
+    // Buscar todos os preços ativos das clínicas cobertas em outros contratos
     const { data: existingPrices, error: fetchError } = await supabase
       .from('clinic_procedure_prices')
       .select('contract_number, procedure_id, valid_from, valid_to, procedures(code, description)')
-      .eq('clinic_id', data.clinic_id)
+      .in('clinic_id', coveredClinics)
       .neq('contract_number', targetContractNumber)
       .neq('contract_number', data.contract_number)
       .eq('active', true)
@@ -100,7 +104,7 @@ export async function saveContractBulkAction(data: ContractFormData) {
             }
 
             return {
-              error: `❌ Conflito de Item Contratual: O procedimento "${code} - ${description}" já possui um preço pactuado ativo nesta clínica no período de ${formatPeriod(conflict.valid_from, conflict.valid_to)} (Contrato: "${conflict.contract_number}"). Para reajustar o valor ou vigência deste item, defina a validade final dele no contrato anterior antes de lançar o novo aditivo.`
+              error: `❌ Conflito de Item Contratual: O procedimento "${code} - ${description}" já possui um preço pactuado ativo nesta clínica ou filial coberta no período de ${formatPeriod(conflict.valid_from, conflict.valid_to)} (Contrato: "${conflict.contract_number}"). Para reajustar o valor ou vigência deste item, defina a validade final dele no contrato anterior antes de lançar o novo aditivo.`
             }
           }
         }
@@ -160,6 +164,25 @@ export async function saveContractBulkAction(data: ContractFormData) {
     contractId = newContract.id
   }
 
+  // --- 1.1 ATUALIZAR VÍNCULOS EM contract_clinics (Matriz + Filiais cobertas) ---
+  await supabase
+    .from('contract_clinics')
+    .delete()
+    .eq('contract_id', contractId)
+
+  const contractClinicsToInsert = coveredClinics.map(cid => ({
+    contract_id: contractId,
+    clinic_id: cid
+  }))
+
+  const { error: ccError } = await supabase
+    .from('contract_clinics')
+    .insert(contractClinicsToInsert)
+
+  if (ccError) {
+    console.error('Erro ao salvar contract_clinics:', ccError)
+  }
+
   // --- 2. OBTENÇÃO DE ITENS EXISTENTES PARA SALDO DIFERENCIAL ---
   const { data: existingItems } = await supabase
     .from('clinic_procedure_prices')
@@ -215,10 +238,11 @@ export async function saveContractBulkAction(data: ContractFormData) {
     action: existingContract ? 'UPDATE' : 'CREATE',
     table_name: 'contracts',
     record_id: contractId,
-    description: `${existingContract ? 'Atualizou' : 'Cadastrou'} contrato número ${data.contract_number} da clínica ID: ${data.clinic_id}. Valor Global: R$ ${data.valor_total}.`,
+    description: `${existingContract ? 'Atualizou' : 'Cadastrou'} contrato número ${data.contract_number} da clínica ID: ${data.clinic_id}. Abrangência: ${coveredClinics.length} unidade(s). Valor Global: R$ ${data.valor_total}.`,
     new_data: {
       clinic_id: data.clinic_id,
       contract_number: data.contract_number,
+      covered_clinics: coveredClinics,
       valid_from: data.valid_from,
       valid_to: data.valid_to,
       valor_total: data.valor_total,

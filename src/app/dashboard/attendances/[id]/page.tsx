@@ -59,13 +59,17 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
     { data: professionalsRaw },
     { data: procedures },
     { data: clinics },
-    { data: settings }
+    { data: settings },
+    { data: clinicProcedurePrices },
+    { data: contractClinics }
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
     supabase.from('procedures').select('id, name, code, active, valor_total, min_age, max_age, max_quantity, procedure_specialties(specialty_id)').order('name'),
-    supabase.from('clinics').select('id, name, cnes').order('name'),
-    supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single()
+    supabase.from('clinics').select('id, name, cnes, parent_clinic_id').order('name'),
+    supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single(),
+    supabase.from('clinic_procedure_prices').select('clinic_id, procedure_id, valor_total, valid_from, valid_to, active, contract_id, quantidade_contratada, quantidade_saldo').eq('active', true),
+    supabase.from('contract_clinics').select('contract_id, clinic_id')
   ])
 
   const systemTimezone = settings?.value || 'America/Sao_Paulo'
@@ -76,12 +80,12 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
       (ps: any) => ps.specialties?.name
     ).filter(Boolean)
     
-    const cbos = (p.professional_specialties as any[])?.map(
-      (ps: any) => ps.specialties?.cbo
-    ).filter(Boolean)
-
     const specialtyIds = (p.professional_specialties as any[])?.map(
       (ps: any) => ps.specialty_id
+    ).filter(Boolean)
+
+    const cbos = (p.professional_specialties as any[])?.map(
+      (ps: any) => ps.specialties?.cbo
     ).filter(Boolean)
 
     const specialtiesFull = (p.professional_specialties as any[])?.map((ps: any) => ({
@@ -125,6 +129,8 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
         userClinicId={profile?.clinic_id}
         userRole={profile?.role || ''}
         systemTimezone={systemTimezone}
+        clinicProcedurePrices={clinicProcedurePrices || []}
+        contractClinics={contractClinics || []}
       />
     </div>
   )

@@ -33,7 +33,7 @@ export default async function EditContractPage({
       .eq('contract_number', contract_number),
     supabase
       .from('contracts')
-      .select('valor_total, valor_saldo')
+      .select('id, valor_total, valor_saldo')
       .eq('clinic_id', clinic_id)
       .eq('contract_number', contract_number)
       .maybeSingle()
@@ -43,6 +43,19 @@ export default async function EditContractPage({
     redirect('/dashboard/contracts')
   }
 
+  // Buscar vínculos em contract_clinics
+  let coveredClinicIds: string[] = []
+  if (contract?.id) {
+    const { data: ccData } = await supabase
+      .from('contract_clinics')
+      .select('clinic_id')
+      .eq('contract_id', contract.id)
+    
+    coveredClinicIds = (ccData || [])
+      .map(cc => cc.clinic_id)
+      .filter(cid => cid !== clinic_id)
+  }
+
   const initialData = {
     clinic_id: items[0].clinic_id,
     contract_number: items[0].contract_number,
@@ -50,10 +63,11 @@ export default async function EditContractPage({
     valid_to: items[0].valid_to,
     valor_total: contract?.valor_total ? Number(contract.valor_total) : 0,
     valor_saldo: contract?.valor_saldo ? Number(contract.valor_saldo) : 0,
+    covered_clinic_ids: coveredClinicIds,
     items: items
   }
 
-  const { data: clinics } = await supabase.from('clinics').select('id, name').order('name')
+  const { data: clinics } = await supabase.from('clinics').select('id, name, parent_clinic_id').order('name')
   const { data: procedures } = await supabase.from('procedures').select('id, code, name, description, valor_sus, valor_rp').order('name')
 
   return (

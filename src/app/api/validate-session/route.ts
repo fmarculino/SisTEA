@@ -2,6 +2,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyValidationHMAC, isLinkExpired } from '@/utils/token'
 import { logAudit } from '@/lib/audit'
+import { getEffectiveContractPrice } from '@/lib/contracts'
 
 const MAX_ATTEMPTS = 5
 
@@ -141,18 +142,13 @@ export async function POST(request: NextRequest) {
 
     const realizedCount = (allSessions || []).filter((s: any) => s.status === 'Realizada').length
 
-    // Get the price snapshot for this procedure/clinic/date
-    const { data: contractPrice } = await supabase
-      .from('clinic_procedure_prices')
-      .select('valor_total')
-      .eq('clinic_id', attendance.clinic_id)
-      .eq('procedure_id', attendance.procedure_id)
-      .eq('active', true)
-      .lte('valid_from', attendance.attendance_date)
-      .or(`valid_to.is.null,valid_to.gte.${attendance.attendance_date}`)
-      .order('valid_from', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    // Get the price snapshot for this procedure/clinic/date (direct or shared via group)
+    const contractPrice = await getEffectiveContractPrice(
+      supabase,
+      attendance.clinic_id,
+      attendance.procedure_id,
+      attendance.attendance_date
+    )
 
     let unitValue = 0
     if (contractPrice) {
