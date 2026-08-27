@@ -82,6 +82,7 @@ export default async function AttendancesPage({
   let selectFields = `
     id,
     attendance_date,
+    auth_number,
     value_applied,
     patient:patients(name),
     professional:professionals(name),
@@ -99,24 +100,27 @@ export default async function AttendancesPage({
     .from('attendances')
     .select(selectFields, { count: 'exact' })
 
-  // Apply Search Filter
+  // Apply Search Filter (Paciente, Profissional ou Nº da Guia)
   if (queryParams.q) {
+    const cleanQ = queryParams.q.trim()
+
     // 1. Fetch matching patient IDs
     const { data: matchedPatients } = await supabase
       .from('patients')
       .select('id')
-      .or(`name.ilike.%${queryParams.q}%,cns_patient.ilike.%${queryParams.q}%`)
+      .or(`name.ilike.%${cleanQ}%,cns_patient.ilike.%${cleanQ}%,cpf.ilike.%${cleanQ}%`)
 
     // 2. Fetch matching professional IDs
     const { data: matchedProfessionals } = await supabase
       .from('professionals')
       .select('id')
-      .or(`name.ilike.%${queryParams.q}%,cns.ilike.%${queryParams.q}%`)
+      .or(`name.ilike.%${cleanQ}%,cns.ilike.%${cleanQ}%`)
 
     const patientIds = matchedPatients?.map((p: any) => p.id) || []
     const professionalIds = matchedProfessionals?.map((p: any) => p.id) || []
 
-    const orConditions = []
+    const orConditions: string[] = [`auth_number.ilike.%${cleanQ}%`]
+
     if (patientIds.length > 0) {
       orConditions.push(`patient_id.in.(${patientIds.map(id => `"${id}"`).join(',')})`)
     }
@@ -124,12 +128,7 @@ export default async function AttendancesPage({
       orConditions.push(`professional_id.in.(${professionalIds.map(id => `"${id}"`).join(',')})`)
     }
 
-    if (orConditions.length > 0) {
-      query = query.or(orConditions.join(','))
-    } else {
-      // Force empty result if nothing matched the name search
-      query = query.eq('id', '00000000-0000-0000-0000-000000000000')
-    }
+    query = query.or(orConditions.join(','))
   }
 
   // Apply dropdown filters
@@ -177,7 +176,7 @@ export default async function AttendancesPage({
       </div>
 
       <DataTableFilters 
-        placeholder="Pesquisar por paciente ou profissional..." 
+        placeholder="Pesquisar por paciente, profissional ou nº da guia..." 
         showStatus={false}
         extraFilters={extraFilters}
         checkboxFilter={{
@@ -219,8 +218,13 @@ export default async function AttendancesPage({
                         {format(new Date(att.attendance_date + 'T00:00:00'), 'dd/MM/yyyy')}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-5 text-sm font-medium text-foreground/90 max-w-[200px] truncate">
-                      {att.patient?.name || '-'}
+                    <td className="whitespace-nowrap px-3 py-5 text-sm font-medium text-foreground/90 max-w-[200px]">
+                      <div className="truncate">{att.patient?.name || '-'}</div>
+                      {att.auth_number && (
+                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                          Guia: <span className="text-foreground/80 font-medium">{att.auth_number}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground group-hover:text-foreground transition-colors max-w-[150px] truncate">
                       {att.professional?.name || '-'}
