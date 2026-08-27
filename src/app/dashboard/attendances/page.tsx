@@ -103,18 +103,26 @@ export default async function AttendancesPage({
   // Apply Search Filter (Paciente, Profissional ou Nº da Guia)
   if (queryParams.q) {
     const cleanQ = queryParams.q.trim()
+    const words = cleanQ.split(/\s+/).filter(w => w.length >= 2)
+    const patientFilters = [`name.ilike.%${cleanQ}%`, `cns_patient.ilike.%${cleanQ}%`, `cpf.ilike.%${cleanQ}%`]
+    const profFilters = [`name.ilike.%${cleanQ}%`, `cns.ilike.%${cleanQ}%`]
+
+    words.forEach(w => {
+      patientFilters.push(`name.ilike.%${w}%`)
+      profFilters.push(`name.ilike.%${w}%`)
+    })
 
     // 1. Fetch matching patient IDs
     const { data: matchedPatients } = await supabase
       .from('patients')
       .select('id')
-      .or(`name.ilike.%${cleanQ}%,cns_patient.ilike.%${cleanQ}%,cpf.ilike.%${cleanQ}%`)
+      .or(patientFilters.join(','))
 
     // 2. Fetch matching professional IDs
     const { data: matchedProfessionals } = await supabase
       .from('professionals')
       .select('id')
-      .or(`name.ilike.%${cleanQ}%,cns.ilike.%${cleanQ}%`)
+      .or(profFilters.join(','))
 
     const patientIds = matchedPatients?.map((p: any) => p.id) || []
     const professionalIds = matchedProfessionals?.map((p: any) => p.id) || []
