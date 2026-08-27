@@ -1041,6 +1041,8 @@ export function AttendanceForm({
             <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data da Guia/Atendimento *</label>
             <input
               type="date"
+              min="2020-01-01"
+              max="2035-12-31"
               {...register('attendance_date')}
               readOnly={isMetadataLocked}
               className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
@@ -1063,6 +1065,8 @@ export function AttendanceForm({
             <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data de Autorização</label>
             <input
               type="date"
+              min="2020-01-01"
+              max="2035-12-31"
               {...register('authorization_date')}
               readOnly={isMetadataLocked}
               className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
@@ -1273,6 +1277,8 @@ export function AttendanceForm({
                       <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Data</label>
                       <input
                         type="date"
+                        min="2020-01-01"
+                        max="2035-12-31"
                         {...register(`sessions.${index}.session_date` as const)}
                         readOnly={isCompetenceLocked || isSessionLockedForClinic}
                         className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || isSessionLockedForClinic) ? 'opacity-70 bg-muted cursor-not-allowed' : ''

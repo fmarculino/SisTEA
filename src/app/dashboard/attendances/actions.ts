@@ -86,7 +86,9 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   const userAgent = headersList.get('user-agent') || 'unknown'
 
   const validatedFields = attendanceSchema.safeParse(data)
-  if (!validatedFields.success) return { error: 'Validação falhou' }
+  if (!validatedFields.success) {
+    return { error: validatedFields.error.issues[0]?.message || 'Validação falhou' }
+  }
 
   const { sessions, ...rawAttendanceData } = validatedFields.data
 
@@ -260,7 +262,9 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   const userAgent = headersList.get('user-agent') || 'unknown'
 
   const validatedFields = attendanceSchema.safeParse(data)
-  if (!validatedFields.success) return { error: 'Validação falhou' }
+  if (!validatedFields.success) {
+    return { error: validatedFields.error.issues[0]?.message || 'Validação falhou' }
+  }
 
   const { sessions, ...rawAttendanceData } = validatedFields.data
 
