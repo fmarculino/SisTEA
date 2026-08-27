@@ -62,10 +62,11 @@ export default async function CompetencesPage({
       .order('name')
     clinicsList = clinicsData || []
 
-    // Buscar todas as sessões com data real para calcular competências que continuam ABERTAS
+    // Buscar apenas as sessões devidamente realizadas/registradas para calcular competências que continuam ABERTAS
     const { data: sessionsData } = await supabase
       .from('attendance_sessions')
       .select('session_date, attendance:attendances(clinic_id)')
+      .in('status', ['Realizada', 'Faltou', 'Glosado'])
 
     const clinicsMap = new Map()
     clinicsList.forEach(c => clinicsMap.set(c.id, c))
@@ -153,11 +154,12 @@ export default async function CompetencesPage({
     const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', profile.clinic_id).single()
     const endDay = clinicConfig?.competence_end_day || 31
 
-    // Buscar meses distintos com sessões
+    // Buscar meses distintos com sessões devidamente realizadas/registradas
     const { data: clinicSessions } = await supabase
       .from('attendance_sessions')
       .select('session_date, attendance:attendances!inner(clinic_id)')
       .eq('attendance.clinic_id', profile.clinic_id)
+      .in('status', ['Realizada', 'Faltou', 'Glosado'])
 
     const uniqueMonths = new Set<string>()
     
