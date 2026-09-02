@@ -100,21 +100,52 @@ export default async function AttendancesPage({
     .select(selectFields, { count: 'exact' })
 
   // Apply Search Filter
-  if (queryParams.q) {
-    // 1. Fetch matching patient IDs
-    const { data: matchedPatients } = await supabase
-      .from('patients')
-      .select('id')
-      .or(`name.ilike.%${queryParams.q}%,cns_patient.ilike.%${queryParams.q}%`)
+  if (queryParams.q && queryParams.q.trim()) {
+    const rawSearch = queryParams.q.trim()
+    const terms = rawSearch.split(/\s+/).filter(Boolean)
+    const cleanDigits = rawSearch.replace(/\D/g, '')
 
-    // 2. Fetch matching professional IDs
-    const { data: matchedProfessionals } = await supabase
-      .from('professionals')
-      .select('id')
-      .or(`name.ilike.%${queryParams.q}%,cns.ilike.%${queryParams.q}%`)
+    // 1. Fetch matching patient IDs (all words must match patient name, e.g. "samuel" AND "alves")
+    let patientNameQuery = supabase.from('patients').select('id')
+    terms.forEach((term: string) => {
+      patientNameQuery = patientNameQuery.ilike('name', `%${term}%`)
+    })
+    const { data: matchedPatientsByName } = await patientNameQuery
 
-    const patientIds = matchedPatients?.map((p: any) => p.id) || []
-    const professionalIds = matchedProfessionals?.map((p: any) => p.id) || []
+    let matchedPatientsByDoc: any[] = []
+    if (cleanDigits.length >= 3) {
+      const { data } = await supabase
+        .from('patients')
+        .select('id')
+        .or(`cns_patient.ilike."%${cleanDigits}%",cpf.ilike."%${cleanDigits}%"`)
+      matchedPatientsByDoc = data || []
+    }
+
+    // 2. Fetch matching professional IDs (all words must match professional name)
+    let profNameQuery = supabase.from('professionals').select('id')
+    terms.forEach((term: string) => {
+      profNameQuery = profNameQuery.ilike('name', `%${term}%`)
+    })
+    const { data: matchedProfessionalsByName } = await profNameQuery
+
+    let matchedProfessionalsByDoc: any[] = []
+    if (cleanDigits.length >= 3) {
+      const { data } = await supabase
+        .from('professionals')
+        .select('id')
+        .or(`cns.ilike."%${cleanDigits}%",cpf.ilike."%${cleanDigits}%"`)
+      matchedProfessionalsByDoc = data || []
+    }
+
+    const patientIds = Array.from(new Set([
+      ...(matchedPatientsByName?.map((p: any) => p.id) || []),
+      ...(matchedPatientsByDoc?.map((p: any) => p.id) || [])
+    ]))
+
+    const professionalIds = Array.from(new Set([
+      ...(matchedProfessionalsByName?.map((p: any) => p.id) || []),
+      ...(matchedProfessionalsByDoc?.map((p: any) => p.id) || [])
+    ]))
 
     const orConditions = []
     if (patientIds.length > 0) {
@@ -123,11 +154,14 @@ export default async function AttendancesPage({
     if (professionalIds.length > 0) {
       orConditions.push(`professional_id.in.(${professionalIds.map(id => `"${id}"`).join(',')})`)
     }
+    if (cleanDigits.length >= 3) {
+      orConditions.push(`auth_number.ilike."%${cleanDigits}%"`)
+    }
 
     if (orConditions.length > 0) {
       query = query.or(orConditions.join(','))
     } else {
-      // Force empty result if nothing matched the name search
+      // Force empty result if nothing matched the search
       query = query.eq('id', '00000000-0000-0000-0000-000000000000')
     }
   }

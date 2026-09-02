@@ -31,10 +31,20 @@ export default async function ClinicsPage({
   let query = supabase.from('clinics').select('*, parent_clinic:clinics!parent_clinic_id(name)', { count: 'exact' })
 
   // Filtro de Busca Inteligente
-  if (queryParams.q) {
-    const cleanQ = queryParams.q.replace(/\D/g, '')
-    // Busca pelo nome, pelo valor formatado ou pelo valor limpo (sem pontos/traços)
-    query = query.or(`name.ilike.%${queryParams.q}%,cnpj.ilike.%${queryParams.q}%,cnpj.ilike.%${cleanQ}%`)
+  if (queryParams.q && queryParams.q.trim()) {
+    const rawSearch = queryParams.q.trim()
+    const terms = rawSearch.split(/\s+/).filter(Boolean)
+    const cleanDigits = rawSearch.replace(/\D/g, '')
+
+    if (terms.length > 1) {
+      terms.forEach((term: string) => {
+        query = query.ilike('name', `%${term}%`)
+      })
+    } else if (cleanDigits.length >= 3) {
+      query = query.or(`name.ilike."%${rawSearch}%",cnpj.ilike."%${cleanDigits}%"`)
+    } else {
+      query = query.or(`name.ilike."%${rawSearch}%",cnpj.ilike."%${rawSearch}%"`)
+    }
   }
 
   // Apply Status Filter

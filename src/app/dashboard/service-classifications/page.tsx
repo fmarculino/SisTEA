@@ -29,10 +29,20 @@ export default async function ServiceClassificationsPage({
   let query = supabase.from('service_classifications').select('*', { count: 'exact' })
 
   // Filtro de Busca Inteligente
-  if (queryParams.q) {
-    const cleanQ = queryParams.q.replace(/\D/g, '')
-    // Busca pelo nome, valor formatado ou valor limpo
-    query = query.or(`name.ilike.%${queryParams.q}%,service_code.ilike.%${queryParams.q}%,service_code.ilike.%${cleanQ}%,classification_code.ilike.%${queryParams.q}%,classification_code.ilike.%${cleanQ}%`)
+  if (queryParams.q && queryParams.q.trim()) {
+    const rawSearch = queryParams.q.trim()
+    const terms = rawSearch.split(/\s+/).filter(Boolean)
+    const cleanDigits = rawSearch.replace(/\D/g, '')
+
+    if (terms.length > 1) {
+      terms.forEach((term: string) => {
+        query = query.ilike('name', `%${term}%`)
+      })
+    } else if (cleanDigits.length >= 2) {
+      query = query.or(`name.ilike."%${rawSearch}%",service_code.ilike."%${cleanDigits}%",classification_code.ilike."%${cleanDigits}%"`)
+    } else {
+      query = query.or(`name.ilike."%${rawSearch}%",service_code.ilike."%${rawSearch}%",classification_code.ilike."%${rawSearch}%"`)
+    }
   }
 
   // Apply Status Filter

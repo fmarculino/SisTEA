@@ -29,10 +29,18 @@ export default async function CidPage({
   let query = supabase.from('cid').select('*', { count: 'exact' })
 
   // Filtro de Busca Inteligente
-  if (queryParams.q) {
-    const cleanQ = queryParams.q.replace(/[^\w]/g, '')
-    // Busca pela descrição, pelo valor formatado ou pelo valor limpo (sem pontos/traços)
-    query = query.or(`name.ilike.%${queryParams.q}%,code.ilike.%${queryParams.q}%,code.ilike.%${cleanQ}%`)
+  if (queryParams.q && queryParams.q.trim()) {
+    const rawSearch = queryParams.q.trim()
+    const terms = rawSearch.split(/\s+/).filter(Boolean)
+    const cleanQ = rawSearch.replace(/[^\w]/g, '')
+
+    if (terms.length > 1) {
+      terms.forEach((term: string) => {
+        query = query.ilike('name', `%${term}%`)
+      })
+    } else {
+      query = query.or(`name.ilike."%${rawSearch}%",code.ilike."%${rawSearch}%",code.ilike."%${cleanQ}%"`)
+    }
   }
 
   // Apply Status Filter

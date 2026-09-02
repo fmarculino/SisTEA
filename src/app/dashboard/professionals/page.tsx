@@ -59,10 +59,21 @@ export default async function ProfessionalsPage({
   }
 
   // Filtro de Busca Inteligente
-  if (queryParams.q) {
-    const cleanQ = queryParams.q.replace(/[^\w]/g, '')
-    // Busca pelo nome, pelo valor formatado ou pelo valor limpo (sem pontos/traços)
-    query = query.or(`name.ilike.%${queryParams.q}%,cpf.ilike.%${queryParams.q}%,cpf.ilike.%${cleanQ}%,cns.ilike.%${queryParams.q}%,cns.ilike.%${cleanQ}%`)
+  if (queryParams.q && queryParams.q.trim()) {
+    const rawSearch = queryParams.q.trim()
+    const terms = rawSearch.split(/\s+/).filter(Boolean)
+    const cleanDigits = rawSearch.replace(/\D/g, '')
+
+    if (terms.length > 1) {
+      // Quando há mais de uma palavra (ex: nome e sobrenome), todas devem coincidir no nome
+      terms.forEach((term: string) => {
+        query = query.ilike('name', `%${term}%`)
+      })
+    } else if (cleanDigits.length >= 3) {
+      query = query.or(`name.ilike."%${rawSearch}%",cpf.ilike."%${cleanDigits}%",cns.ilike."%${cleanDigits}%"`)
+    } else {
+      query = query.ilike('name', `%${rawSearch}%`)
+    }
   }
 
   // Apply Status Filter

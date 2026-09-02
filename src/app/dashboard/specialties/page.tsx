@@ -30,8 +30,17 @@ export default async function SpecialtiesPage({
   let query = supabase.from('specialties').select('*', { count: 'exact' })
 
   // Apply Search Filter
-  if (queryParams.q) {
-    query = query.or(`name.ilike.%${queryParams.q}%,cbo.ilike.%${queryParams.q}%`)
+  if (queryParams.q && queryParams.q.trim()) {
+    const rawSearch = queryParams.q.trim()
+    const terms = rawSearch.split(/\s+/).filter(Boolean)
+
+    if (terms.length > 1) {
+      terms.forEach((term: string) => {
+        query = query.ilike('name', `%${term}%`)
+      })
+    } else {
+      query = query.or(`name.ilike."%${rawSearch}%",cbo.ilike."%${rawSearch}%"`)
+    }
   }
 
   // Apply Status Filter

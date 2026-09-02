@@ -103,10 +103,17 @@ export default async function AuditPage({
     query = query.lte('created_at', `${queryParams.endDate}T23:59:59`)
   }
 
-  if (queryParams.q) {
-    // Supabase search is limited, for production consider Full Text Search
-    // Here we use or filter but it might be heavy for many rows
-    query = query.or(`description.ilike.%${queryParams.q}%,user_email.ilike.%${queryParams.q}%`)
+  if (queryParams.q && queryParams.q.trim()) {
+    const rawSearch = queryParams.q.trim()
+    const terms = rawSearch.split(/\s+/).filter(Boolean)
+
+    if (terms.length > 1) {
+      terms.forEach((term: string) => {
+        query = query.ilike('description', `%${term}%`)
+      })
+    } else {
+      query = query.or(`description.ilike."%${rawSearch}%",user_email.ilike."%${rawSearch}%"`)
+    }
   }
 
   const { data: logs, count } = await query.range(from, to)

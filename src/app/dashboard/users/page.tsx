@@ -59,8 +59,17 @@ export default async function UsersPage({
   }
 
   // Apply Search Filter
-  if (queryParams.q) {
-    query = query.or(`email.ilike.%${queryParams.q}%,name.ilike.%${queryParams.q}%`)
+  if (queryParams.q && queryParams.q.trim()) {
+    const rawSearch = queryParams.q.trim()
+    const terms = rawSearch.split(/\s+/).filter(Boolean)
+
+    if (terms.length > 1) {
+      terms.forEach((term: string) => {
+        query = query.ilike('name', `%${term}%`)
+      })
+    } else {
+      query = query.or(`email.ilike."%${rawSearch}%",name.ilike."%${rawSearch}%"`)
+    }
   }
 
   // Apply Status Filter
