@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Printer, ChevronLeft, Calendar, Building2, User, FileText, Activity, Users } from 'lucide-react'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, formatDateBR } from '@/utils/format'
 import { groupBillingData } from '@/utils/reportGrouping'
 
 interface PrintReportClientProps {
@@ -206,7 +206,7 @@ export default function PrintReportClient({
                               {pat.sessions.map((s, sIdx) => (
                                 <tr key={sIdx} className="border-b border-slate-100 text-xs print:text-[6pt]">
                                   <td className="py-1 px-1.5 print:py-0.5 print:px-1 text-center font-medium text-slate-700 whitespace-nowrap">
-                                    {new Date(s.session_date).toLocaleDateString('pt-BR')}
+                                    {formatDateBR(s.session_date)}
                                   </td>
                                   <td className="py-1 px-1.5 print:py-0.5 print:px-1 text-left italic break-words leading-tight">
                                     <span className="font-bold not-italic">{s.procedure_code || 'SEM CÓDIGO'}</span> - {s.procedure_name}
@@ -343,7 +343,7 @@ export default function PrintReportClient({
                 <tr key={i} className="hover:bg-slate-50 print:hover:bg-transparent">
                   <td className="border border-slate-300 p-2 print:py-0.5 print:px-1 text-xs print:text-[6pt] break-words">
                     <span className="font-bold">{row.patient_name}</span><br/>
-                    <span className="text-[9px] print:text-[5pt] text-slate-500 font-black">{new Date(row.session_date).toLocaleDateString('pt-BR')}</span>
+                    <span className="text-[9px] print:text-[5pt] text-slate-500 font-black">{formatDateBR(row.session_date)}</span>
                   </td>
                   <td className="border border-slate-300 p-2 print:py-0.5 print:px-1 text-xs print:text-[6pt] font-medium break-words">{row.professional_name}</td>
                   <td className="border border-slate-300 p-2 print:py-0.5 print:px-1 text-xs print:text-[6pt] text-rose-700 font-bold italic break-words">{row.issue_type}</td>
@@ -396,7 +396,7 @@ export default function PrintReportClient({
                     <span className="font-bold not-italic">{row.procedure_code || 'SEM CÓDIGO'}</span> - {row.procedure_name}
                   </td>
                   <td className="border border-slate-300 p-2 print:py-0.5 print:px-1 text-xs print:text-[6pt] text-center whitespace-nowrap">
-                    {new Date(row.session_date).toLocaleDateString('pt-BR')}
+                    {formatDateBR(row.session_date)}
                   </td>
                   <td className="border border-slate-300 p-2 print:py-0.5 print:px-1 text-xs print:text-[6pt] text-center font-black uppercase tracking-tighter">
                     {row.status}

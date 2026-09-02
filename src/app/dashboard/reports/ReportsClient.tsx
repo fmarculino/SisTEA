@@ -17,7 +17,7 @@ import {
   ChevronDown,
   Layers
 } from 'lucide-react'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, formatDateBR } from '@/utils/format'
 import { Pagination } from '@/components/ui/Pagination'
 import * as XLSX from 'xlsx'
 import { createReportRequest } from './actions'
@@ -100,7 +100,7 @@ export default function ReportsClient({
               'Paciente': pat.patient_name,
               'CNS Paciente': pat.patient_cns,
               'Nº Autorização (APAC)': pat.auth_number,
-              'Data Sessão': new Date(s.session_date).toLocaleDateString('pt-BR'),
+              'Data Sessão': formatDateBR(s.session_date),
               'Código Procedimento': s.procedure_code || '',
               'Procedimento': s.procedure_name || '',
               'Status': s.status,
@@ -170,7 +170,7 @@ export default function ReportsClient({
         'CBO': r.professional_cbo,
         'Código Procedimento': r.procedure_code,
         'Procedimento': r.procedure_name,
-        'Data Sessão': new Date(r.session_date).toLocaleDateString('pt-BR'),
+        'Data Sessão': formatDateBR(r.session_date),
         'Status': r.status,
         'SUS (Fed.) R$': Number(r.valor_sus) || 0,
         'RP (Mun.) R$': Number(r.valor_rp) || 0,
@@ -190,7 +190,7 @@ export default function ReportsClient({
     } else if (type === 'consistency') {
       exportData = initialData.map(r => ({
         'Paciente': r.patient_name,
-        'Data Sessão': new Date(r.session_date).toLocaleDateString('pt-BR'),
+        'Data Sessão': formatDateBR(r.session_date),
         'Profissional': r.professional_name,
         'Inconsistência Identificada': r.issue_type
       }))
@@ -351,7 +351,7 @@ export default function ReportsClient({
                       <div className="flex flex-col gap-0.5">
                         <span className="text-sm font-bold text-foreground">{row.patient_name}</span>
                         <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                          {new Date(row.session_date).toLocaleDateString('pt-BR')}
+                          {formatDateBR(row.session_date)}
                         </span>
                       </div>
                     </td>
@@ -500,7 +500,7 @@ export default function ReportsClient({
                             {pat.sessions.map((s, sIdx) => (
                               <tr key={sIdx} className="hover:bg-muted/10 transition-colors">
                                 <td className="py-3 px-6 text-center font-medium text-foreground whitespace-nowrap">
-                                  {new Date(s.session_date).toLocaleDateString('pt-BR')}
+                                  {formatDateBR(s.session_date)}
                                 </td>
                                 <td className="py-3 px-6">
                                   <div className="flex flex-col">
@@ -626,7 +626,7 @@ export default function ReportsClient({
                     </div>
                   </td>
                   <td className="p-6 text-sm font-medium text-foreground">
-                    {new Date(row.session_date).toLocaleDateString('pt-BR')}
+                    {formatDateBR(row.session_date)}
                   </td>
                   <td className="p-6">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${
