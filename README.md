@@ -1,5 +1,5 @@
 # SisTEA - Sistema Inteligente de Gestão Integrada
-![Version](https://img.shields.io/badge/version-1.7.0-green.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.9.0-green.svg?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-active-success.svg?style=for-the-badge)
 
 > **SisTEA** é uma plataforma enterprise de alta densidade projetada para a gestão especializada de acompanhamento multiprofissional em casos de **Autismo (TEA)** e **TDAH**. O sistema foca em três pilares fundamentais: **Transparência Forense**, **Eficiência Operacional** e **Segurança Jurídica**.
@@ -7,6 +7,9 @@
 ---
 
 ## 🚀 Diferenciais Estratégicos
+
+### 🧭 Navegação Contextual com Retenção de Filtros (Atendimentos)
+Ao editar atendimentos a partir de pesquisas refinadas ou filtros aplicados (por paciente, profissional, procedimento, clínica ou status), o sistema mantém os parâmetros na URL e disponibiliza uma barra superior de navegação. Permite retornar diretamente à listagem preservando toda a busca intacta (`← Voltar para Atendimentos`), além de transitar com agilidade entre os itens do filtro através dos botões **`◀ Anterior`** e **`Próximo ▶`**, indicador de posição (`X de Y no filtro`) e atalhos de teclado inteligentes (`←`, `→`, `Esc`).
 
 ### 💬 Envio Automático por WhatsApp & Integração Chatwoot
 Disparo automatizado de mensagens e tokens de validação digital para o paciente/responsável via API do Chatwoot (ou provedores AstraCalls/Custom). O sistema possui tratamento inteligente de DDD, variação do 9º dígito e modal de fallback elegante para WhatsApp Web em caso de falha de conexão.
@@ -17,8 +20,8 @@ Validação de presença via QR Code dinâmico com rastreamento de geolocalizaç
 ### 🛡️ Auditoria Digital Forense
 Motor de auditoria imutável (append-only) que registra cada interação no sistema. Inclui histórico de modificações (Value Diff), captura de IP, User-Agent e carimbo de tempo rigoroso para compliance administrativo total.
 
-### 🏥 Gestão Multi-Clínica & Rede Integrada
-Arquitetura que permite o vínculo de pacientes a múltiplas unidades simultaneamente, ideal para redes municipais de saúde. Gestão centralizada de profissionais e procedimentos com políticas de Row-Level Security (RLS) granulares.
+### 🏥 Gestão Multi-Clínica & Rede Integrada (Matriz & Filiais)
+Arquitetura que permite o vínculo de pacientes a múltiplas unidades simultaneamente, ideal para redes municipais de saúde. Gestão centralizada de profissionais e procedimentos com políticas de Row-Level Security (RLS) granulares e preservação estrita da unidade de atendimento (Matriz/Filial) no lançamento e edição de guias.
 
 ### 📑 Conformidade SUS & Exportação
 Geração automatizada de fichas de frequência e documentos oficiais do SUS em PDF com calibração milimétrica, garantindo agilidade no faturamento e redução de glosas.

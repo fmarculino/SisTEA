@@ -2,6 +2,34 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.9.0] - 2026-09-02
+
+Esta versão traz melhorias substanciais em **usabilidade, navegação contextual, precisão de relatórios e integridade operacional**, incluindo a **Barra de Navegação entre Atendimentos com Retenção de Filtros**, **correção definitiva de vínculo de unidades Matriz/Filial**, **eliminação de inconsistências de fuso horário em relatórios**, **busca incremental multi-termos** e **justificativa de faltas**.
+
+### 🧭 Navegação Contextual e Retenção de Filtros em Atendimentos
+- **Barra de Navegação Superior (`AttendanceNavToolbar.tsx`):** Exibição de barra flutuante com design moderno no topo da tela de edição de atendimentos (`/dashboard/attendances/[id]/edit`).
+- **Retenção Integral de Filtros:** Todos os parâmetros de consulta (`q`, `professional`, `procedure`, `clinic`, `show_unvalidated`, `page`) são repassados e preservados na URL ao abrir uma guia.
+- **Botão "Voltar para Atendimentos":** Retorna à listagem com a pesquisa e paginação exatamente no mesmo estado anterior. O botão "Descartar" do formulário também adota o retorno inteligente.
+- **Transição Rápida entre Atendimentos do Filtro:** Botões **`◀ Anterior`** e **`Próximo ▶`** para alternar instantaneamente entre as guias resultantes da pesquisa sem voltar à listagem, com contador posicional em tempo real (ex: `2 / 3 no filtro`).
+- **Atalhos de Teclado:** Suporte a teclas direcionais `←` (Anterior), `→` (Próximo) e `Esc` (Voltar à lista), com desativação automática durante digitação em campos de entrada.
+- **Mecanismo de Consulta Otimizado (`navigation.ts`):** Função de cálculo no servidor Next.js que consulta unicamente os IDs correspondentes aos filtros aplicados, garantindo resposta instantânea.
+
+### 🏢 Correção e Blindagem de Unidades (Matriz vs. Filial)
+- **Preservação da Filial no Formulário:** Correção no [AttendanceForm.tsx](file:///c:/Users/ferna/projetos/SisTEA/src/app/dashboard/attendances/AttendanceForm.tsx) para priorizar estritamente `initialData.clinic_id`, impedindo que o `userClinicId` do operador sobrescreva a unidade filial selecionada ao carregar a tela de edição.
+- **Blindagem no Backend:** Atualização de `updateAttendanceAction` em [actions.ts](file:///c:/Users/ferna/projetos/SisTEA/src/app/dashboard/attendances/actions.ts) para travar a clínica original do atendimento (`currentAttendance.clinic_id`), impedindo transferências indevidas entre unidades.
+
+### 🕒 Correção de Fuso Horário em Relatórios e Impressões (Timezone Shift)
+- **Utilitário `formatDateBR`:** Criação de função em `src/utils/format.ts` para formatação de strings `YYYY-MM-DD` em `DD/MM/YYYY` via manipulação direta de texto, 100% imune a desvios de UTC e fuso horário do navegador (UTC-3).
+- **Relatórios Web e Impressão Oficial:** Atualização em `ReportsClient.tsx` e `PrintReportClient.tsx`, garantindo que a data real de cada sessão (ex: 01/09 ou 25/08) seja exibida com total exatidão em tela, no Excel e no documento impresso.
+
+### 🔍 Busca Incremental Multi-Termos (AND Logic)
+- **Pesquisa por Nome e Sobrenome:** Refinamento dos filtros de busca em todas as listagens (`attendances`, `patients`, `professionals`, `procedures`, `clinics`, `users`, `specialties`, `service-classifications`, `cid`, `audit`), dividindo termos compostos e exigindo a presença de todas as palavras na consulta.
+
+### 📝 Justificativa de Faltas de Pacientes
+- **Registro de Motivo de Ausência:** Adição de campo de texto para justificativa no registro de frequência quando o status de uma sessão for alterado para `Faltou`, proporcionando transparência e rastreabilidade para auditoria.
+
+---
+
 ## [1.8.0] - 2026-08-26
 
 Esta versão adiciona o **Compartilhamento Flexível de Contratos entre Clínicas Matriz e Filiais**, permitindo que uma clínica matriz e suas filiais compartilhem o mesmo contrato (com consumo unificado de saldo financeiro e cotas físicas de procedimentos/serviços) ou operem com contratos separados e independentes, viabilizando o lançamento direto de atendimentos na unidade física correta.
