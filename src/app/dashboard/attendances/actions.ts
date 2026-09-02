@@ -469,6 +469,7 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
 
   const attendanceData = {
     ...rawAttendanceData,
+    clinic_id: currentAttendance.clinic_id, // Preserva rigorosamente a clínica (Matriz ou Filial) onde o atendimento foi registrado
     value_applied: finalValue,
     authorization_date: rawAttendanceData.authorization_date || null,
     status: realizedSessions > 0 ? 'Realizada' : 'Pendente',

@@ -184,9 +184,9 @@ export function AttendanceForm({
     }
   }
 
-  const defaultClinicId = userRole === 'SMS_ADMIN'
-    ? (initialData?.clinic_id || '')
-    : (userClinicId || '')
+  const defaultClinicId = initialData?.clinic_id || (userRole === 'SMS_ADMIN'
+    ? ''
+    : (userClinicId || ''))
 
   const {
     register,
@@ -224,11 +224,11 @@ export function AttendanceForm({
     if (initialData) {
       reset({
         ...initialData,
-        clinic_id: defaultClinicId,
+        clinic_id: initialData.clinic_id || defaultClinicId,
         attendance_date: initialData.attendance_date || new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(new Date()),
       });
     }
-  }, [initialData, reset, defaultClinicId]);
+  }, [initialData, reset, defaultClinicId, systemTimezone]);
 
   const { fields: sessionFields, append, remove } = useFieldArray({
     control,
