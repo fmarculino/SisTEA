@@ -1448,26 +1448,42 @@ export function AttendanceForm({
                       )}
                     </div>
 
-                  {(watch(`sessions.${index}.status` as any) === 'Glosado' || watch(`sessions.${index}.status` as any) === 'Pendente') && (
+                  {(watch(`sessions.${index}.status` as any) === 'Glosado' || watch(`sessions.${index}.status` as any) === 'Pendente' || watch(`sessions.${index}.status` as any) === 'Faltou') && (
                     <div className={`sm:col-span-4 mt-2 sm:mt-0 transition-all animate-in fade-in slide-in-from-left-2`}>
-                      <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ml-1 opacity-80 ${watch(`sessions.${index}.status` as any) === 'Glosado' ? 'text-rose-500' : 'text-amber-600'
+                      <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ml-1 opacity-80 ${
+                        watch(`sessions.${index}.status` as any) === 'Glosado' 
+                          ? 'text-rose-500' 
+                          : watch(`sessions.${index}.status` as any) === 'Faltou'
+                            ? 'text-rose-500 dark:text-rose-400'
+                            : 'text-amber-600'
                         }`}>
-                        {watch(`sessions.${index}.status` as any) === 'Glosado' ? 'Motivo da Glosa' : 'Motivo da Pendência'}
+                        {watch(`sessions.${index}.status` as any) === 'Glosado' 
+                          ? 'Motivo da Glosa' 
+                          : watch(`sessions.${index}.status` as any) === 'Faltou'
+                            ? 'Justificativa / Motivo da Falta'
+                            : 'Motivo da Pendência'}
                       </label>
                       <input
                         {...register(`sessions.${index}.justification` as any)}
                         readOnly={isCompetenceLocked}
-                        className={`block w-full rounded-lg shadow-sm sm:text-xs px-3 py-2 border transition-all ${watch(`sessions.${index}.status` as any) === 'Glosado'
+                        className={`block w-full rounded-lg shadow-sm sm:text-xs px-3 py-2 border transition-all ${
+                          watch(`sessions.${index}.status` as any) === 'Glosado' || watch(`sessions.${index}.status` as any) === 'Faltou'
                             ? 'border-rose-200 dark:border-rose-900/50 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-500/5'
                             : 'border-amber-200 dark:border-amber-900/50 focus:border-amber-500 focus:ring-amber-500/20 bg-amber-500/5'
                           }`}
-                        placeholder={watch(`sessions.${index}.status` as any) === 'Glosado' ? "Descreva o motivo da glosa..." : "Descreva o motivo da pendência..."}
+                        placeholder={
+                          watch(`sessions.${index}.status` as any) === 'Glosado' 
+                            ? "Descreva o motivo da glosa..." 
+                            : watch(`sessions.${index}.status` as any) === 'Faltou'
+                              ? "Informe a justificativa ou motivo da ausência do paciente..."
+                              : "Descreva o motivo da pendência..."
+                        }
                       />
                     </div>
                   )}
 
                   {/* Action buttons area */}
-                  {(watch(`sessions.${index}.status` as any) === 'Realizada' || watch(`sessions.${index}.status` as any) === 'Glosado') ? (
+                  {(watch(`sessions.${index}.status` as any) === 'Realizada' || watch(`sessions.${index}.status` as any) === 'Glosado' || watch(`sessions.${index}.status` as any) === 'Faltou') ? (
                     <div className="sm:col-span-1 flex items-end justify-end">
                       {!isCompetenceLocked && !watch(`sessions.${index}.id`) && (
                         <button
