@@ -28,7 +28,8 @@ export function AttendanceForm({
   competenceStatus,
   clinicProcedurePrices = [],
   contractClinics = [],
-  initialAttachments = []
+  initialAttachments = [],
+  backUrl
 }: {
   initialData?: Partial<AttendanceFormData>;
   id?: string;
@@ -43,6 +44,7 @@ export function AttendanceForm({
   clinicProcedurePrices?: any[];
   contractClinics?: { contract_id: string; clinic_id: string }[];
   initialAttachments?: any[];
+  backUrl?: string;
 }) {
   const router = useRouter()
   const [errorMsg, setErrorMsg] = useState('')
@@ -1533,7 +1535,7 @@ export function AttendanceForm({
         <div className="flex items-center justify-end space-x-4 border-t border-border/30 pt-8 mt-10">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => backUrl ? router.push(backUrl) : router.back()}
             className="rounded-xl border border-border bg-background px-6 py-2.5 text-sm font-bold text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground transition-all active:scale-95"
           >
             Descartar

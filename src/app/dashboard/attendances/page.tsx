@@ -193,6 +193,16 @@ export default async function AttendancesPage({
     console.error('Erro ao buscar atendimentos:', fetchError)
   }
 
+  const currentParams = new URLSearchParams()
+  if (queryParams.q) currentParams.set('q', queryParams.q)
+  if (queryParams.professional && queryParams.professional !== 'all') currentParams.set('professional', queryParams.professional)
+  if (queryParams.procedure && queryParams.procedure !== 'all') currentParams.set('procedure', queryParams.procedure)
+  if (queryParams.clinic && queryParams.clinic !== 'all') currentParams.set('clinic', queryParams.clinic)
+  if (queryParams.show_unvalidated === 'false') currentParams.set('show_unvalidated', 'false')
+  if (queryParams.page && queryParams.page !== '1') currentParams.set('page', queryParams.page)
+  const queryString = currentParams.toString()
+  const editQuerySuffix = queryString ? `?${queryString}` : ''
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -249,7 +259,7 @@ export default async function AttendancesPage({
                   <tr key={att.id} className="group hover:bg-muted/20 transition-colors duration-200 relative">
                     <td className="whitespace-nowrap py-5 pl-6 pr-3 text-sm font-semibold text-foreground">
                       <Link
-                        href={`/dashboard/attendances/${att.id}/edit`}
+                        href={`/dashboard/attendances/${att.id}/edit${editQuerySuffix}`}
                         className="absolute inset-0 z-0"
                       />
                       <span className="relative z-10">
@@ -284,7 +294,7 @@ export default async function AttendancesPage({
                     <td className="whitespace-nowrap py-5 pl-3 pr-6 text-right text-sm font-medium relative z-10">
                       <div className="flex items-center justify-end gap-2">
                         <Link
-                          href={`/dashboard/attendances/${att.id}/edit`}
+                          href={`/dashboard/attendances/${att.id}/edit${editQuerySuffix}`}
                           className="text-muted-foreground hover:text-primary hover:bg-primary/10 p-2 rounded-lg transition-all"
                           title="Editar Atendimento"
                         >

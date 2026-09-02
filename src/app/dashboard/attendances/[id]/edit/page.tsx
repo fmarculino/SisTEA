@@ -1,28 +1,52 @@
 import { createClient } from '@/utils/supabase/server'
 import { getUserProfile } from '@/lib/dal'
 import { AttendanceForm } from '../../AttendanceForm'
+import { AttendanceNavToolbar } from '../../AttendanceNavToolbar'
+import { getAttendanceNavigation } from '../../navigation'
 import { notFound } from 'next/navigation'
 import { getCompetenceForDate } from '@/utils/competence'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export default async function EditAttendancePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditAttendancePage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ id: string }>,
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const profile = await getUserProfile()
   const supabase = await createClient()
   const { id } = await params
+  const rawSearchParams = searchParams ? await searchParams : {}
 
-  const { data: attendance } = await supabase
-    .from('attendances')
-    .select(`
-      *, 
-      sessions:attendance_sessions(*),
-      patient:patients(id, name, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color),
-      professional:professionals(id, name, cns, professional_specialties(specialty_id, specialties(name, cbo))),
-      procedure:procedures(id, name, code, valor_total, procedure_specialties(specialty_id))
-    `)
-    .eq('id', id)
-    .single()
+  const queryParams = {
+    q: typeof rawSearchParams.q === 'string' ? rawSearchParams.q : undefined,
+    professional: typeof rawSearchParams.professional === 'string' ? rawSearchParams.professional : undefined,
+    procedure: typeof rawSearchParams.procedure === 'string' ? rawSearchParams.procedure : undefined,
+    clinic: typeof rawSearchParams.clinic === 'string' ? rawSearchParams.clinic : undefined,
+    show_unvalidated: typeof rawSearchParams.show_unvalidated === 'string' ? rawSearchParams.show_unvalidated : undefined,
+    page: typeof rawSearchParams.page === 'string' ? rawSearchParams.page : undefined,
+  }
+
+  const [
+    { data: attendance },
+    navigation
+  ] = await Promise.all([
+    supabase
+      .from('attendances')
+      .select(`
+        *, 
+        sessions:attendance_sessions(*),
+        patient:patients(id, name, cns_patient, birth_date, gender, mother_name, phone, address, city, cep, race_color),
+        professional:professionals(id, name, cns, professional_specialties(specialty_id, specialties(name, cbo))),
+        procedure:procedures(id, name, code, valor_total, procedure_specialties(specialty_id))
+      `)
+      .eq('id', id)
+      .single(),
+    getAttendanceNavigation(supabase, id, queryParams)
+  ])
   
   if (!attendance) notFound()
   
@@ -153,14 +177,19 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
-          Editar Atendimento
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Atualize os dados do atendimento selecionado.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold leading-7 text-foreground sm:truncate sm:text-3xl sm:tracking-tight">
+            Editar Atendimento
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Atualize os dados do atendimento selecionado.
+          </p>
+        </div>
       </div>
+
+      <AttendanceNavToolbar navigation={navigation} />
+
       <AttendanceForm 
         id={attendance.id}
         initialData={attendance}
@@ -175,6 +204,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
         clinicProcedurePrices={clinicProcedurePrices || []}
         contractClinics={contractClinics || []}
         initialAttachments={attachments || []}
+        backUrl={navigation.backUrl}
       />
     </div>
   )
