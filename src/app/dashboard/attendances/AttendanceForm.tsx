@@ -27,6 +27,7 @@ export function AttendanceForm({
   systemTimezone,
   competenceStatus,
   clinicProcedurePrices = [],
+  contractClinics = [],
   initialAttachments = []
 }: {
   initialData?: Partial<AttendanceFormData>;
@@ -40,6 +41,7 @@ export function AttendanceForm({
   systemTimezone: string;
   competenceStatus?: string;
   clinicProcedurePrices?: any[];
+  contractClinics?: { contract_id: string; clinic_id: string }[];
   initialAttachments?: any[];
 }) {
   const router = useRouter()
@@ -278,6 +280,50 @@ export function AttendanceForm({
   const selectedClinicId = watch('clinic_id')
   const selectedAttendanceDate = watch('attendance_date')
 
+  const currentClinic = useMemo(() => {
+    return clinics?.find(c => c.id === selectedClinicId)
+  }, [clinics, selectedClinicId])
+
+  // IDs de todas as clínicas do grupo (Matriz + todas as Filiais vinculadas)
+  const groupClinicIds = useMemo(() => {
+    if (!selectedClinicId || !clinics) return []
+    const matrixId = currentClinic?.parent_clinic_id || selectedClinicId
+    const filiais = clinics.filter(c => c.parent_clinic_id === matrixId).map(c => c.id)
+    return [matrixId, ...filiais]
+  }, [selectedClinicId, currentClinic, clinics])
+
+  // IDs de todos os contratos que cobrem a clínica selecionada (diretos ou compartilhados via Matriz/contract_clinics)
+  const coveringContractIds = useMemo(() => {
+    if (!selectedClinicId) return []
+    const directContracts = contractClinics?.filter(cc => cc.clinic_id === selectedClinicId).map(cc => cc.contract_id) || []
+    const parentContracts = currentClinic?.parent_clinic_id
+      ? (contractClinics?.filter(cc => cc.clinic_id === currentClinic.parent_clinic_id).map(cc => cc.contract_id) || [])
+      : []
+    return Array.from(new Set([...directContracts, ...parentContracts]))
+  }, [selectedClinicId, currentClinic, contractClinics])
+
+  // Helper para localizar o preço/item contratual ativo e vigente do procedimento para a clínica
+  const findEffectivePrice = useMemo(() => {
+    return (procedureId: string) => {
+      if (!selectedClinicId) return null
+      return clinicProcedurePrices.find(price => {
+        if (price.procedure_id !== procedureId || !price.active) return false
+
+        const isClinicMatch = price.clinic_id === selectedClinicId ||
+          (price.contract_id && coveringContractIds.includes(price.contract_id)) ||
+          (currentClinic?.parent_clinic_id && price.clinic_id === currentClinic.parent_clinic_id)
+
+        if (!isClinicMatch) return false
+
+        if (selectedAttendanceDate) {
+          if (selectedAttendanceDate < price.valid_from) return false
+          if (price.valid_to && selectedAttendanceDate > price.valid_to) return false
+        }
+        return true
+      }) || null
+    }
+  }, [selectedClinicId, coveringContractIds, currentClinic, clinicProcedurePrices, selectedAttendanceDate])
+
   // Filter procedures based on professional specialties AND patient age AND clinic contract
   const filteredProcedures = useMemo(() => {
     return selectedProfessionalId
@@ -302,23 +348,10 @@ export function AttendanceForm({
           if (proc.max_age !== null && proc.max_age !== undefined && patientAge > proc.max_age) return false
         }
 
-        // 3. Contract Filter (Governança de Vínculos Contratuais de Clínicas)
+        // 3. Contract Filter (Governança de Vínculos Contratuais de Clínicas diretas ou filiais)
         if (selectedClinicId) {
-          const hasContract = clinicProcedurePrices.some(price => {
-            if (price.clinic_id !== selectedClinicId || price.procedure_id !== proc.id || !price.active) return false
-
-            // Se houver datas de vigência, validar contra a data do atendimento
-            if (selectedAttendanceDate) {
-              if (selectedAttendanceDate < price.valid_from) return false
-
-              if (price.valid_to) {
-                if (selectedAttendanceDate > price.valid_to) return false
-              }
-            }
-            return true
-          })
-
-          if (!hasContract) return false
+          const contractPrice = findEffectivePrice(proc.id)
+          if (!contractPrice) return false
         }
 
         return true
@@ -331,8 +364,7 @@ export function AttendanceForm({
     professionals,
     patientAge,
     selectedClinicId,
-    clinicProcedurePrices,
-    selectedAttendanceDate
+    findEffectivePrice
   ])
 
   // Filter CIDs based on selected procedure
@@ -387,16 +419,7 @@ export function AttendanceForm({
           // Procurar contrato correspondente para precificação
           let unitPrice = Number(proc.valor_total || 0)
           if (selectedClinicId) {
-            const contract = clinicProcedurePrices.find(price => {
-              if (price.clinic_id !== selectedClinicId || price.procedure_id !== selectedProcedureId || !price.active) return false
-              if (selectedAttendanceDate) {
-                if (selectedAttendanceDate < price.valid_from) return false
-                if (price.valid_to) {
-                  if (selectedAttendanceDate > price.valid_to) return false
-                }
-              }
-              return true
-            })
+            const contract = findEffectivePrice(selectedProcedureId)
             if (contract) {
               unitPrice = Number(contract.valor_total || 0)
             }
@@ -406,7 +429,7 @@ export function AttendanceForm({
         }
       }
     }
-  }, [selectedProcedureId, sessions, procedures, setValue, selectedClinicId, selectedAttendanceDate, clinicProcedurePrices])
+  }, [selectedProcedureId, sessions, procedures, setValue, selectedClinicId, findEffectivePrice])
 
   // AUTO-POPULATE CBO based on Procedure Specialty Intersection
   useEffect(() => {
@@ -467,19 +490,7 @@ export function AttendanceForm({
 
   // Obter o contrato/preço correspondente ao procedimento selecionado para exibir informações de saldo
   const selectedProcedurePrice = selectedProcedureId && selectedClinicId
-    ? clinicProcedurePrices.find(price => {
-      if (price.clinic_id !== selectedClinicId || price.procedure_id !== selectedProcedureId || !price.active) return false
-      if (selectedAttendanceDate) {
-        const attDate = new Date(selectedAttendanceDate)
-        const fromDate = new Date(price.valid_from)
-        if (attDate < fromDate) return false
-        if (price.valid_to) {
-          const toDate = new Date(price.valid_to)
-          if (attDate > toDate) return false
-        }
-      }
-      return true
-    })
+    ? findEffectivePrice(selectedProcedureId)
     : null
 
 
@@ -569,17 +580,17 @@ export function AttendanceForm({
     }
   }, [errors]);
 
-  // Filter patients and professionals by selected clinic
+  // Filter patients and professionals by selected clinic and its group (Matriz/Filiais)
   const filteredPatients = selectedClinicId
     ? patients.filter(p =>
-      p.clinic_id === selectedClinicId ||
-      (p.patient_clinics && p.patient_clinics.some((pc: any) => pc.clinic_id === selectedClinicId))
+      groupClinicIds.includes(p.clinic_id) ||
+      (p.patient_clinics && p.patient_clinics.some((pc: any) => groupClinicIds.includes(pc.clinic_id)))
     )
     : patients
 
   const filteredProfessionals = selectedClinicId
     ? professionals.filter(p =>
-      p.professional_clinics?.some((pc: any) => pc.clinic_id === selectedClinicId)
+      p.professional_clinics?.some((pc: any) => groupClinicIds.includes(pc.clinic_id))
     )
     : professionals
 
@@ -872,19 +883,7 @@ export function AttendanceForm({
                       // Tentar achar contrato correspondente para exibição do valor unitário real
                       let displayValue = p.valor_total
                       if (selectedClinicId) {
-                        const contract = clinicProcedurePrices.find(price => {
-                          if (price.clinic_id !== selectedClinicId || price.procedure_id !== p.id || !price.active) return false
-                          if (selectedAttendanceDate) {
-                            const attDate = new Date(selectedAttendanceDate)
-                            const fromDate = new Date(price.valid_from)
-                            if (attDate < fromDate) return false
-                            if (price.valid_to) {
-                              const toDate = new Date(price.valid_to)
-                              if (attDate > toDate) return false
-                            }
-                          }
-                          return true
-                        })
+                        const contract = findEffectivePrice(p.id)
                         if (contract) {
                           displayValue = contract.valor_total
                         }
@@ -1042,6 +1041,8 @@ export function AttendanceForm({
             <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data da Guia/Atendimento *</label>
             <input
               type="date"
+              min="2020-01-01"
+              max="2035-12-31"
               {...register('attendance_date')}
               readOnly={isMetadataLocked}
               className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
@@ -1064,6 +1065,8 @@ export function AttendanceForm({
             <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Data de Autorização</label>
             <input
               type="date"
+              min="2020-01-01"
+              max="2035-12-31"
               {...register('authorization_date')}
               readOnly={isMetadataLocked}
               className={`mt-1 block w-full rounded-xl border-border/60 shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm px-4 py-2 border bg-background transition-all ${isMetadataLocked ? 'cursor-not-allowed opacity-70 bg-muted' : ''}`}
@@ -1274,6 +1277,8 @@ export function AttendanceForm({
                       <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Data</label>
                       <input
                         type="date"
+                        min="2020-01-01"
+                        max="2035-12-31"
                         {...register(`sessions.${index}.session_date` as const)}
                         readOnly={isCompetenceLocked || isSessionLockedForClinic}
                         className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || isSessionLockedForClinic) ? 'opacity-70 bg-muted cursor-not-allowed' : ''

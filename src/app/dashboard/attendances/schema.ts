@@ -1,8 +1,19 @@
 import { z } from 'zod'
 
+const dateRegex = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
+
+const isYearValid = (dateStr?: string | null) => {
+  if (!dateStr) return true
+  const year = parseInt(dateStr.split('-')[0], 10)
+  return !isNaN(year) && year >= 2020 && year <= 2035
+}
+
 export const attendanceSessionSchema = z.object({
   id: z.string().uuid().optional(),
-  session_date: z.string().min(1, 'Data é obrigatória'),
+  session_date: z.string()
+    .min(1, 'Data é obrigatória')
+    .regex(dateRegex, 'Data da sessão inválida (formato esperado: AAAA-MM-DD)')
+    .refine(isYearValid, { message: 'O ano da sessão deve estar entre 2020 e 2035' }),
   start_time: z.string().min(1, 'Hora inicial é obrigatória'),
   end_time: z.string().min(1, 'Hora final é obrigatória'),
   status: z.enum(['Realizada', 'Pendente', 'Glosado', 'Não Realizado', 'Faltou']),
@@ -21,11 +32,18 @@ export const attendanceSchema = z.object({
   professional_id: z.string().uuid('Profissional é obrigatório'),
   procedure_id: z.string().uuid('Procedimento é obrigatório'),
   clinic_id: z.string().uuid('Clínica é obrigatória'),
-  attendance_date: z.string().min(1, 'Data de atendimento é obrigatória'),
+  attendance_date: z.string()
+    .min(1, 'Data de atendimento é obrigatória')
+    .regex(dateRegex, 'Data de atendimento inválida (formato esperado: AAAA-MM-DD)')
+    .refine(isYearValid, { message: 'O ano do atendimento deve estar entre 2020 e 2035' }),
   
   // Novos campos do cabeçalho da guia
   auth_number: z.string().optional().nullable(),
-  authorization_date: z.string().optional().nullable(),
+  authorization_date: z.string()
+    .optional()
+    .nullable()
+    .refine((val) => !val || dateRegex.test(val), { message: 'Data de autorização inválida' })
+    .refine(isYearValid, { message: 'O ano de autorização deve estar entre 2020 e 2035' }),
   authorized_quantity: z.coerce.number().min(1, 'Quantidade deve ser maior que zero').default(20),
   cid: z.string().optional().nullable(),
   service_classification_id: z.string().optional().nullable().transform(val => (val === '' ? null : val)),

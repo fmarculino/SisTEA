@@ -2,6 +2,29 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.8.0] - 2026-08-26
+
+Esta versão adiciona o **Compartilhamento Flexível de Contratos entre Clínicas Matriz e Filiais**, permitindo que uma clínica matriz e suas filiais compartilhem o mesmo contrato (com consumo unificado de saldo financeiro e cotas físicas de procedimentos/serviços) ou operem com contratos separados e independentes, viabilizando o lançamento direto de atendimentos na unidade física correta.
+
+### 🏢 Vínculo e Compartilhamento Flexível de Contratos
+- **Tabela N:N `contract_clinics`:** Criação da tabela de junção para mapear quais clínicas (Matriz e Filiais) estão cobertas por cada contrato municipal/SUS, com políticas RLS para visibilidade segura por grupo.
+- **Seletor de Unidades no Cadastro de Contratos:** Interface interativa em `ContractForm.tsx` com checkboxes para selecionar e sincronizar quais filiais vinculadas compartilham o contrato da matriz.
+- **Listagem Informativa de Contratos:** Exibição de badges e etiquetas no painel de contratos (`/dashboard/contracts`) discriminando as filiais cobertas por cada contrato (`+ X Filiais Vinculadas`).
+- **Validação de Vigências de Procedimentos:** Verificação inteligente de conflito de datas de preços e aditivos contratuais abrangendo todas as unidades vinculadas ao contrato.
+
+### 🏥 Resolução Efetiva de Contratos e Lançamento de Atendimentos
+- **Utilitário Centralizado de Resolução:** Criação de `src/lib/contracts.ts` com as funções `getEffectiveContractPrice` e `getEffectiveContractForClinic` para resolução de preços, itens e contratos vigentes para qualquer unidade (direta ou filial).
+- **Lançamento Direto na Filial:** Ao selecionar uma filial em `/dashboard/attendances/new` ou edição, o formulário carrega os procedimentos pactuados no contrato compartilhado, seus respectivos valores e o saldo/cotas restantes em tempo real.
+- **Acesso Unificado a Profissionais e Pacientes:** Permite selecionar profissionais e pacientes cadastrados na matriz ou filial do mesmo grupo.
+- **Validações de Backend e Validação Digital:** Atualização de `createAttendanceAction`, `updateAttendanceAction` e da rota `/api/validate-session` para validar preços e contratos compartilhados sem disparar bloqueios indevidos.
+
+### 📊 Competências, Dedução Atômica de Saldos e Reestorno
+- **Dedução Consolidada no Fechamento:** No fechamento e envio ao Ministério da Saúde (`closeCompetenceAction`), o sistema deduz os saldos financeiros e cotas do contrato compartilhado de forma atômica (`deduct_contract_balances`).
+- **Reestorno Consistente na Reabertura:** Na reabertura de competência (`reopenCompetenceAction`), o reestorno (`refund_contract_balances`) é aplicado com exatidão sobre o contrato compartilhado.
+- **Migração de Banco de Dados:** Criação e execução da migração `20260826000000_add_contract_clinics_and_shared_contract_support.sql`, garantindo 100% de retrocompatibilidade com contratos legados.
+
+---
+
 ## [1.7.0] - 2026-08-25
 
 Esta versão adiciona o **Relatório Hierárquico de Produção por Profissional e Paciente**, com totalizações em cascata, número de autorização (APAC), exportação avançada para Excel em todos os relatórios e calibração de impressão A4.

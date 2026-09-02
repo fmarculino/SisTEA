@@ -20,7 +20,7 @@ export interface CompetenceDateRange {
  * Se a data for 26/07/2026, a competência é 08/2026.
  */
 export function getCompetenceForDate(dateStr: string, competenceEndDay: number = 31): CompetenceInfo {
-  const parts = dateStr.split('-')
+  const parts = dateStr ? dateStr.split('-') : []
   if (parts.length < 3) {
     const now = new Date()
     return {
@@ -30,9 +30,17 @@ export function getCompetenceForDate(dateStr: string, competenceEndDay: number =
     }
   }
 
-  const yearNum = parseInt(parts[0], 10)
-  const monthNum = parseInt(parts[1], 10)
+  let yearNum = parseInt(parts[0], 10)
+  let monthNum = parseInt(parts[1], 10)
   const dayNum = parseInt(parts[2], 10)
+
+  // Sanitização de sanidade para datas corrompidas
+  if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2099) {
+    yearNum = new Date().getFullYear()
+  }
+  if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+    monthNum = new Date().getMonth() + 1
+  }
 
   let calculatedMonth = monthNum
   let calculatedYear = yearNum

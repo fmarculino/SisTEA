@@ -9,6 +9,7 @@ import { buildValidationURL, generateValidationHMAC, isLinkExpired, verifyValida
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getCompetenceForDate } from '@/utils/competence'
+import { getEffectiveContractPrice } from '@/lib/contracts'
 
 async function validateProcedureQuantityLimit(
   supabase: any,
@@ -85,7 +86,9 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   const userAgent = headersList.get('user-agent') || 'unknown'
 
   const validatedFields = attendanceSchema.safeParse(data)
-  if (!validatedFields.success) return { error: 'Validação falhou' }
+  if (!validatedFields.success) {
+    return { error: validatedFields.error.issues[0]?.message || 'Validação falhou' }
+  }
 
   const { sessions, ...rawAttendanceData } = validatedFields.data
 
@@ -157,18 +160,13 @@ export async function createAttendanceAction(data: AttendanceFormData) {
   )
   if (qtyLimitError) return qtyLimitError
 
-  // --- FETCH PROCEDURE VALUE (Historical Contract Snapshot) ---
-  const { data: contractPrice } = await supabase
-    .from('clinic_procedure_prices')
-    .select('valor_total')
-    .eq('clinic_id', rawAttendanceData.clinic_id)
-    .eq('procedure_id', rawAttendanceData.procedure_id)
-    .eq('active', true)
-    .lte('valid_from', rawAttendanceData.attendance_date)
-    .or(`valid_to.is.null,valid_to.gte.${rawAttendanceData.attendance_date}`)
-    .order('valid_from', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  // --- FETCH PROCEDURE VALUE (Historical / Shared Contract Snapshot) ---
+  const contractPrice = await getEffectiveContractPrice(
+    supabase,
+    rawAttendanceData.clinic_id,
+    rawAttendanceData.procedure_id,
+    rawAttendanceData.attendance_date
+  )
 
   if (!contractPrice && !rawAttendanceData.is_historical_import) {
     return {
@@ -264,7 +262,9 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   const userAgent = headersList.get('user-agent') || 'unknown'
 
   const validatedFields = attendanceSchema.safeParse(data)
-  if (!validatedFields.success) return { error: 'Validação falhou' }
+  if (!validatedFields.success) {
+    return { error: validatedFields.error.issues[0]?.message || 'Validação falhou' }
+  }
 
   const { sessions, ...rawAttendanceData } = validatedFields.data
 
@@ -439,18 +439,13 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
   )
   if (qtyLimitError) return qtyLimitError
 
-  // --- FETCH PROCEDURE VALUE (Historical Contract Snapshot) ---
-  const { data: contractPrice } = await supabase
-    .from('clinic_procedure_prices')
-    .select('valor_total')
-    .eq('clinic_id', rawAttendanceData.clinic_id)
-    .eq('procedure_id', rawAttendanceData.procedure_id)
-    .eq('active', true)
-    .lte('valid_from', rawAttendanceData.attendance_date)
-    .or(`valid_to.is.null,valid_to.gte.${rawAttendanceData.attendance_date}`)
-    .order('valid_from', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  // --- FETCH PROCEDURE VALUE (Historical / Shared Contract Snapshot) ---
+  const contractPrice = await getEffectiveContractPrice(
+    supabase,
+    rawAttendanceData.clinic_id,
+    rawAttendanceData.procedure_id,
+    rawAttendanceData.attendance_date
+  )
 
   if (!contractPrice && !rawAttendanceData.is_historical_import) {
     return {
@@ -1003,17 +998,12 @@ export async function validateSessionAction(data: {
 
     const realizedCount = (allSessions || []).filter((s: any) => s.status === 'Realizada').length
 
-    const { data: contractPrice } = await supabase
-      .from('clinic_procedure_prices')
-      .select('valor_total')
-      .eq('clinic_id', att.clinic_id)
-      .eq('procedure_id', att.procedure_id)
-      .eq('active', true)
-      .lte('valid_from', att.attendance_date)
-      .or(`valid_to.is.null,valid_to.gte.${att.attendance_date}`)
-      .order('valid_from', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    const contractPrice = await getEffectiveContractPrice(
+      supabase,
+      att.clinic_id,
+      att.procedure_id,
+      att.attendance_date
+    )
 
     let unitValue = 0
     if (contractPrice) {

@@ -82,6 +82,7 @@ export default async function AttendancesPage({
   let selectFields = `
     id,
     attendance_date,
+    auth_number,
     value_applied,
     patient:patients(name),
     professional:professionals(name),
@@ -99,7 +100,7 @@ export default async function AttendancesPage({
     .from('attendances')
     .select(selectFields, { count: 'exact' })
 
-  // Apply Search Filter
+  // Apply Search Filter (Paciente, Profissional ou Nº da Guia)
   if (queryParams.q && queryParams.q.trim()) {
     const rawSearch = queryParams.q.trim()
     const terms = rawSearch.split(/\s+/).filter(Boolean)
@@ -147,7 +148,7 @@ export default async function AttendancesPage({
       ...(matchedProfessionalsByDoc?.map((p: any) => p.id) || [])
     ]))
 
-    const orConditions = []
+    const orConditions: string[] = []
     if (patientIds.length > 0) {
       orConditions.push(`patient_id.in.(${patientIds.map(id => `"${id}"`).join(',')})`)
     }
@@ -156,6 +157,8 @@ export default async function AttendancesPage({
     }
     if (cleanDigits.length >= 3) {
       orConditions.push(`auth_number.ilike."%${cleanDigits}%"`)
+    } else if (rawSearch.length >= 2) {
+      orConditions.push(`auth_number.ilike."%${rawSearch}%"`)
     }
 
     if (orConditions.length > 0) {
@@ -211,7 +214,7 @@ export default async function AttendancesPage({
       </div>
 
       <DataTableFilters 
-        placeholder="Pesquisar por paciente ou profissional..." 
+        placeholder="Pesquisar por paciente, profissional ou nº da guia..." 
         showStatus={false}
         extraFilters={extraFilters}
         checkboxFilter={{
@@ -253,8 +256,13 @@ export default async function AttendancesPage({
                         {format(new Date(att.attendance_date + 'T00:00:00'), 'dd/MM/yyyy')}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-5 text-sm font-medium text-foreground/90 max-w-[200px] truncate">
-                      {att.patient?.name || '-'}
+                    <td className="whitespace-nowrap px-3 py-5 text-sm font-medium text-foreground/90 max-w-[200px]">
+                      <div className="truncate">{att.patient?.name || '-'}</div>
+                      {att.auth_number && (
+                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                          Guia: <span className="text-foreground/80 font-medium">{att.auth_number}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-3 py-5 text-sm text-muted-foreground group-hover:text-foreground transition-colors max-w-[150px] truncate">
                       {att.professional?.name || '-'}

@@ -78,16 +78,18 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
     { data: settings },
     { data: clinicConfig },
     { data: clinicProcedurePrices },
-    { data: attachments }
+    { data: attachments },
+    { data: contractClinics }
   ] = await Promise.all([
     patientsQuery,
     professionalsQuery,
     supabase.from('procedures').select('id, name, code, active, valor_total, procedure_specialties(specialty_id), procedure_cid(cid_id, cid(code, name)), procedure_service_classifications(service_classifications(*))').order('name'),
-    supabase.from('clinics').select('id, name, cnes').order('name'),
+    supabase.from('clinics').select('id, name, cnes, parent_clinic_id').order('name'),
     supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single(),
     supabase.from('clinics').select('competence_end_day').eq('id', attendance.clinic_id).single(),
     supabase.from('clinic_procedure_prices').select('clinic_id, procedure_id, valor_total, valid_from, valid_to, active, contract_id, quantidade_contratada, quantidade_saldo').eq('active', true),
-    supabase.from('attendance_attachments').select('*').eq('attendance_id', id)
+    supabase.from('attendance_attachments').select('*').eq('attendance_id', id),
+    supabase.from('contract_clinics').select('contract_id, clinic_id')
   ])
 
   const systemTimezone = settings?.value || 'America/Sao_Paulo'
@@ -171,6 +173,7 @@ export default async function EditAttendancePage({ params }: { params: Promise<{
         systemTimezone={systemTimezone}
         competenceStatus={competenceStatus}
         clinicProcedurePrices={clinicProcedurePrices || []}
+        contractClinics={contractClinics || []}
         initialAttachments={attachments || []}
       />
     </div>

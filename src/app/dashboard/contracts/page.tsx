@@ -32,28 +32,38 @@ export default async function ContractsPage({
       clinic_id,
       active,
       clinic:clinics!inner(name),
+      contract_clinics(clinic_id, clinic:clinics(id, name, parent_clinic_id)),
       items:clinic_procedure_prices(id)
     `)
     .order('valid_from', { ascending: false })
 
-  const uniqueContracts = contracts?.map(c => ({
-    clinic_id: c.clinic_id,
-    contract_number: c.contract_number,
-    clinic_name: (c.clinic as any)?.name,
-    valid_from: c.valid_from,
-    valid_to: c.valid_to,
-    valor_total: Number(c.valor_total || 0),
-    valor_saldo: Number(c.valor_saldo || 0),
-    active: c.active,
-    items_count: c.items?.length || 0
-  })) || []
+  const uniqueContracts = contracts?.map(c => {
+    const coveredClinics = (c.contract_clinics as any[])?.map((cc: any) => cc.clinic).filter(Boolean) || []
+    const filiaisCovered = coveredClinics.filter((cl: any) => cl.id !== c.clinic_id)
+
+    return {
+      id: c.id,
+      clinic_id: c.clinic_id,
+      contract_number: c.contract_number,
+      clinic_name: (c.clinic as any)?.name,
+      covered_clinics: coveredClinics,
+      filiais_covered: filiaisCovered,
+      valid_from: c.valid_from,
+      valid_to: c.valid_to,
+      valor_total: Number(c.valor_total || 0),
+      valor_saldo: Number(c.valor_saldo || 0),
+      active: c.active,
+      items_count: c.items?.length || 0
+    }
+  }) || []
 
   const filteredContracts = uniqueContracts.filter(c => {
     if (!queryParams.q) return true
     const q = queryParams.q.toLowerCase()
     return (
       c.clinic_name?.toLowerCase().includes(q) ||
-      c.contract_number?.toLowerCase().includes(q)
+      c.contract_number?.toLowerCase().includes(q) ||
+      c.filiais_covered.some((f: any) => f.name?.toLowerCase().includes(q))
     )
   })
 
@@ -111,9 +121,21 @@ export default async function ContractsPage({
             {filteredContracts.map((contract) => (
               <tr key={`${contract.clinic_id}-${contract.contract_number}`} className="transition-colors group/row hover:bg-muted/30">
                 <td className="whitespace-nowrap py-6 pl-8 pr-3">
-                  <span className="text-sm font-bold text-foreground">
-                    {contract.clinic_name}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-foreground">
+                      {contract.clinic_name}
+                    </span>
+                    {contract.filiais_covered.length > 0 && (
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        <span className="inline-flex items-center rounded-lg bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-600 dark:text-amber-400 border border-amber-500/20 uppercase tracking-tight">
+                          + {contract.filiais_covered.length} {contract.filiais_covered.length === 1 ? 'Filial Vinculada' : 'Filiais Vinculadas'}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground" title={contract.filiais_covered.map((f: any) => f.name).join(', ')}>
+                          ({contract.filiais_covered.map((f: any) => f.name).join(', ')})
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="whitespace-nowrap px-3 py-6">
                   <span className="inline-flex items-center rounded-xl bg-primary/10 px-3 py-1 text-xs font-black text-primary border border-primary/20 uppercase tracking-widest">

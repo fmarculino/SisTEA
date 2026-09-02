@@ -19,10 +19,24 @@ export function ContractForm({
 
   // States for header
   const [clinicId, setClinicId] = useState(initialData?.clinic_id || '')
+  const [coveredClinicIds, setCoveredClinicIds] = useState<string[]>(initialData?.covered_clinic_ids || [])
   const [contractNumber, setContractNumber] = useState(initialData?.contract_number || '')
   const [validFrom, setValidFrom] = useState(initialData?.valid_from || '')
   const [validTo, setValidTo] = useState(initialData?.valid_to || '')
   const [valorTotal, setValorTotal] = useState<number>(initialData?.valor_total ? Number(initialData.valor_total) : 0)
+
+  // Encontrar a clínica titular selecionada e suas possíveis filiais
+  const selectedClinic = clinics.find(c => c.id === clinicId)
+  const filiais = clinics.filter(c => c.parent_clinic_id === clinicId)
+
+  // Se trocar de clínica e for nova criação, atualizar filiais cobertas por padrão se desejar ou limpar
+  useEffect(() => {
+    if (!initialData && clinicId) {
+      const childClinics = clinics.filter(c => c.parent_clinic_id === clinicId)
+      // Por padrão, se a matriz tiver filiais, sugere incluí-las
+      setCoveredClinicIds(childClinics.map(c => c.id))
+    }
+  }, [clinicId, clinics, initialData])
 
   const handleCurrencyChange = (value: string) => {
     const cleanValue = value.replace(/\D/g, '')
@@ -107,6 +121,7 @@ export function ContractForm({
         valid_to: i.active && i.valid_to ? i.valid_to : undefined,
         quantidade_contratada: Number(i.quantidade_contratada || 0)
       })),
+      covered_clinic_ids: coveredClinicIds,
       original_clinic_id: initialData?.clinic_id || undefined,
       original_contract_number: initialData?.contract_number || undefined
     }
@@ -123,7 +138,7 @@ export function ContractForm({
     <form onSubmit={handleSubmit} className="space-y-10">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/20 p-6 rounded-2xl border border-border/40">
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Clínica</label>
+          <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Clínica Titular (Matriz / Unidade Principal)</label>
           <select
             value={clinicId}
             onChange={(e) => setClinicId(e.target.value)}
@@ -133,7 +148,9 @@ export function ContractForm({
           >
             <option value="" disabled>Selecione a clínica</option>
             {clinics?.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>
+                {c.name} {c.parent_clinic_id ? '(Filial)' : ''}
+              </option>
             ))}
           </select>
         </div>
@@ -190,6 +207,51 @@ export function ContractForm({
             className="w-full flex h-12 rounded-2xl border border-input bg-background px-4 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 transition-all font-medium"
           />
         </div>
+
+        {/* Bloco de Unidades Abrangidas (Compartilhamento de Contrato com Filiais) */}
+        {filiais.length > 0 && (
+          <div className="md:col-span-3 bg-primary/5 p-5 rounded-2xl border border-primary/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+                  Unidades Abrangidas por este Contrato (Compartilhamento de Saldo e Serviços)
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Marque abaixo quais filiais vinculadas compartilharão este contrato. As filiais selecionadas poderão lançar atendimentos consumindo os mesmos procedimentos e o saldo global deste contrato.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div className="flex items-center space-x-3 text-sm bg-background/60 p-3.5 rounded-xl border border-border/40 opacity-90 cursor-not-allowed">
+                <input type="checkbox" checked disabled className="rounded border-border h-4 w-4" />
+                <span className="font-bold text-foreground truncate">{selectedClinic?.name}</span>
+                <span className="text-[10px] bg-primary/10 text-primary font-black px-2 py-0.5 rounded-full ml-auto shrink-0">Matriz</span>
+              </div>
+              {filiais.map(filial => {
+                const isChecked = coveredClinicIds.includes(filial.id)
+                return (
+                  <label key={filial.id} className={`flex items-center space-x-3 text-sm p-3.5 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-background border-primary/60 shadow-sm' : 'bg-background/40 border-border/50 opacity-70'}`}>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCoveredClinicIds([...coveredClinicIds, filial.id])
+                        } else {
+                          setCoveredClinicIds(coveredClinicIds.filter(id => id !== filial.id))
+                        }
+                      }}
+                      className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span className="font-semibold text-foreground truncate">{filial.name}</span>
+                    <span className="text-[10px] bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full ml-auto shrink-0">Filial</span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
