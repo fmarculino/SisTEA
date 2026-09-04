@@ -93,3 +93,14 @@ Este documento descreve as regras de integridade e validação implementadas no 
 ### BR-014: Blindagem de Unidade de Saúde (Clínica)
 *   **Regra**: O campo de Unidade de Saúde (Clínica) é estritamente imutável in qualquer registro de atendimento já existente (Modo de Edição), independente do status das sessões ou nível de acesso do usuário.
 *   **Objetivo**: Impedir a transferência indevida de produção entre clínicas diferentes, evitando fraudes de cota ou erros graves de alocação orçamentária.
+
+---
+
+## 8. Governança de Competências e Ciclos de Faturamento
+
+### BR-015: Governança Granular de Competências por Data de Sessão
+*   **Regra**: A apuração, geração de BPA e as travas de integridade de faturamento são regidas pela **data real de execução de cada sessão** (`attendance_sessions.session_date`) e pelo **dia de corte** configurado no cadastro de cada clínica (`clinics.competence_end_day`), e não pela data de abertura do cabeçalho da guia (`attendance_date`).
+*   **Cálculo do Ciclo**: Para clínicas com dia de corte $N$ ($1 \le N < 31$), uma sessão executada do dia $N+1$ em diante pertence ao mês civil subsequente (competência seguinte). Por exemplo, com corte no dia 24, a competência `08/2026` compreende o período de `25/07/2026 a 24/08/2026`, e a competência `09/2026` compreende de `25/08/2026 a 24/09/2026`.
+*   **Comportamento Operacional**: O encerramento (`FECHADA`) ou transmissão (`ENVIADA_MS`) de uma competência bloqueia estritamente a alteração ou exclusão das sessões pertencentes àquele ciclo encerrado. Novas sessões cuja data pertença a um ciclo em aberto podem ser adicionadas, editadas e validadas digitalmente (via QR Code) livremente na mesma guia de atendimento, garantindo a continuidade ininterrupta do tratamento do paciente.
+*   **Aplicação**: Validação granular em tempo real no frontend (`AttendanceForm.tsx`) e controle atômico em nível de backend (`actions.ts` e rotas de validação).
+

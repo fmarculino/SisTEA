@@ -130,9 +130,36 @@ export async function createAttendanceAction(data: AttendanceFormData) {
     return { error: `Limite de sessões excedido (${rawAttendanceData.authorized_quantity} autorizadas)` }
   }
 
+  // --- CLINIC COMPETENCE CONFIG ---
+  const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', rawAttendanceData.clinic_id).single()
+  const endDay = clinicConfig?.competence_end_day || 31
+
   // --- COMPETENCE CHECK ---
-  const compError = await checkCompetenceLock(supabase, rawAttendanceData.clinic_id, rawAttendanceData.attendance_date)
-  if (compError) return compError
+  if (sessions && sessions.length > 0) {
+    for (const session of sessions) {
+      const sessCompError = await checkCompetenceLock(supabase, rawAttendanceData.clinic_id, session.session_date)
+      if (sessCompError) {
+        return { error: `A frequência do dia ${session.session_date} não pode ser cadastrada: ${sessCompError.error}` }
+      }
+    }
+    // Se a data de autorização/guia digitada for de ciclo anterior já fechado, mas todas as sessões pertencerem ao ciclo aberto,
+    // alinha attendance_date para a data da primeira sessão para garantir consistência no banco
+    const headerComp = getCompetenceForDate(rawAttendanceData.attendance_date, endDay)
+    const { data: headerCompClosed } = await supabase
+      .from('competences')
+      .select('status')
+      .eq('clinic_id', rawAttendanceData.clinic_id)
+      .eq('month', headerComp.month)
+      .eq('year', headerComp.year)
+      .maybeSingle()
+
+    if (headerCompClosed && (headerCompClosed.status === 'FECHADA' || headerCompClosed.status === 'ENVIADA_MS')) {
+      rawAttendanceData.attendance_date = sessions[0].session_date
+    }
+  } else {
+    const compError = await checkCompetenceLock(supabase, rawAttendanceData.clinic_id, rawAttendanceData.attendance_date)
+    if (compError) return compError
+  }
 
   // --- CLINIC GROUP ACCESS CHECK ---
   const isClinicRole = ['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(profile?.role || '')
@@ -142,10 +169,6 @@ export async function createAttendanceAction(data: AttendanceFormData) {
       return { error: 'Você não tem permissão para criar atendimentos nesta clínica.' }
     }
   }
-
-  // --- CLINIC COMPETENCE CONFIG ---
-  const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', rawAttendanceData.clinic_id).single()
-  const endDay = clinicConfig?.competence_end_day || 31
 
   // --- QUANTITY LIMIT CHECK (BR-004) ---
   const qtyLimitError = await validateProcedureQuantityLimit(
@@ -418,13 +441,69 @@ export async function updateAttendanceAction(id: string, data: AttendanceFormDat
     }
   }
 
-  // --- COMPETENCE CHECK ---
-  const compError = await checkCompetenceLock(supabase, rawAttendanceData.clinic_id, rawAttendanceData.attendance_date)
-  if (compError) return compError
-
   // --- CLINIC COMPETENCE CONFIG ---
   const { data: clinicConfig } = await supabase.from('clinics').select('competence_end_day').eq('id', rawAttendanceData.clinic_id).single()
   const endDay = clinicConfig?.competence_end_day || 31
+
+  // --- COMPETENCE CHECK (Granular por Sessão) ---
+  const { data: closedCompetences } = await supabase
+    .from('competences')
+    .select('month, year, status')
+    .eq('clinic_id', rawAttendanceData.clinic_id)
+    .in('status', ['FECHADA', 'ENVIADA_MS'])
+
+  const closedMap = new Map((closedCompetences || []).map((c: any) => [`${c.month}/${c.year}`, c.status]))
+
+  // 1. Validar integridade das sessões já existentes no banco
+  for (const s of (dbSessions || [])) {
+    const sessComp = getCompetenceForDate(s.session_date, endDay)
+    const isClosed = closedMap.has(`${sessComp.month}/${sessComp.year}`)
+
+    if (isClosed) {
+      // Se a sessão pertence a competência fechada e o usuário tentou remover
+      if (sessions && !sessions.some(is => is.id === s.id)) {
+        return { error: `Não é possível remover a frequência do dia ${s.session_date}, pois a competência ${sessComp.monthYear} já foi encerrada.` }
+      }
+      // Se o usuário tentou alterar dados da sessão de competência fechada
+      const incoming = sessions?.find(is => is.id === s.id)
+      if (incoming && profile?.role !== 'SMS_ADMIN') {
+        const dateModified = incoming.session_date !== s.session_date
+        const startModified = incoming.start_time !== s.start_time
+        const endModified = incoming.end_time !== s.end_time
+        const statusModified = incoming.status !== s.status
+        if (dateModified || startModified || endModified || statusModified) {
+          return { error: `Não é possível alterar a frequência do dia ${s.session_date}, pois a competência ${sessComp.monthYear} já foi encerrada.` }
+        }
+      }
+    }
+  }
+
+  // 2. Validar novas sessões inseridas
+  if (sessions) {
+    for (const session of sessions) {
+      if (!session.id) {
+        const sessComp = getCompetenceForDate(session.session_date, endDay)
+        if (closedMap.has(`${sessComp.month}/${sessComp.year}`)) {
+          return { error: `A frequência com data ${session.session_date} não pode ser adicionada porque a competência ${sessComp.monthYear} já está encerrada.` }
+        }
+      }
+    }
+  }
+
+  // 3. Validar se o cabeçalho original é de competência fechada
+  const originalHeaderComp = getCompetenceForDate(currentAttendance.attendance_date, endDay)
+  const isOriginalHeaderClosed = closedMap.has(`${originalHeaderComp.month}/${originalHeaderComp.year}`)
+
+  if (isOriginalHeaderClosed) {
+    // Preserva a data original da guia para não modificar registro histórico fechado
+    rawAttendanceData.attendance_date = currentAttendance.attendance_date
+  } else {
+    // Se a guia original não estava em competência fechada, mas tentou mudar para uma data fechada:
+    const newHeaderComp = getCompetenceForDate(rawAttendanceData.attendance_date, endDay)
+    if (closedMap.has(`${newHeaderComp.month}/${newHeaderComp.year}`)) {
+      return { error: `A competência (${newHeaderComp.monthYear}) para a nova data da guia informada está encerrada.` }
+    }
+  }
 
   // --- QUANTITY LIMIT CHECK (BR-004) ---
   const qtyLimitError = await validateProcedureQuantityLimit(

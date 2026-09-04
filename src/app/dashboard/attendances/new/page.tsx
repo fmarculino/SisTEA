@@ -36,11 +36,25 @@ export default async function NewAttendancePage() {
     patientsQuery,
     professionalsQuery,
     supabase.from('procedures').select('id, name, code, valor_total, active, min_age, max_age, max_quantity, procedure_specialties(specialty_id), procedure_cid(cid_id, cid(code, name)), procedure_service_classifications(service_classifications(*))').eq('active', true).order('name'),
-    supabase.from('clinics').select('id, name, cnes, parent_clinic_id').order('name'),
+    supabase.from('clinics').select('id, name, cnes, parent_clinic_id, competence_end_day').order('name'),
     supabase.from('system_settings').select('key, value').eq('key', 'system_timezone').single(),
     supabase.from('clinic_procedure_prices').select('clinic_id, procedure_id, valor_total, valid_from, valid_to, active, contract_id, quantidade_contratada, quantidade_saldo').eq('active', true),
     supabase.from('contract_clinics').select('contract_id, clinic_id')
   ])
+
+  let closedCompQuery = supabase
+    .from('competences')
+    .select('clinic_id, month, year, status')
+    .in('status', ['FECHADA', 'ENVIADA_MS'])
+
+  if (profile?.clinic_id) {
+    closedCompQuery = closedCompQuery.eq('clinic_id', profile.clinic_id)
+  }
+
+  const { data: closedCompetences } = await closedCompQuery
+
+  const userClinic = (clinics as any[])?.find(c => c.id === profile?.clinic_id)
+  const clinicEndDay = userClinic?.competence_end_day || 31
 
   const systemTimezone = settings?.value || 'America/Sao_Paulo'
 
@@ -112,6 +126,8 @@ export default async function NewAttendancePage() {
         systemTimezone={systemTimezone}
         clinicProcedurePrices={clinicProcedurePrices || []}
         contractClinics={contractClinics || []}
+        closedCompetences={closedCompetences || []}
+        clinicEndDay={clinicEndDay}
       />
     </div>
   )

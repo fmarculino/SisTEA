@@ -102,3 +102,17 @@ export function getCompetenceDateRange(month: number, year: number, competenceEn
 export function formatCompetence(month: number, year: number): string {
   return `${String(month).padStart(2, '0')}/${year}`
 }
+
+/**
+ * Retorna o período da competência formatado em padrão brasileiro (DD/MM/YYYY a DD/MM/YYYY)
+ * Exemplo: Para mês 8/2026 com fechamento dia 24 -> "25/07/2026 a 24/08/2026"
+ */
+export function formatCompetencePeriod(month: number, year: number, competenceEndDay: number = 31): string {
+  const { startDate, endDate } = getCompetenceDateRange(month, year, competenceEndDay)
+  const formatBR = (isoDate: string) => {
+    const parts = isoDate.split('-')
+    if (parts.length < 3) return isoDate
+    return `${parts[2]}/${parts[1]}/${parts[0]}`
+  }
+  return `${formatBR(startDate)} a ${formatBR(endDate)}`
+}

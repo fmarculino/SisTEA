@@ -8,7 +8,7 @@ import SendToMSButton from './SendToMSButton'
 import { CompetencesFilterPanel } from './CompetencesFilterPanel'
 import { Pagination } from '@/components/ui/Pagination'
 import { formatCurrency } from '@/utils/format'
-import { getCompetenceForDate } from '@/utils/competence'
+import { getCompetenceForDate, formatCompetencePeriod } from '@/utils/competence'
 import { Fragment } from 'react'
 
 export default async function CompetencesPage({
@@ -132,8 +132,10 @@ export default async function CompetencesPage({
     paginatedCompetences = filteredList.slice(from, to).map(c => {
       const monthYear = `${String(c.month).padStart(2, '0')}/${c.year}`
       const billing = billingSums.find(b => b.clinic_id === c.clinic_id && b.month_year === monthYear)
+      const clinicEndDay = clinicsMap.get(c.clinic_id)?.competence_end_day || 31
       return {
         ...c,
+        endDay: clinicEndDay,
         total_sus: Number(billing?.total_sus) || 0,
         total_rp: Number(billing?.total_rp) || 0,
         total_value: Number(billing?.total_value) || 0
@@ -210,6 +212,7 @@ export default async function CompetencesPage({
       const billing = billingSums.find(b => b.clinic_id === profile.clinic_id && b.month_year === monthYear)
       return {
         ...m,
+        endDay,
         total_sus: Number(billing?.total_sus) || 0,
         total_rp: Number(billing?.total_rp) || 0,
         total_value: Number(billing?.total_value) || 0
@@ -264,6 +267,9 @@ export default async function CompetencesPage({
                           <div className="flex flex-col">
                             <span className="text-sm font-bold text-foreground capitalize">
                               {m.label}
+                            </span>
+                            <span className="text-[11px] font-medium text-muted-foreground mt-0.5">
+                              Período: {formatCompetencePeriod(m.month, m.year, m.endDay || 31)}
                             </span>
                             {isHistorical && (
                               <span className="text-[9px] font-black text-purple-600 uppercase tracking-widest mt-1">
@@ -378,9 +384,14 @@ export default async function CompetencesPage({
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-6">
-                        <span className="text-sm font-bold text-foreground">
-                          {String(comp.month).padStart(2, '0')}/{comp.year}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-foreground">
+                            {String(comp.month).padStart(2, '0')}/{comp.year}
+                          </span>
+                          <span className="text-[11px] font-medium text-muted-foreground mt-0.5">
+                            {formatCompetencePeriod(comp.month, comp.year, comp.endDay || 31)}
+                          </span>
+                        </div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-6">
                         {comp.is_historical ? (

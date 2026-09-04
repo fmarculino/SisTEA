@@ -4,14 +4,15 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { attendanceSchema, type AttendanceFormData } from './schema'
 import { createAttendanceAction, updateAttendanceAction, deleteAttachmentAction, saveAttachmentRecordAction, getAttachmentSignedUrlAction } from './actions'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatNumberBR } from '@/utils/format'
+import { getCompetenceForDate } from '@/utils/competence'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { QRCodeModal } from './QRCodeModal'
 import { StatusModal } from '@/components/ui/StatusModal'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
-import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck, Smartphone, UserCheck, UserCog, FileText, Upload, Eye, Loader2, X, Download, Image } from 'lucide-react'
+import { Plus, Trash2, Printer, QrCode, Search, AlertCircle, ShieldCheck, Smartphone, UserCheck, UserCog, FileText, Upload, Eye, Loader2, X, Download, Image, Lock } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { createPortal } from 'react-dom'
 
@@ -26,6 +27,8 @@ export function AttendanceForm({
   clinics,
   systemTimezone,
   competenceStatus,
+  closedCompetences = [],
+  clinicEndDay = 31,
   clinicProcedurePrices = [],
   contractClinics = [],
   initialAttachments = [],
@@ -41,6 +44,8 @@ export function AttendanceForm({
   clinics?: any[];
   systemTimezone: string;
   competenceStatus?: string;
+  closedCompetences?: { month: number; year: number; status: string }[];
+  clinicEndDay?: number;
   clinicProcedurePrices?: any[];
   contractClinics?: { contract_id: string; clinic_id: string }[];
   initialAttachments?: any[];
@@ -244,6 +249,31 @@ export function AttendanceForm({
   const sessions = watch('sessions') || []
   const hasValidatedSession = sessions.some(s => s.status === 'Realizada' || s.status === 'Glosado' || s.status === 'Faltou');
   const isCompetenceLocked = competenceStatus === 'FECHADA' || competenceStatus === 'ENVIADA_MS';
+
+  // Mapa de competências fechadas e dia de corte para validação granular por sessão
+  const currentFormClinicId = watch('clinic_id') || userClinicId;
+  const closedCompetencesMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (closedCompetences || []).forEach((c: any) => {
+      if (c.clinic_id && currentFormClinicId && c.clinic_id !== currentFormClinicId) {
+        return;
+      }
+      map.set(`${c.month}/${c.year}`, c.status);
+    });
+    return map;
+  }, [closedCompetences, currentFormClinicId]);
+
+  const effectiveEndDay = useMemo(() => {
+    if (clinicEndDay && clinicEndDay >= 1 && clinicEndDay <= 31) return clinicEndDay;
+    const currentCl = clinics?.find((c: any) => c.id === (watch('clinic_id') || userClinicId));
+    return currentCl?.competence_end_day || 31;
+  }, [clinicEndDay, clinics, watch('clinic_id'), userClinicId]);
+
+  const getSessionCompetenceStatus = useCallback((dateStr: string) => {
+    if (!dateStr) return 'ABERTA';
+    const comp = getCompetenceForDate(dateStr, effectiveEndDay);
+    return closedCompetencesMap.get(`${comp.month}/${comp.year}`) || 'ABERTA';
+  }, [closedCompetencesMap, effectiveEndDay]);
 
   // IDENTITY LOCK logic: 
   // 1. Competence is closed/sent
@@ -730,18 +760,16 @@ export function AttendanceForm({
         )}
 
         {(competenceStatus === 'FECHADA' || competenceStatus === 'ENVIADA_MS') && (
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-start gap-3">
-            <div className="shrink-0 mt-0.5 text-rose-500">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+            <div className="shrink-0 mt-0.5 text-amber-500">
+              <Lock className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-rose-600 uppercase tracking-widest mb-1">
-                {competenceStatus === 'ENVIADA_MS' ? 'Competência com Hard Lock' : 'Competência Encerrada'}
+              <h4 className="text-sm font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">
+                {competenceStatus === 'ENVIADA_MS' ? 'Guia com Hard Lock (Enviada ao MS)' : 'Guia Originada em Competência Encerrada'}
               </h4>
-              <p className="text-xs text-rose-500/80 font-medium leading-relaxed">
-                {competenceStatus === 'ENVIADA_MS'
-                  ? 'Este atendimento pertence a uma competência que já foi processada e enviada ao Ministério da Saúde. Nenhuma alteração é possível sob qualquer circunstância.'
-                  : 'Este atendimento pertence a uma competência que já foi fechada. Para modificá-lo, a competência deve ser reaberta pelo administrador do sistema.'}
+              <p className="text-xs text-amber-700/80 dark:text-amber-300/80 font-medium leading-relaxed">
+                Os dados cadastrais desta guia e as frequências do ciclo anterior estão preservados e protegidos. No entanto, é permitido adicionar e registrar presenças normalmente para as frequências do novo período em aberto.
               </p>
             </div>
           </div>
@@ -1242,7 +1270,7 @@ export function AttendanceForm({
             </div>
             <button
               type="button"
-              disabled={sessionFields.length >= authorizedQuantity || isCompetenceLocked}
+              disabled={sessionFields.length >= authorizedQuantity}
               onClick={() => append({ session_date: new Intl.DateTimeFormat('en-CA', { timeZone: systemTimezone }).format(new Date()), start_time: '08:00', end_time: '08:50', status: 'Não Realizado' })}
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
             >
@@ -1259,12 +1287,17 @@ export function AttendanceForm({
           <div className="space-y-4">
             {sessionFields.map((field, index) => {
               const currentSessionId = watch(`sessions.${index}.id` as any);
+              const currentSessionDate = watch(`sessions.${index}.session_date` as any);
+              const sessionCompStatus = getSessionCompetenceStatus(currentSessionDate);
+              const isSessionCompLocked = sessionCompStatus === 'FECHADA' || sessionCompStatus === 'ENVIADA_MS';
+
               const isOriginalFaltou = initialData?.sessions?.find((s: any) => s.id === currentSessionId)?.status === 'Faltou';
               const isSessionLockedForClinic = userRole !== 'SMS_ADMIN' && (
                 watch(`sessions.${index}.status`) === 'Realizada' ||
                 watch(`sessions.${index}.status`) === 'Glosado' ||
                 isOriginalFaltou
               );
+              const isFieldReadOnly = isSessionCompLocked || isSessionLockedForClinic;
 
               return (
                 <div key={field.id} className="flex gap-4 items-start group">
@@ -1282,8 +1315,8 @@ export function AttendanceForm({
                         min="2020-01-01"
                         max="2035-12-31"
                         {...register(`sessions.${index}.session_date` as const)}
-                        readOnly={isCompetenceLocked || isSessionLockedForClinic}
-                        className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || isSessionLockedForClinic) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                        readOnly={isFieldReadOnly}
+                        className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${isFieldReadOnly ? 'opacity-70 bg-muted cursor-not-allowed' : ''
                           }`}
                       />
                     </div>
@@ -1299,8 +1332,8 @@ export function AttendanceForm({
                             }
                           }
                         })}
-                        readOnly={isCompetenceLocked || isSessionLockedForClinic}
-                        className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || isSessionLockedForClinic) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                        readOnly={isFieldReadOnly}
+                        className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${isFieldReadOnly ? 'opacity-70 bg-muted cursor-not-allowed' : ''
                           }`}
                       />
                     </div>
@@ -1309,8 +1342,8 @@ export function AttendanceForm({
                       <input
                         type="time"
                         {...register(`sessions.${index}.end_time` as const)}
-                        readOnly={isCompetenceLocked || isSessionLockedForClinic}
-                        className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${(isCompetenceLocked || isSessionLockedForClinic) ? 'opacity-70 bg-muted cursor-not-allowed' : ''
+                        readOnly={isFieldReadOnly}
+                        className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${isFieldReadOnly ? 'opacity-70 bg-muted cursor-not-allowed' : ''
                           }`}
                       />
                     </div>
@@ -1339,7 +1372,7 @@ export function AttendanceForm({
                                 }
                               }
                             })}
-                            disabled={isCompetenceLocked}
+                            disabled={isSessionCompLocked}
                             className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${watch(`sessions.${index}.status`) === 'Glosado' ? 'text-rose-600 dark:text-rose-400 font-bold border-rose-500 dark:border-rose-500/50 bg-rose-50/50 dark:bg-rose-500/10' :
                                 watch(`sessions.${index}.status`) === 'Pendente' ? 'text-amber-600 dark:text-amber-400 font-bold border-amber-500 dark:border-amber-500/50 bg-amber-50/50 dark:bg-amber-500/10' :
                                   watch(`sessions.${index}.status`) === 'Realizada' ? 'text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10' :
@@ -1436,7 +1469,7 @@ export function AttendanceForm({
                                   }
                                 }
                               })}
-                              disabled={isCompetenceLocked}
+                              disabled={isSessionCompLocked}
                               className={`block w-full rounded-lg border-border/60 shadow-sm py-2 px-3 text-sm border bg-background focus:ring-primary/10 focus:border-primary transition-all ${
                                 watch(`sessions.${index}.status` as any) === 'Faltou' ? 'text-rose-500 dark:text-rose-400 font-bold border-rose-400 dark:border-rose-500/30 bg-rose-500/5' :
                                 'text-muted-foreground font-bold border-border bg-muted/30'
@@ -1467,7 +1500,7 @@ export function AttendanceForm({
                       </label>
                       <input
                         {...register(`sessions.${index}.justification` as any)}
-                        readOnly={isCompetenceLocked}
+                        readOnly={isSessionCompLocked}
                         className={`block w-full rounded-lg shadow-sm sm:text-xs px-3 py-2 border transition-all ${
                           watch(`sessions.${index}.status` as any) === 'Glosado' || watch(`sessions.${index}.status` as any) === 'Faltou'
                             ? 'border-rose-200 dark:border-rose-900/50 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-500/5'
@@ -1487,7 +1520,7 @@ export function AttendanceForm({
                   {/* Action buttons area */}
                   {(watch(`sessions.${index}.status` as any) === 'Realizada' || watch(`sessions.${index}.status` as any) === 'Glosado' || watch(`sessions.${index}.status` as any) === 'Faltou') ? (
                     <div className="sm:col-span-1 flex items-end justify-end">
-                      {!isCompetenceLocked && !watch(`sessions.${index}.id`) && (
+                      {!isSessionCompLocked && !watch(`sessions.${index}.id`) && (
                         <button
                           type="button"
                           onClick={() => remove(index)}
@@ -1499,7 +1532,7 @@ export function AttendanceForm({
                     </div>
                   ) : (
                     <div className="sm:col-span-1 flex flex-col items-end justify-center gap-2">
-                      {['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(userRole) && (watch(`sessions.${index}.status`) === 'Pendente' || watch(`sessions.${index}.status`) === 'Não Realizado') && id && watch(`sessions.${index}.id`) && !isCompetenceLocked && (
+                      {['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(userRole) && (watch(`sessions.${index}.status`) === 'Pendente' || watch(`sessions.${index}.status`) === 'Não Realizado') && id && watch(`sessions.${index}.id`) && !isSessionCompLocked && (
                         <button
                           type="button"
                           onClick={() => setQrModalSession({ index, sessionId: watch(`sessions.${index}.id`)! })}
@@ -1509,7 +1542,7 @@ export function AttendanceForm({
                           📱 Assinar
                         </button>
                       )}
-                      {!isCompetenceLocked && (
+                      {!isSessionCompLocked && (
                         !watch(`sessions.${index}.id`) ||
                         (userRole === 'SMS_ADMIN' && !watch(`sessions.${index}.validated_at`)) ||
                         (['GERENTE', 'RECEPCIONISTA', 'FATURISTA'].includes(userRole) && (watch(`sessions.${index}.status` as any) === 'Pendente' || watch(`sessions.${index}.status` as any) === 'Não Realizado') && !watch(`sessions.${index}.validated_at`))

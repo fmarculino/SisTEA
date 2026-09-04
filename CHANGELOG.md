@@ -2,6 +2,23 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.10.0] - 2026-09-03
+
+Esta versão traz a **Governança Granular de Competências por Data de Sessão (BR-015)** e a **Exibição do Período Civil Real nas Competências**, solucionando definitivamente o relato das clínicas em que o encerramento da competência anterior travava indevidamente atendimentos a partir do dia 25.
+
+### 🗓️ Governança Granular de Competências por Sessão (BR-015)
+- **Desacoplamento de Bloqueio por Guia:** O formulário de atendimento (`AttendanceForm.tsx`) e o backend (`actions.ts`) não mais utilizam a data do cabeçalho da guia (`attendance_date`) para travar indiscriminadamente todas as sessões.
+- **Validação Individual por Sessão:** Cada sessão é validada atômica e individualmente de acordo com a sua data de execução (`session_date`) e o dia de corte da clínica (`competence_end_day`).
+- **Continuidade do Cuidado:** O encerramento de uma competência (ex: 08/2026 com corte no dia 24) congela apenas os registros daquele ciclo ($\le 24$). Sessões realizadas a partir do dia 25 (pertencentes à competência 09/2026 em aberto) podem ser adicionadas, editadas e validadas digitalmente via QR Code (**📱 Assinar**) livremente.
+- **Botão "+ Adicionar Sessão":** Desbloqueado da trava global da competência da guia, respeitando unicamente a cota autorizada do procedimento.
+- **Proteção de Integridade no Backend:** `updateAttendanceAction` e `createAttendanceAction` impedem a exclusão ou modificação de sessões já faturadas em competências fechadas, ao mesmo tempo em que aceitam com segurança o salvamento de novas sessões de ciclos abertos.
+
+### 📊 Exibição Clara do Intervalo Civil nas Competências
+- **Helper `formatCompetencePeriod`:** Adicionada função em `src/utils/competence.ts` que calcula e formata o período civil de faturamento (ex: `25/07/2026 a 24/08/2026` para corte no dia 24, ou `01/08/2026 a 31/08/2026` para o dia 31).
+- **Gestão de Competências (`/dashboard/competences`):** A tabela de competências (visão Admin e Clínica) agora exibe o intervalo de datas exato sob o badge do mês (`Período: DD/MM/AAAA a DD/MM/AAAA`), eliminando qualquer ambiguidade sobre quais dias estão abrangidos no encerramento.
+
+---
+
 ## [1.9.0] - 2026-09-02
 
 Esta versão traz melhorias substanciais em **usabilidade, navegação contextual, precisão de relatórios e integridade operacional**, incluindo a **Barra de Navegação entre Atendimentos com Retenção de Filtros**, **correção definitiva de vínculo de unidades Matriz/Filial**, **eliminação de inconsistências de fuso horário em relatórios**, **busca incremental multi-termos** e **justificativa de faltas**.

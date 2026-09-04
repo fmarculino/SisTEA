@@ -119,9 +119,14 @@ export default async function EditAttendancePage({
   const systemTimezone = settings?.value || 'America/Sao_Paulo'
   const endDay = clinicConfig?.competence_end_day || 31
 
-  const { month, year } = getCompetenceForDate(attendance.attendance_date, endDay)
+  const [
+    { data: competence },
+    { data: closedCompetences }
+  ] = await Promise.all([
+    supabase.from('competences').select('status').eq('clinic_id', attendance.clinic_id).eq('month', getCompetenceForDate(attendance.attendance_date, endDay).month).eq('year', getCompetenceForDate(attendance.attendance_date, endDay).year).maybeSingle(),
+    supabase.from('competences').select('month, year, status').eq('clinic_id', attendance.clinic_id).in('status', ['FECHADA', 'ENVIADA_MS'])
+  ])
 
-  const { data: competence } = await supabase.from('competences').select('status').eq('clinic_id', attendance.clinic_id).eq('month', month).eq('year', year).maybeSingle()
   const competenceStatus = competence?.status || 'ABERTA'
 
   // Mapeando dados dos profissionais para incluir o nome da especialidade e CBO
@@ -201,6 +206,8 @@ export default async function EditAttendancePage({
         userRole={profile?.role || ''}
         systemTimezone={systemTimezone}
         competenceStatus={competenceStatus}
+        closedCompetences={closedCompetences || []}
+        clinicEndDay={endDay}
         clinicProcedurePrices={clinicProcedurePrices || []}
         contractClinics={contractClinics || []}
         initialAttachments={attachments || []}
