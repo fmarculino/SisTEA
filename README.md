@@ -1,5 +1,5 @@
 # SisTEA - Sistema Inteligente de Gestão Integrada
-![Version](https://img.shields.io/badge/version-1.10.0-green.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.11.0-green.svg?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-active-success.svg?style=for-the-badge)
 
 > **SisTEA** é uma plataforma enterprise de alta densidade projetada para a gestão especializada de acompanhamento multiprofissional em casos de **Autismo (TEA)** e **TDAH**. O sistema foca em três pilares fundamentais: **Transparência Forense**, **Eficiência Operacional** e **Segurança Jurídica**.
@@ -7,6 +7,9 @@
 ---
 
 ## 🚀 Diferenciais Estratégicos
+
+### 🏥 Conformidade Integral BPA/DATASUS (Versão 05.00)
+Geração de arquivo magnético de faturamento ambulatorial SUS em total conformidade com a **Versão 05.00 do BPA (BPAMAG)** obrigatória a partir da competência 07/2026. Inclui cálculo do campo de controle matemático oficial (`cbc-smt-vrf`), alinhamento rigoroso de cabeçalho de 126 caracteres, registros individuais de 351 caracteres, alternância de identificação CNS/CPF, validação de Raça/Cor obrigatória (Portaria GM/MS nº 344/2017), preenchimento correto de Etnia, e novos indicadores de **Situação de Rua (PNRV)** e **Pessoa sem CPF/Registro Civil**.
 
 ### 🗓️ Governança Granular de Competências por Data de Sessão (BR-015)
 O sistema calcula e apura o faturamento SUS e a geração de arquivos BPA com base na **data efetiva de realização de cada atendimento**, respeitando estritamente o **dia de corte configurado no cadastro da unidade** (ex: dia 24, cobrindo o período de 25 do mês anterior a 24 do mês corrente). O encerramento de uma competência bloqueia apenas as sessões pertencentes ao ciclo faturado, permitindo que a clínica continue adicionando, alterando e coletando assinaturas digitais via QR Code para atendimentos realizados a partir do dia 25 (ciclo seguinte em aberto) na mesma guia, sem interrupção do cuidado ao paciente. A interface de Gestão de Competências exibe com clareza o intervalo civil exato de vigência de cada mês.

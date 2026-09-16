@@ -2,6 +2,36 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.11.0] - 2026-09-16
+
+Esta versão traz a **Conformidade Integral com a Versão 05.00 do BPA (DATASUS)**, obrigatória a partir da competência **07/2026**, alinhando o arquivo magnético de faturamento ambulatorial e o cadastro de pacientes com todas as portarias vigentes do Ministério da Saúde.
+
+### 🏥 Adequação Estrutural do BPA (DATASUS v05.00)
+- **Cabeçalho Oficial (Registro 01 - 126 caracteres):**
+  - **Correção de Posicionamento:** Remoção da sobreposição indevida do CNES nas posições 20-31, restaurando o alinhamento de todos os campos subsequentes.
+  - **Controle de Folhas (`cbc-flh`):** Preenchimento automático com a quantidade real de folhas geradas (`00000X`, posições 20-25).
+  - **Dígito Verificador / Checksum (`cbc-smt-vrf`):** Implementada a fórmula matemática oficial do DATASUS `((sum(código_procedimento + quantidade) % 1111) + 1111)`, gerando o código de controle obrigatório de 4 dígitos (posições 26-29).
+  - **Identificador e Versão:** Inclusão do indicador `'M'` (Municipal, posição 120) e versão `'D05.00'` (posições 121-126), compondo a versão oficial `MD05.00`.
+- **Produção Individualizada (Registro 03 - 351 caracteres):**
+  - **Expansão de Linha:** Ajustado o comprimento total de cada linha BPA-I de 350 para **351 caracteres fixos**.
+  - **Pessoa em Situação de Rua (`prd_situacao_rua`, posição 350):** Campo obrigatório para cumprimento do Plano Nacional Ruas Visíveis (PNRV), gravando `'S'` ou `'N'`.
+  - **Pessoa sem CPF / Registro Civil (`prd_sem_cpf`, posição 351):** Novo campo obrigatório da v05.00 para controle de exceções em procedimentos que exigem CPF (atributo 058), gravando `'S'` ou `'N'`.
+  - **Alternância de Identificação (CNS / CPF):** Implementada a regra do SUS que proíbe informar simultaneamente CNS e CPF no mesmo atendimento. Quando identificado por CNS, grava CNS na posição 60-74 e 11 espaços na posição de CPF; quando identificado por CPF, grava 15 espaços na posição de CNS e o CPF na posição 339-349.
+  - **Preenchimento de Etnia:** Correção para gravar 4 espaços em branco (`'    '`) quando a raça/cor não for indígena, eliminando o erro gerado por `'0000'`.
+  - **CNPJ OPM:** Ajustado para gravar 14 espaços em branco em atendimentos convencionais (campo exclusivo para empresas de órteses e próteses).
+
+### 👥 Atualizações no Cadastro de Pacientes
+- **Raça/Cor Obrigatória (Portaria GM/MS nº 344/2017):** Excluída a opção `"Não Informado"`. A escolha de uma das 5 categorias oficiais do IBGE (`Branca`, `Preta`, `Parda`, `Amarela`, `Indígena`) agora é obrigatória no schema de validação (`schema.ts`) e no formulário (`PatientForm.tsx`).
+- **Novos Seletores no Formulário:** Adicionados controles dedicados para:
+  - *Pessoa em Situação de Rua (PNRV)*
+  - *Pessoa sem CPF / Registro Civil (Exceção SUS v05.00)*
+- **Migração de Banco de Dados:** Criada a migration `20260916182000_add_bpa_v0500_patient_fields.sql` adicionando as colunas `is_homeless` e `no_cpf_civil_registry` na tabela `public.patients`.
+
+### 🛡️ Validação Pré-Exportação Fortalecida
+- **Detecção Prévia de Inconsistências:** A varredura prévia de faturamento (`validateExport`) agora acusa imediatamente pacientes sem Raça/Cor informada e pacientes sem documento de identificação (CNS ou CPF), impedindo a exportação de arquivos com rejeição no validador do DATASUS.
+
+---
+
 ## [1.10.0] - 2026-09-03
 
 Esta versão traz a **Governança Granular de Competências por Data de Sessão (BR-015)** e a **Exibição do Período Civil Real nas Competências**, solucionando definitivamente o relato das clínicas em que o encerramento da competência anterior travava indevidamente atendimentos a partir do dia 25.

@@ -14,7 +14,7 @@ import { MultiSearchSelect } from '@/components/ui/MultiSearchSelect'
 type ClinicOption = { id: string; name: string }
 
 const GENDER_OPTIONS = ['Masculino', 'Feminino', 'Indefinido', 'Não Informado']
-const RACE_OPTIONS = ['Branca', 'Preta', 'Parda', 'Amarela', 'Indígena', 'Não Informado']
+const RACE_OPTIONS = ['Branca', 'Preta', 'Parda', 'Amarela', 'Indígena']
 const UF_OPTIONS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
 ]
@@ -108,7 +108,9 @@ export function PatientForm({
       address_neighborhood: initialData?.address_neighborhood || '',
       ibge_code: initialData?.ibge_code || '',
       nationality: initialData?.nationality || '010',
-      race_color: (initialData?.race_color as any) || 'Não Informado',
+      race_color: (initialData?.race_color && (initialData.race_color as string) !== 'Não Informado' ? initialData.race_color : 'Parda') as any,
+      is_homeless: initialData?.is_homeless ?? false,
+      no_cpf_civil_registry: initialData?.no_cpf_civil_registry ?? false,
       cep: initialData?.cep ? maskCEP(initialData.cep) : '',
       city: initialData?.city || '',
       state: initialData?.state || '',
@@ -373,6 +375,37 @@ export function PatientForm({
                 </select>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none group-focus-within/select:text-primary transition-colors" />
               </div>
+              {errors.race_color && <p className="mt-2 text-xs text-rose-500 font-bold tracking-tight">{errors.race_color.message}</p>}
+            </div>
+
+            <div className="sm:col-span-3 flex items-center justify-between p-4 rounded-2xl border border-border/60 bg-background/50 hover:border-primary/40 transition-all shadow-sm">
+              <div className="pr-4">
+                <label className="block text-xs font-black text-foreground uppercase tracking-wider cursor-pointer" htmlFor="is_homeless">
+                  Pessoa em Situação de Rua (PNRV)
+                </label>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Exigência SUS/BPA para monitoramento de vulnerabilidade</p>
+              </div>
+              <input
+                id="is_homeless"
+                type="checkbox"
+                {...register('is_homeless')}
+                className="w-5 h-5 rounded-lg border-border text-primary focus:ring-primary/20 accent-primary cursor-pointer"
+              />
+            </div>
+
+            <div className="sm:col-span-3 flex items-center justify-between p-4 rounded-2xl border border-border/60 bg-background/50 hover:border-primary/40 transition-all shadow-sm">
+              <div className="pr-4">
+                <label className="block text-xs font-black text-foreground uppercase tracking-wider cursor-pointer" htmlFor="no_cpf_civil_registry">
+                  Pessoa sem CPF / Registro Civil
+                </label>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Exceção técnica para procedimentos regulados (BPA v05.00)</p>
+              </div>
+              <input
+                id="no_cpf_civil_registry"
+                type="checkbox"
+                {...register('no_cpf_civil_registry')}
+                className="w-5 h-5 rounded-lg border-border text-primary focus:ring-primary/20 accent-primary cursor-pointer"
+              />
             </div>
           </div>
         </section>

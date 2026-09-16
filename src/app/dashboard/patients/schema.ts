@@ -17,7 +17,11 @@ export const patientSchema = z.object({
   ibge_code: z.string().optional().nullable(),
   nationality: z.string().default('010').optional().nullable(),
   ethnicity: z.string().optional().nullable(),
-  race_color: z.enum(['Branca', 'Preta', 'Parda', 'Amarela', 'Indígena', 'Não Informado']).default('Não Informado'),
+  race_color: z.enum(['Branca', 'Preta', 'Parda', 'Amarela', 'Indígena'], {
+    message: 'Selecione uma Raça/Cor válida (exigência obrigatória do SUS)',
+  }),
+  is_homeless: z.boolean().default(false),
+  no_cpf_civil_registry: z.boolean().default(false),
   cep: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   state: z.string().length(2, 'UF deve ter 2 caracteres').optional().nullable(),
