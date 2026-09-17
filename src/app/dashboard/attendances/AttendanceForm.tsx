@@ -420,21 +420,29 @@ export function AttendanceForm({
     }
   }, [selectedProfessionalId, filteredProcedures, selectedProcedureId, setValue])
 
-  // Reset CID and DataSUS if procedure changes and current values are not in filtered lists
+  // Reset or auto-select CID and DataSUS if procedure changes and current values are not in filtered lists
   useEffect(() => {
     const currentCid = getValues('cid')
-    if (currentCid && selectedProcedureId) {
-      const isValid = filteredCids.some((c: any) => c.id === currentCid)
-      if (!isValid) {
-        setValue('cid', '', { shouldDirty: true })
+    if (selectedProcedureId) {
+      if (currentCid) {
+        const isValid = filteredCids.some((c: any) => c.id === currentCid)
+        if (!isValid) {
+          setValue('cid', filteredCids.length === 1 ? filteredCids[0].id : '', { shouldDirty: true })
+        }
+      } else if (filteredCids.length === 1) {
+        setValue('cid', filteredCids[0].id, { shouldDirty: true })
       }
     }
 
     const currentDatasus = getValues('service_classification_id')
-    if (currentDatasus && selectedProcedureId) {
-      const isValid = filteredDatasus.some((d: any) => d.id === currentDatasus)
-      if (!isValid) {
-        setValue('service_classification_id', '', { shouldDirty: true })
+    if (selectedProcedureId) {
+      if (currentDatasus) {
+        const isValid = filteredDatasus.some((d: any) => d.id === currentDatasus)
+        if (!isValid) {
+          setValue('service_classification_id', filteredDatasus.length === 1 ? filteredDatasus[0].id : '', { shouldDirty: true })
+        }
+      } else if (filteredDatasus.length === 1) {
+        setValue('service_classification_id', filteredDatasus[0].id, { shouldDirty: true })
       }
     }
   }, [selectedProcedureId, filteredCids, filteredDatasus, setValue, getValues])

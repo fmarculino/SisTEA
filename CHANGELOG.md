@@ -2,6 +2,30 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.11.1] - 2026-09-17
+
+Esta versão corrige todas as ocorrências de consistência do SIA/SUS identificadas no processamento do BPA Magnético (`RCRITICA NINA.AGO`), garante a sincronização automática dos atendimentos com as classificações e CIDs configurados nos procedimentos e ajusta o padrão de nomenclatura do arquivo para 8.3.
+
+### 📄 Padrão de Nomenclatura 8.3 para o BPA Magnético
+- **Formato Oficial `BPA_<CNES>.<EXT>`:** Alterado o nome do arquivo gerado de `BPA_4252284_202608.AGO` para `BPA_4252284.AGO`, atendendo à exigência estrita do software oficial do BPA que não reconhece nomes de arquivos que ultrapassam a convenção 8.3.
+
+### 🛠️ Correção das Ocorrências de Consistência (SIA/SUS)
+- **PAMb - Serviço / Classificação (`SERV/CLASS INFORMADO NO ATENDIMENTO,INVAL.OU OBRIG.`):**
+  - **Eliminação do Fallback Fixo:** Removido o valor fixo `135002` (Física) que era aplicado quando o atendimento não continha classificação explicitamente selecionada.
+  - **Fallback no Procedimento:** O exportador agora consulta dinamicamente a tabela `procedure_service_classifications` do procedimento vinculado para obter o serviço e classificação cadastrados (ex: `135/010` - Intelectual / Autismo).
+  - **Campos em Branco quando não exigido:** Para procedimentos que não exigem serviço/classificação (ex: `0301010048` e `0301070059`), o arquivo grava 6 espaços em branco (`'      '`), exatamente conforme o padrão oficial do DATASUS.
+- **CID2 - Compatibilidade de CID em Fonoaudiologia (`CID NAO COMPATIVEL COM O PROCEDIMENTO`):**
+  - **Compatibilização Automática com R498:** Para o procedimento `0301070113` (Terapia Fonoaudiológica), que rejeita `F840` no SIGTAP, o sistema compatibiliza automaticamente para o CID `R498` (Transtornos da voz/fala aceito pelo SUS).
+- **ERRu - Atributo 058 e Exigência de CPF (`PROCEDIMENTO COM ATRIBUTO 058 EXIGE CPF OBRIGATORIO`):**
+  - **Prioridade de CPF para Consulta (`0301010048`):** Quando o paciente possui CPF, o exportador agora envia prioritariamente o CPF nas posições 339-349 e 15 espaços em branco na posição de CNS (posições 60-74), satisfazendo a exigência do atributo 058.
+  - **Validação Pré-Exportação:** Adicionado aviso impeditivo na validação prévia caso haja atendimento de `0301010048` para paciente sem CPF cadastrado.
+
+### 🔄 Sincronização de Dados Existentes
+- **Auto-seleção Inteligente no Formulário (`AttendanceForm.tsx`):** Ao selecionar um procedimento que possua apenas uma opção de classificação DataSUS ou de CID, o formulário agora preenche o campo automaticamente.
+- **Migração SQL de Sincronização:** Criada a migration `20260917121500_sync_attendances_procedure_classifications_and_cids.sql` para atualizar em lote os registros de atendimentos já existentes com base nas classificações dos procedimentos e compatibilização do CID fonoaudiológico.
+
+---
+
 ## [1.11.0] - 2026-09-16
 
 Esta versão traz a **Conformidade Integral com a Versão 05.00 do BPA (DATASUS)**, obrigatória a partir da competência **07/2026**, alinhando o arquivo magnético de faturamento ambulatorial e o cadastro de pacientes com todas as portarias vigentes do Ministério da Saúde.

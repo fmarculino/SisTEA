@@ -163,6 +163,11 @@ export class BpaExportService {
       // Validações Procedimento
       if (!att.procedures?.code) missing.push('Procedimento sem Código SUS');
       if (att.procedures?.bpa_type === 'NAO_APLICA') missing.push('Procedimento sem Tipo BPA definido (BPA-I/BPA-C)');
+      if (att.procedures?.code === '0301010048') {
+        if (!att.patients?.cpf && !att.patients?.no_cpf_civil_registry) {
+          missing.push('Procedimento 0301010048 exige CPF do paciente (Atributo 058 SIGTAP)');
+        }
+      }
 
       if (missing.length > 0) {
         errors.push({
@@ -212,7 +217,14 @@ export class BpaExportService {
         service_classifications ( service_code, classification_code ),
         patients!inner ( name, cns_patient, cpf, birth_date, gender, ibge_code, race_color, nationality, ethnicity, cep, address_street, address_complement, address_neighborhood, address_number, city, phone, is_homeless, no_cpf_civil_registry ),
         professionals!inner ( name, cns ),
-        procedures!inner ( name, code, bpa_type ),
+        procedures!inner ( 
+          name, 
+          code, 
+          bpa_type,
+          procedure_service_classifications (
+            service_classifications ( service_code, classification_code )
+          )
+        ),
         clinics!inner ( name, cnes, cnpj, orgao_emissor, competence_end_day ),
         sessions:attendance_sessions!inner ( id, session_date, status )
       `)
@@ -350,10 +362,52 @@ export class BpaExportService {
         const etniaCode = raceCode === '05' ? padLeft(att.patients.ethnicity || '', 4) : '    ';
 
         // Identificação por CNS ou CPF (Regra oficial DATASUS: apenas 1 documento por atendimento)
-        const hasCns = !!att.patients.cns_patient && att.patients.cns_patient.trim().length > 0;
-        const cnsField = hasCns ? padLeft(att.patients.cns_patient, 15) : padRight('', 15);
+        // Regra Atributo 058: Para procedimentos como 0301010048, o SIGTAP exige estritamente CPF.
+        const isAttr058 = att.procCode === '0301010048';
         const cpfDigits = sanitize(att.patients.cpf);
-        const cpfField = (!hasCns && cpfDigits) ? padLeft(cpfDigits, 11) : padRight('', 11);
+        const hasCpf = !!cpfDigits && cpfDigits.length === 11;
+        const hasCns = !!att.patients.cns_patient && att.patients.cns_patient.trim().length > 0;
+
+        let cnsField = padRight('', 15);
+        let cpfField = padRight('', 11);
+
+        if (isAttr058 && hasCpf) {
+          // Atributo 058: CPF é mandatório no SIGTAP, CNS vai em branco (15 espaços)
+          cpfField = padLeft(cpfDigits, 11);
+        } else if (hasCns) {
+          cnsField = padLeft(att.patients.cns_patient, 15);
+        } else if (hasCpf) {
+          cpfField = padLeft(cpfDigits, 11);
+        }
+
+        // Compatibilização de CID:
+        // Se for terapia fonoaudiológica (0301070113) e o CID for F840 ou vazio, compatibilizar com R498 (exigido pelo SIGTAP)
+        let cidCode = sanitizeCid(att.cid || 'F840');
+        if (att.procCode === '0301070113' && (cidCode === 'F840' || !cidCode)) {
+          cidCode = 'R498';
+        }
+
+        // Resolução de Serviço e Classificação:
+        // 1. Prioridade: Se o atendimento tem serviço/classificação já vinculado diretamente
+        let sCode = att.service_classifications?.service_code;
+        let cCode = att.service_classifications?.classification_code;
+
+        // 2. Fallback: Se não houver no atendimento, buscar do procedimento vinculado
+        if (!sCode || !cCode) {
+          const pscList = att.procedures?.procedure_service_classifications;
+          if (Array.isArray(pscList) && pscList.length > 0) {
+            const firstValid = pscList.find((psc: any) => psc.service_classifications?.service_code);
+            if (firstValid?.service_classifications) {
+              sCode = firstValid.service_classifications.service_code;
+              cCode = firstValid.service_classifications.classification_code;
+            }
+          }
+        }
+
+        // 3. Se nenhum estiver definido (ou se o procedimento não exige serviço/classificação), enviar 6 espaços em branco
+        const srvClfField = (sCode && cCode)
+          ? padLeft(sCode, 3) + padLeft(cCode, 3)
+          : '      ';
 
         // Campos novos DATASUS (v04.08 e v05.00)
         const situacaoRua = att.patients.is_homeless ? 'S' : 'N';
@@ -372,7 +426,7 @@ export class BpaExportService {
           cnsField +                              // 60-74: CNS Paciente (15)
           genderCode +                            // 75: Sexo (1)
           padLeft(att.patients.ibge_code, 6) +    // 76-81: IBGE Município Residência (6)
-          padRight(sanitizeCid(att.cid || 'F840'), 4) + // 82-85: CID (4)
+          padRight(cidCode, 4) +                  // 82-85: CID (4)
           padLeft(age, 3) +                       // 86-88: Idade (3)
           padLeft(att.quantity, 6) +              // 89-94: Quantidade (6)
           padLeft(att.attendance_character || '01', 2) + // 95-96: Caráter Atendimento (2)
@@ -383,8 +437,7 @@ export class BpaExportService {
           raceCode +                              // 151-152: Raça/Cor (01..05) (2)
           etniaCode +                             // 153-156: Etnia (4)
           padLeft(att.patients.nationality || '010', 3) + // 157-159: Nacionalidade (3)
-          padLeft(att.service_classifications?.service_code || '135', 3) + // 160-162: Serviço (3)
-          padLeft(att.service_classifications?.classification_code || '002', 3) + // 163-165: Classificação (3)
+          srvClfField +                           // 160-165: Serviço (3) + Classificação (3) ou 6 espaços
           padRight('', 8) +                       // 166-173: Equipe Seq (8)
           padRight('', 4) +                       // 174-177: Equipe Area (4)
           padRight('', 14) +                      // 178-191: CNPJ Empresa OPM (14 espaços para atendimentos normais) (14)
@@ -409,7 +462,7 @@ export class BpaExportService {
   }
 
   /**
-   * Sugere o nome do arquivo seguindo o padrão BPA_CNES_AAAAMM.EXT
+   * Sugere o nome do arquivo seguindo o padrão BPA_<CNES>.<EXT> (8.3 compatível com BPA Magnético)
    * Sempre usa o CNES da MATRIZ.
    */
   static async getSuggestedFilename(clinic_id: string, month_year: string): Promise<string> {
@@ -419,8 +472,7 @@ export class BpaExportService {
     // Sempre busca CNES da matriz
     const { data: clinic } = await supabase.from('clinics').select('cnes').eq('id', matrixId).single();
     
-    const [month, year] = month_year.split('/');
-    const compAAAAMM = `${year}${month.padStart(2, '0')}`;
+    const [month] = month_year.split('/');
     const cnes = clinic?.cnes || '0000000';
 
     const extensions: Record<string, string> = {
@@ -430,6 +482,6 @@ export class BpaExportService {
     };
 
     const ext = extensions[month.padStart(2, '0')] || 'TXT';
-    return `BPA_${cnes}_${compAAAAMM}.${ext}`;
+    return `BPA_${cnes}.${ext}`;
   }
 }
