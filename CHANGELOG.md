@@ -2,6 +2,18 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.11.2] - 2026-09-17
+
+Esta versão implementa a **Consolidação de Sessões por Paciente no BPA-I**, agrupando múltiplas sessões realizadas do mesmo procedimento, profissional e CBO em uma única linha no arquivo magnético com a quantidade total somada, conforme o padrão oficial do DATASUS.
+
+### 📦 Consolidação de Produção no BPA-I
+- **Agrupamento por Paciente / Procedimento / Profissional / CBO:** Em vez de gerar uma linha para cada atendimento/sessão individual de um mesmo paciente no mês, o sistema agora consolida todas as sessões realizadas do período em **uma única linha**.
+- **Soma da Quantidade:** O campo de quantidade (posições 89–94) recebe a soma exata de todas as sessões realizadas pelo paciente naquela competência (ex: 8, 12 sessões).
+- **Data da Primeira Sessão:** O campo de data do atendimento (posições 37–44) passa a registrar a data da primeira sessão realizada do ciclo.
+- **Otimização de Folhas e Checksum:** Redução expressiva no volume de folhas e linhas gravadas no arquivo, mantendo o cálculo exato do dígito verificador / controle (`cbc-smt-vrf`) com base na somatória das quantidades consolidadas.
+
+---
+
 ## [1.11.1] - 2026-09-17
 
 Esta versão corrige todas as ocorrências de consistência do SIA/SUS identificadas no processamento do BPA Magnético (`RCRITICA NINA.AGO`), garante a sincronização automática dos atendimentos com as classificações e CIDs configurados nos procedimentos e ajusta o padrão de nomenclatura do arquivo para 8.3.

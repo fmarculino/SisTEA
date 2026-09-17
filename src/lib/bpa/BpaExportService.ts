@@ -237,26 +237,61 @@ export class BpaExportService {
 
     const { getCompetenceForDate } = await import('@/utils/competence');
 
-    // Desmembrar cada atendimento em suas sessões que pertencem exatamente à competência solicitada
-    const exportableItems: any[] = [];
+    // Agrupar atendimentos e sessões pertencentes à competência solicitada
+    // Padrão DATASUS BPA-I: 1 linha consolidada por Paciente + Procedimento + Profissional + CBO,
+    // contendo a soma das sessões realizadas no período e a data da primeira sessão do ciclo.
+    const groupedItemsMap = new Map<string, any>();
 
     (attendances || []).forEach((att: any) => {
       if (!att.procedures?.code || att.procedures.code.trim() === '') return;
       const endDay = att.clinics?.competence_end_day || 31;
       const sessions = att.sessions || [];
 
-      sessions.forEach((s: any) => {
-        if (s.status !== 'Realizada') return;
+      // Filtrar apenas sessões com status 'Realizada' pertencentes a esta competência
+      const matchingSessions = sessions.filter((s: any) => {
+        if (s.status !== 'Realizada') return false;
         const comp = getCompetenceForDate(s.session_date, endDay);
-        if (comp.monthYear === month_year) {
-          exportableItems.push({
-            ...att,
-            session_date: s.session_date,
-            quantity: 1
-          });
-        }
+        return comp.monthYear === month_year;
       });
+
+      if (matchingSessions.length === 0) return;
+
+      const isBpaC = att.procedures.bpa_type === 'BPA_C';
+      const patientKey = sanitize(att.patients?.cns_patient) || sanitize(att.patients?.cpf) || normalizeText(att.patients?.name);
+      const procCode = sanitize(att.procedures.code);
+      const profCns = sanitize(att.professionals?.cns);
+      const cbo = sanitize(att.professional_cbo);
+
+      // Chave de agrupamento:
+      // BPA-C: por código de procedimento
+      // BPA-I: por Paciente + Procedimento + Profissional + CBO
+      const groupKey = isBpaC
+        ? `BPA_C_${procCode}`
+        : `${patientKey}_${procCode}_${profCns}_${cbo}`;
+
+      // Ordenar datas para identificar a primeira sessão realizada do ciclo
+      const sessionDates = matchingSessions
+        .map((s: any) => sanitize(s.session_date))
+        .filter(Boolean)
+        .sort();
+      const firstSessionDate = sessionDates[0] || sanitize(att.attendance_date);
+
+      if (groupedItemsMap.has(groupKey)) {
+        const existing = groupedItemsMap.get(groupKey);
+        existing.quantity += matchingSessions.length;
+        if (firstSessionDate && (!existing.session_date || firstSessionDate < existing.session_date)) {
+          existing.session_date = firstSessionDate;
+        }
+      } else {
+        groupedItemsMap.set(groupKey, {
+          ...att,
+          session_date: firstSessionDate,
+          quantity: matchingSessions.length
+        });
+      }
     });
+
+    const exportableItems: any[] = Array.from(groupedItemsMap.values());
 
     if (exportableItems.length === 0) {
       throw new Error('Nenhuma produção exportável encontrada para esta competência.');
