@@ -2,6 +2,17 @@
 
 Todas as mudanças notáveis para este projeto serão documentadas neste arquivo.
 
+## [1.11.3] - 2026-09-17
+
+Esta versão adiciona a **Habilitação Automática de Serviço e Classificação 135/010 para TEA/Autismo** nos procedimentos de reabilitação ambulatorial, eliminando as inconsistências `PAMb` restantes no SIA/SUS para a clínica NINA.
+
+### 🏥 Vinculação Obrigatória de Serviço/Classificação 135/010 (TEA)
+- **Salvaguarda no Exportador BPA ([BpaExportService.ts](file:///c:/Users/ferna/projetos/SisTEA/src/lib/bpa/BpaExportService.ts)):** Para os procedimentos de reabilitação intelectual, desenvolvimento psicomotor e múltiplas deficiências (`0301070075`, `0301070067`, `0301070024`, `0301070113`), o sistema garante a aplicação da classificação oficial de TEA `135` (Serviço de Reabilitação) e `010` (Reabilitação Intelectual / TEA), impedindo que sejam enviados com campos em branco ou vinculados a `135002` (Física - não habilitada na unidade).
+- **Procedimentos que Dispensam Serviço/Classificação:** Mantido o envio de 6 espaços em branco (`'      '`) para procedimentos que não exigem serviço/classificação no SIGTAP (`0301010048` e `0301070059`), que foram consistidos com 100% de aprovação no SIA/SUS.
+- **Migração SQL de Atualização no Banco:** Criada a migration `20260917130000_fix_tea_rehabilitation_service_classifications.sql` que atualiza as tabelas `procedure_service_classifications` e `attendances` para todas as competências (incluindo 07/2026 e 08/2026).
+
+---
+
 ## [1.11.2] - 2026-09-17
 
 Esta versão implementa a **Consolidação de Sessões por Paciente no BPA-I**, agrupando múltiplas sessões realizadas do mesmo procedimento, profissional e CBO em uma única linha no arquivo magnético com a quantidade total somada, conforme o padrão oficial do DATASUS.

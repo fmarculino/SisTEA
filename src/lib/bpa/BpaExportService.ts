@@ -439,7 +439,17 @@ export class BpaExportService {
           }
         }
 
-        // 3. Se nenhum estiver definido (ou se o procedimento não exige serviço/classificação), enviar 6 espaços em branco
+        // 3. Regra Específica de Reabilitação (TEA/Autismo - Clínica NINA CNES 4252284):
+        // Procedimentos ambulatoriais de reabilitação (0301070075, 0301070067, 0301070024, 0301070113)
+        // exigem Serviço 135 e Classificação 010 (habilitação oficial de TEA no SIGTAP).
+        // Se estiver em branco ou apontando para 002 (Física - não habilitada), assegurar 135/010:
+        const isReabTea = ['0301070075', '0301070067', '0301070024', '0301070113'].includes(att.procCode);
+        if (isReabTea && (!sCode || !cCode || cCode === '002')) {
+          sCode = '135';
+          cCode = '010';
+        }
+
+        // 4. Se nenhum estiver definido (ou se o procedimento não exige serviço/classificação, ex: 0301010048), enviar 6 espaços em branco
         const srvClfField = (sCode && cCode)
           ? padLeft(sCode, 3) + padLeft(cCode, 3)
           : '      ';
